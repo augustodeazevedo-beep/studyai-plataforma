@@ -1,155 +1,197 @@
 
 
-# COGNOS Study.AI — Fase 2: Motor de IA, Google OAuth, Banco de Dados e Dashboard Completo
+# Fase 3: Reestruturar Dashboard para Espelhar Plataforma Modelo
 
-Este plano cobre 4 grandes frentes de desenvolvimento para transformar a plataforma em um sistema funcional completo.
-
----
-
-## Fase 2A: Google OAuth
-
-Configurar login social com Google usando o sistema gerenciado do Lovable Cloud.
-
-- Usar a ferramenta de configuracao social auth do Cloud para gerar o modulo `lovable.auth`
-- Atualizar `Auth.tsx` para usar `lovable.auth.signInWithOAuth("google", ...)` no lugar de `supabase.auth.signInWithOAuth`
-- Manter o login por email/senha via Supabase Auth
+Analise comparativa entre a plataforma modelo (screenshots) e a implementacao atual revelou gaps significativos. Este plano reorganiza a navegacao e adiciona 5 novas abas com funcionalidades de IA.
 
 ---
 
-## Fase 2B: Novas Tabelas no Banco de Dados
+## Mapeamento: Modelo vs. Atual
 
-Criar a estrutura de dados para sessoes de estudo, revisoes espaçadas e progresso.
-
-### Tabelas a criar:
-
-1. **study_sessions** — Registro de cada sessao de estudo
-   - `id`, `user_id`, `subject_id` (FK -> user_subjects), `started_at`, `ended_at`, `duration_minutes`, `notes`, `created_at`
-
-2. **study_plan** — Plano gerado pela IA para cada usuario
-   - `id`, `user_id`, `subject_id` (FK -> user_subjects), `priority_score`, `relevance`, `incidence`, `accuracy`, `performance`, `gap_score`, `recommended_hours_weekly`, `updated_at`, `created_at`
-
-3. **spaced_reviews** — Revisoes espaçadas (SRS)
-   - `id`, `user_id`, `subject_id` (FK -> user_subjects), `review_date`, `interval_days` (1,3,7,15,30), `completed`, `performance_rating` (1-5), `next_review_date`, `created_at`
-
-4. **questions** — Banco de questoes
-   - `id`, `user_id`, `subject_id`, `question_text`, `options` (JSONB), `correct_option`, `explanation`, `difficulty` (1-5), `source`, `created_at`
-
-5. **question_attempts** — Tentativas de resposta
-   - `id`, `user_id`, `question_id` (FK -> questions), `selected_option`, `is_correct`, `time_spent_seconds`, `created_at`
-
-6. **flashcards** — Cartoes de estudo
-   - `id`, `user_id`, `subject_id`, `front`, `back`, `difficulty`, `last_reviewed_at`, `next_review_at`, `review_count`, `created_at`
-
-7. **user_notes** — Anotacoes por disciplina
-   - `id`, `user_id`, `subject_id`, `title`, `content`, `created_at`, `updated_at`
-
-8. **study_materials** — Materiais de estudo (PDFs, links)
-   - `id`, `user_id`, `subject_id`, `title`, `file_url`, `material_type` (pdf, link, text), `created_at`
-
-Todas as tabelas terao RLS habilitado com politicas para que usuarios acessem apenas seus proprios dados.
+| Aba Modelo | Status Atual | Acao |
+|---|---|---|
+| Planner | Parcial (timer existe separado) | Recriar com calendario, blocos de estudo, heatmap de intensidade, timer Pomodoro integrado, registro rapido de sessoes, historico recente |
+| Arsenal | Parcial (materials + notes separados) | Nova aba: processamento de edital com IA, gestao de disciplinas com topicos e checkboxes, relevancia/incidencia/conhecimento por disciplina |
+| Analise | Parcial (progress existe) | Recriar como "Analise de Batalha" com stats cards, progresso por topicos, registro rapido de questoes, programador de revisoes, grafico de acuracia, radar 5 eixos, metas semanais, lembretes |
+| Cadernos | Parcial (notes existe) | Recriar como "Cadernos Inteligentes" com grid de disciplinas, nota rapida vinculada, "Expandir com IA", notas recentes |
+| Historico | Nao existe | Nova aba: tabela completa de sessoes com data, disciplina, material, paginas, duracao, compreensao (estrelas) |
+| Previsor.IA | Nao existe | Nova aba: gerador de ciclos com IA (prever data de conclusao ou calcular ritmo diario), selecao de disciplinas |
+| Coach.IA | Nao existe | Nova aba: conselho estrategico via IA com historico de conselhos |
+| Professor.IA | Nao existe | Nova aba: chat com IA professor especialista no edital |
+| Conquistas | Nao existe | Nova aba: mural de badges gamificados + avanco diario (ring chart) |
+| Configuracoes | Existe | Manter |
 
 ---
 
-## Fase 2C: Motor de Planejamento com IA (5 Vetores)
+## Reestruturacao do Sidebar
 
-### Edge Function: `generate-study-plan`
+Nova ordem de navegacao (espelhando o modelo):
 
-Uma funcao backend que recebe os dados do usuario e gera/atualiza o plano de estudos usando Lovable AI (Gemini).
+1. **Planner** (icone: CalendarDays) - Calendario + Timer + Sessoes
+2. **Arsenal** (icone: Shield) - Edital + Disciplinas + Topicos
+3. **Analise** (icone: BarChart3) - Dashboard analitico completo
+4. **Cadernos** (icone: BookOpen) - Anotacoes inteligentes
+5. **Historico** (icone: History) - Tabela de sessoes
+6. **Previsor.IA** (icone: Sparkles) - Gerador de ciclos
+7. **Coach.IA** (icone: Brain) - Conselho estrategico
+8. **Professor.IA** (icone: MessageCircle) - Chat com professor IA
+9. **Conquistas** (icone: Trophy) - Gamificacao
+10. **Configuracoes** (icone: Settings) - Perfil e preferencias
 
-**Fluxo:**
-1. Frontend envia: disciplinas, nivel de conhecimento, dados do concurso, disponibilidade
-2. Edge function chama Lovable AI Gateway com tool calling para retornar dados estruturados
-3. A IA calcula os 5 vetores para cada disciplina:
-   - **Relevancia**: peso do tema para o concurso selecionado
-   - **Incidencia**: frequencia historica em provas da banca
-   - **Acuracia**: nivel de conhecimento informado + desempenho em questoes
-   - **Desempenho**: horas estudadas + acertos em simulados
-   - **Lacuna (Gap)**: risco de esquecimento baseado no tempo desde ultima revisao
-4. Retorna um plano priorizado com horas recomendadas por disciplina
-5. Dados salvos na tabela `study_plan`
-
-### Edge Function: `generate-reviews`
-
-Calcula as proximas revisoes espaçadas com base no desempenho e insere na tabela `spaced_reviews`.
+Adicionar frase motivacional fixa no topo direito de cada aba (como no modelo: "Persistencia transforma sonho em realidade").
 
 ---
 
-## Fase 2D: Dashboard Completo com Abas
+## Detalhes por Aba
 
-Transformar o dashboard basico em uma interface completa com navegacao lateral e abas:
+### 1. Planner (nova - substitui overview + timer)
 
-### Estrutura de componentes:
+Layout baseado no screenshot: area principal com calendario mensal + coluna direita com timer e registro rapido.
 
-```text
-src/
-  components/
-    dashboard/
-      Sidebar.tsx          -- Navegacao lateral com icones
-      DashboardLayout.tsx  -- Layout com sidebar + conteudo
-      OverviewTab.tsx      -- Visao geral (stats, graficos, revisoes pendentes)
-      StudyPlanTab.tsx     -- Plano de estudos com 5 vetores, prioridades
-      ReviewsTab.tsx       -- Revisoes espaçadas do dia, calendario
-      QuestionsTab.tsx     -- Banco de questoes, simulados
-      FlashcardsTab.tsx    -- Flashcards por disciplina
-      MaterialsTab.tsx     -- Upload de PDFs, anotacoes, links
-      NotesTab.tsx         -- Anotacoes por disciplina
-      ProgressTab.tsx      -- Graficos de evolucao (recharts)
-      SettingsTab.tsx      -- Perfil, preferencias, dados da conta
-      StudyTimerTab.tsx    -- Cronometro Pomodoro/livre
-```
+- **Heatmap de Intensidade**: barra horizontal no topo mostrando intensidade de estudo por dia (estilo GitHub contributions)
+- **Calendario mensal**: grid com dias, botao "+ Bloco" em cada dia para adicionar sessao de estudo
+- **Foco Pomodoro** (coluna direita): timer grande com play/reset, mostrando 25:00
+- **Registro de Sessoes Rapido** (coluna direita): formulario com disciplina, material, pagina inicio/fim, duracao, compreensao (5 estrelas), botao "Adicionar Sessao"
+- **Historico Recente de Sessoes** (abaixo): tabela com ultimas 10 sessoes
 
-### Abas e funcionalidades:
+### 2. Arsenal (nova - substitui materials)
 
-1. **Visao Geral** — Cards de stats, mensagem motivacional, revisoes do dia, grafico de horas semanais
-2. **Plano de Estudos** — Tabela com disciplinas ordenadas por prioridade (5 vetores), botao "Gerar/Atualizar Plano com IA"
-3. **Revisoes** — Lista de revisoes pendentes do dia, calendario com proximas revisoes, marcar como concluida com rating
-4. **Questoes** — Criar questoes manualmente ou via IA, responder questoes, ver estatisticas de acerto
-5. **Flashcards** — Criar, revisar (modo estudo), estatisticas de revisao
-6. **Materiais** — Upload de PDFs (Supabase Storage), links, organizados por disciplina
-7. **Anotacoes** — Editor de texto por disciplina/tema
-8. **Progresso** — Graficos com recharts: evolucao por disciplina, horas estudadas, acuracia
-9. **Cronometro** — Timer de estudo (Pomodoro ou livre), registra sessoes automaticamente
-10. **Configuracoes** — Editar perfil, alterar concurso-alvo, reconfigurar disponibilidade
+- **Stats cards** no topo: disciplinas ativas, topicos no edital, topicos dominados, conclusao geral %
+- **Processar Novo Edital**: textarea para colar conteudo do edital, botao "Processar Edital Manual" que usa IA para extrair disciplinas e topicos
+- **Adicionar Nova Disciplina**: formulario inline com nome, relevancia (1-5), incidencia (1-5), conhecimento (1-5), botao "+ Adicionar"
+- **Grid de Disciplinas**: cards com nome da disciplina colorido, metricas (Relevancia, Incidencia, Conhecimento), lista de topicos com checkboxes, botao editar, campo "Novo topico" + "Adicionar"
 
-### Navegacao:
+### 3. Analise (recriar progress)
 
-- Sidebar colapsavel em mobile (hamburger menu)
-- URL por aba: `/dashboard?tab=overview`, `/dashboard?tab=plan`, etc.
-- Icones consistentes com lucide-react
+Layout 3 colunas: principal + sidebar direita.
+
+- **Stats cards**: Horas Totais, Taxa de Conclusao %, Eficiencia Media %, Topicos Dominados
+- **Progresso por Disciplina (Topicos)**: barras horizontais por disciplina mostrando topicos concluidos/total
+- **Registro Rapido de Questoes** (sidebar): selecionar disciplina, questoes tentadas, questoes corretas, botao "Registrar"
+- **Programador de Revisoes** (sidebar): selecionar disciplina, periodo (7 dias), topico, botao "Agendar"
+- **Metas de Estudo Semanal**: barras de progresso para horas de estudo e questoes resolvidas
+- **Desempenho em Questoes**: grafico de barras de acuracia por disciplina
+- **Analise de Eixos**: grafico radar com 5 eixos (Relevancia, Incidencia, Acuracia, Desempenho, Lacuna) por disciplina
+- **Lembretes** (sidebar): campo para adicionar lembretes com data
+
+### 4. Cadernos (recriar notes)
+
+- **Nova Nota Rapida** (coluna esquerda): vincular a disciplina (select), textarea para anotacao/flashcard, seletor de cor, botao "Salvar Nota", botao "Expandir com IA" (usa IA para expandir a anotacao)
+- **Grid de Disciplinas** (colunas direitas): cards com nome da disciplina e contagem de notas, clicavel para ver notas daquela disciplina
+- **Notas Recentes**: lista das ultimas notas criadas
+
+### 5. Historico (nova)
+
+- Tabela completa e paginada de todas as sessoes de estudo
+- Colunas: Data, Disciplina, Material, Paginas/Video, Duracao, Compreensao (estrelas)
+- Filtros por disciplina e periodo
+- Botao "Adicionar Sessao" no topo
+
+### 6. Previsor.IA (nova)
+
+- **Gerador de Ciclos**: duas abas - "Prever Data de Conclusao" e "Calcular Ritmo Diario"
+- Inputs: Tempo Diario (minutos), Data de Inicio
+- **Disciplinas a Incluir**: grid de checkboxes com todas as disciplinas, "Selecionar Todas"
+- Botao "Gerar Previsao do Ciclo" que chama edge function com IA
+- Resultado: cronograma gerado com datas previstas
+
+### 7. Coach.IA (nova)
+
+- **Conselho Estrategico** (coluna principal): area de texto mostrando o conselho gerado, botao "Gerar Conselho" que analisa dados do usuario e gera feedback personalizado via IA
+- **Historico de Conselhos** (coluna direita): lista dos ultimos conselhos gerados com timestamps
+
+### 8. Professor.IA (nova)
+
+- Interface de chat: mensagens em bolhas (IA e usuario)
+- Mensagem inicial da IA com saudacao
+- Campo de input "Pergunte ao Professor..." com botao enviar
+- Contexto do edital e disciplinas do usuario enviado junto com cada pergunta
+- Historico de conversa mantido na sessao
+
+### 9. Conquistas (nova)
+
+- **Mural de Badges**: grid de conquistas com icones, nome, status (desbloqueado/bloqueado)
+- Badges: Iniciante, Leitor Voraz, Entendimento Pleno, Mestre da Materia, Esforcado, Anotador, Polimata, Conquistador, Maratonista, Questionador, Precisao, Revisor
+- **Avanco Diario (Hoje)**: ring chart mostrando horas estudadas hoje vs meta diaria
 
 ---
 
-## Fase 2E: Teste End-to-End
+## Novas Tabelas no Banco de Dados
 
-Apos implementacao, testar:
-1. Criar conta com email/senha
-2. Verificar que onboarding aparece
-3. Completar os 4 passos do wizard
-4. Verificar que o dashboard carrega com dados do onboarding
-5. Gerar plano de estudos com IA
-6. Testar Google OAuth
+1. **topics** - Topicos por disciplina
+   - `id`, `user_id`, `subject_id` (FK), `name`, `completed` (boolean), `order_index`, `created_at`
+
+2. **ai_coaching_history** - Historico de conselhos do Coach.IA
+   - `id`, `user_id`, `content` (text), `created_at`
+
+3. **user_achievements** - Conquistas desbloqueadas
+   - `id`, `user_id`, `achievement_key` (text), `unlocked_at`
+
+4. **reminders** - Lembretes do usuario
+   - `id`, `user_id`, `text`, `reminder_date`, `completed`, `created_at`
+
+Todas com RLS habilitado.
+
+### Alteracoes em tabelas existentes
+
+- **study_sessions**: adicionar colunas `material_name` (text), `pages_start` (int), `pages_end` (int), `comprehension_rating` (int 1-5)
 
 ---
 
-## Detalhes Tecnicos
+## Novas Edge Functions
 
-### Sequencia de implementacao:
+1. **process-edital** - Recebe texto do edital, usa IA para extrair disciplinas e topicos estruturados
+2. **ai-coach** - Analisa dados do usuario e gera conselho estrategico personalizado
+3. **ai-professor** - Chat contextualizado com dados do edital e disciplinas do usuario
+4. **predict-cycle** - Calcula previsao de conclusao ou ritmo diario necessario
+5. **expand-note** - Recebe anotacao e usa IA para expandir/enriquecer o conteudo
 
-1. Migracoes de banco (todas as tabelas + RLS)
-2. Google OAuth via Cloud social auth tool
-3. Edge functions (`generate-study-plan`, `generate-reviews`)
-4. Componentes do dashboard (sidebar + todas as abas)
-5. Integracao com dados reais (queries Supabase + recharts)
-6. Teste do fluxo completo
+---
 
-### Dependencias existentes ja suficientes:
-- `recharts` para graficos
-- `framer-motion` para animacoes
-- `date-fns` para datas
-- `lucide-react` para icones
-- `@supabase/supabase-js` para backend
+## Arquivos a Criar/Modificar
 
-### Storage:
-- Criar bucket `study-materials` no Supabase Storage para PDFs
-- Politicas de storage para acesso restrito ao usuario dono
+### Novos componentes (9 arquivos):
+- `src/components/dashboard/PlannerTab.tsx`
+- `src/components/dashboard/ArsenalTab.tsx`
+- `src/components/dashboard/AnalysisTab.tsx`
+- `src/components/dashboard/NotebooksTab.tsx`
+- `src/components/dashboard/HistoryTab.tsx`
+- `src/components/dashboard/PredictorTab.tsx`
+- `src/components/dashboard/CoachTab.tsx`
+- `src/components/dashboard/ProfessorTab.tsx`
+- `src/components/dashboard/AchievementsTab.tsx`
+
+### Modificar (3 arquivos):
+- `src/components/dashboard/Sidebar.tsx` - Nova navegacao com 10 abas
+- `src/pages/Dashboard.tsx` - Novo switch/case com todas as abas
+- `src/components/dashboard/DashboardLayout.tsx` - Adicionar frase motivacional no topo
+
+### Remover (abas antigas que serao substituidas):
+- `OverviewTab.tsx` (incorporado no Planner)
+- `StudyPlanTab.tsx` (incorporado no Arsenal/Analise)
+- `ReviewsTab.tsx` (incorporado na Analise)
+- `QuestionsTab.tsx` (mantido como sub-funcionalidade)
+- `FlashcardsTab.tsx` (incorporado nos Cadernos)
+- `MaterialsTab.tsx` (incorporado no Arsenal)
+- `NotesTab.tsx` (substituido por NotebooksTab)
+- `ProgressTab.tsx` (substituido por AnalysisTab)
+- `StudyTimerTab.tsx` (incorporado no Planner)
+
+### Novas Edge Functions (5 arquivos):
+- `supabase/functions/process-edital/index.ts`
+- `supabase/functions/ai-coach/index.ts`
+- `supabase/functions/ai-professor/index.ts`
+- `supabase/functions/predict-cycle/index.ts`
+- `supabase/functions/expand-note/index.ts`
+
+---
+
+## Sequencia de Implementacao
+
+1. Migracoes de banco (novas tabelas + alteracoes)
+2. Edge functions (5 novas funcoes de IA)
+3. Sidebar e DashboardLayout atualizados
+4. Componentes das abas (Planner, Arsenal, Analise, Cadernos, Historico, Previsor, Coach, Professor, Conquistas)
+5. Dashboard.tsx com novo roteamento
+6. Limpeza dos componentes antigos
 
