@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_coaching_history: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       flashcards: {
         Row: {
           back: string
@@ -191,6 +212,33 @@ export type Database = {
           },
         ]
       }
+      reminders: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          reminder_date: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          reminder_date: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          reminder_date?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       spaced_reviews: {
         Row: {
           completed: boolean
@@ -328,31 +376,43 @@ export type Database = {
       }
       study_sessions: {
         Row: {
+          comprehension_rating: number | null
           created_at: string
           duration_minutes: number | null
           ended_at: string | null
           id: string
+          material_name: string | null
           notes: string | null
+          pages_end: number | null
+          pages_start: number | null
           started_at: string
           subject_id: string | null
           user_id: string
         }
         Insert: {
+          comprehension_rating?: number | null
           created_at?: string
           duration_minutes?: number | null
           ended_at?: string | null
           id?: string
+          material_name?: string | null
           notes?: string | null
+          pages_end?: number | null
+          pages_start?: number | null
           started_at?: string
           subject_id?: string | null
           user_id: string
         }
         Update: {
+          comprehension_rating?: number | null
           created_at?: string
           duration_minutes?: number | null
           ended_at?: string | null
           id?: string
+          material_name?: string | null
           notes?: string | null
+          pages_end?: number | null
+          pages_start?: number | null
           started_at?: string
           subject_id?: string | null
           user_id?: string
@@ -366,6 +426,65 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      topics: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          subject_id: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number
+          subject_id: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          subject_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topics_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "user_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_achievements: {
+        Row: {
+          achievement_key: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_notes: {
         Row: {
