@@ -80,6 +80,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subjects: {
+        Row: {
+          created_at: string
+          id: string
+          knowledge_level: number
+          name: string
+          updated_at: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          knowledge_level?: number
+          name: string
+          updated_at?: string
+          user_id: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          knowledge_level?: number
+          name?: string
+          updated_at?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -17,15 +17,30 @@ const motivationalMessages = [
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardingDone, setOnboardingDone] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
+    const checkOnboarding = async (userId: string) => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (data && !data.onboarding_completed) {
+        navigate("/onboarding");
+        return;
+      }
+      setOnboardingDone(true);
+      setLoading(false);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         navigate("/auth");
       } else {
         setUser(session.user);
-        setLoading(false);
+        checkOnboarding(session.user.id);
       }
     });
 
@@ -34,7 +49,7 @@ const Dashboard = () => {
         navigate("/auth");
       } else {
         setUser(session.user);
-        setLoading(false);
+        checkOnboarding(session.user.id);
       }
     });
 
@@ -114,25 +129,7 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Onboarding Prompt */}
-        <Card className="glass border-primary/20">
-          <CardHeader>
-            <CardTitle className="font-display flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              Configure seu primeiro plano de estudos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">
-              Para gerar seu plano personalizado, precisamos saber qual concurso você está estudando,
-              suas disciplinas e sua disponibilidade de horários.
-            </p>
-            <Button className="glow">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Iniciar Configuração
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Placeholder for study plan content */}
       </main>
     </div>
   );
