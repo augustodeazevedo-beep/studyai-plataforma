@@ -1,14 +1,14 @@
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, BookOpen, CalendarCheck, HelpCircle, Layers,
-  FolderOpen, StickyNote, BarChart3, Timer, Settings, LogOut, Menu, X, Brain,
+  CalendarDays, Shield, BarChart3, BookOpen, History,
+  Sparkles, Brain, MessageCircle, Trophy, Settings, LogOut, Menu, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 export type TabKey =
-  | "overview" | "plan" | "reviews" | "questions" | "flashcards"
-  | "materials" | "notes" | "progress" | "timer" | "settings";
+  | "planner" | "arsenal" | "analysis" | "notebooks" | "history"
+  | "predictor" | "coach" | "professor" | "achievements" | "settings";
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -17,16 +17,16 @@ interface SidebarProps {
   userName: string;
 }
 
-const NAV_ITEMS: { key: TabKey; label: string; icon: typeof LayoutDashboard }[] = [
-  { key: "overview", label: "Visão Geral", icon: LayoutDashboard },
-  { key: "plan", label: "Plano de Estudos", icon: BookOpen },
-  { key: "reviews", label: "Revisões", icon: CalendarCheck },
-  { key: "questions", label: "Questões", icon: HelpCircle },
-  { key: "flashcards", label: "Flashcards", icon: Layers },
-  { key: "materials", label: "Materiais", icon: FolderOpen },
-  { key: "notes", label: "Anotações", icon: StickyNote },
-  { key: "progress", label: "Progresso", icon: BarChart3 },
-  { key: "timer", label: "Cronômetro", icon: Timer },
+const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: boolean }[] = [
+  { key: "planner", label: "Planner", icon: CalendarDays },
+  { key: "arsenal", label: "Arsenal", icon: Shield },
+  { key: "analysis", label: "Análise", icon: BarChart3 },
+  { key: "notebooks", label: "Cadernos", icon: BookOpen },
+  { key: "history", label: "Histórico", icon: History },
+  { key: "predictor", label: "Previsor.IA", icon: Sparkles, ai: true },
+  { key: "coach", label: "Coach.IA", icon: Brain, ai: true },
+  { key: "professor", label: "Professor.IA", icon: MessageCircle, ai: true },
+  { key: "achievements", label: "Conquistas", icon: Trophy },
   { key: "settings", label: "Configurações", icon: Settings },
 ];
 
@@ -47,7 +47,10 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           )}
         >
           <item.icon className="h-4 w-4 flex-shrink-0" />
-          <span>{item.label}</span>
+          <span className="flex-1">{item.label}</span>
+          {item.ai && (
+            <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">IA</span>
+          )}
         </button>
       ))}
     </nav>
@@ -55,7 +58,6 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
 
   return (
     <>
-      {/* Mobile toggle */}
       <Button
         variant="ghost"
         size="icon"
@@ -65,12 +67,10 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
         {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
 
-      {/* Mobile overlay */}
       {open && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden" onClick={() => setOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed top-0 left-0 h-full w-64 bg-sidebar-background border-r border-sidebar-border flex flex-col z-40 transition-transform duration-300",
@@ -78,7 +78,6 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
           <img src="/logo-cognos.png" alt="COGNOS" className="h-7" />
           <span className="font-display text-base font-bold">
@@ -86,12 +85,10 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           </span>
         </div>
 
-        {/* Nav */}
         <div className="flex-1 overflow-y-auto p-3">
           {nav}
         </div>
 
-        {/* User & logout */}
         <div className="border-t border-sidebar-border p-3 space-y-2">
           <div className="flex items-center gap-2 px-3 py-2">
             <Brain className="h-4 w-4 text-sidebar-primary" />

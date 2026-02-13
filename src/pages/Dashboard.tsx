@@ -5,15 +5,15 @@ import { Brain } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import type { TabKey } from "@/components/dashboard/Sidebar";
-import OverviewTab from "@/components/dashboard/OverviewTab";
-import StudyPlanTab from "@/components/dashboard/StudyPlanTab";
-import ReviewsTab from "@/components/dashboard/ReviewsTab";
-import QuestionsTab from "@/components/dashboard/QuestionsTab";
-import FlashcardsTab from "@/components/dashboard/FlashcardsTab";
-import MaterialsTab from "@/components/dashboard/MaterialsTab";
-import NotesTab from "@/components/dashboard/NotesTab";
-import ProgressTab from "@/components/dashboard/ProgressTab";
-import StudyTimerTab from "@/components/dashboard/StudyTimerTab";
+import PlannerTab from "@/components/dashboard/PlannerTab";
+import ArsenalTab from "@/components/dashboard/ArsenalTab";
+import AnalysisTab from "@/components/dashboard/AnalysisTab";
+import NotebooksTab from "@/components/dashboard/NotebooksTab";
+import HistoryTab from "@/components/dashboard/HistoryTab";
+import PredictorTab from "@/components/dashboard/PredictorTab";
+import CoachTab from "@/components/dashboard/CoachTab";
+import ProfessorTab from "@/components/dashboard/ProfessorTab";
+import AchievementsTab from "@/components/dashboard/AchievementsTab";
 import SettingsTab from "@/components/dashboard/SettingsTab";
 
 const Dashboard = () => {
@@ -21,7 +21,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get("tab") as TabKey) || "overview";
+  const activeTab = (searchParams.get("tab") as TabKey) || "planner";
 
   const setActiveTab = (tab: TabKey) => {
     setSearchParams({ tab });
@@ -82,17 +82,17 @@ const Dashboard = () => {
 
   const renderTab = () => {
     switch (activeTab) {
-      case "overview": return <OverviewTab userId={user.id} />;
-      case "plan": return <StudyPlanTab userId={user.id} />;
-      case "reviews": return <ReviewsTab userId={user.id} />;
-      case "questions": return <QuestionsTab userId={user.id} />;
-      case "flashcards": return <FlashcardsTab userId={user.id} />;
-      case "materials": return <MaterialsTab userId={user.id} />;
-      case "notes": return <NotesTab userId={user.id} />;
-      case "progress": return <ProgressTab userId={user.id} />;
-      case "timer": return <StudyTimerTab userId={user.id} />;
+      case "planner": return <PlannerTab userId={user.id} />;
+      case "arsenal": return <ArsenalTab userId={user.id} />;
+      case "analysis": return <AnalysisTab userId={user.id} />;
+      case "notebooks": return <NotebooksTab userId={user.id} />;
+      case "history": return <HistoryTab userId={user.id} />;
+      case "predictor": return <PredictorTab userId={user.id} />;
+      case "coach": return <CoachTab userId={user.id} />;
+      case "professor": return <ProfessorTab userId={user.id} />;
+      case "achievements": return <AchievementsTab userId={user.id} />;
       case "settings": return <SettingsTab userId={user.id} />;
-      default: return <OverviewTab userId={user.id} />;
+      default: return <PlannerTab userId={user.id} />;
     }
   };
 
