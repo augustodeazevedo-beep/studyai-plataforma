@@ -205,38 +205,36 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold font-display">🗓️ Planner de Estudos</h1>
 
-      {/* Heatmap */}
-      <div className="flex gap-6">
-        <Card className="glass flex-1">
-          <CardHeader className="py-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">Histórico de Intensidade</CardTitle>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Menos</span>
-                <div className="flex gap-0.5">
-                  <div className="w-3 h-3 rounded-sm bg-muted" />
-                  <div className="w-3 h-3 rounded-sm bg-primary/30" />
-                  <div className="w-3 h-3 rounded-sm bg-primary/60" />
-                  <div className="w-3 h-3 rounded-sm bg-primary" />
-                </div>
-                <span>Mais</span>
+      {/* Heatmap - 90 days */}
+      <Card className="glass">
+        <CardHeader className="py-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Histórico de Intensidade</CardTitle>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Menos</span>
+              <div className="flex gap-0.5">
+                <div className="w-3 h-3 rounded-sm bg-muted" />
+                <div className="w-3 h-3 rounded-sm bg-primary/30" />
+                <div className="w-3 h-3 rounded-sm bg-primary/60" />
+                <div className="w-3 h-3 rounded-sm bg-primary" />
               </div>
+              <span>Mais</span>
             </div>
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="flex gap-1 flex-wrap">
-              {Array.from({ length: 30 }, (_, i) => {
-                const d = new Date(); d.setDate(d.getDate() - 29 + i);
-                const key = format(d, "yyyy-MM-dd");
-                const count = sessionDates.filter(sd => sd === key).length;
-                return (
-                  <div key={i} className={`w-4 h-4 rounded-sm transition-colors ${count === 0 ? "bg-muted" : count === 1 ? "bg-primary/30" : count === 2 ? "bg-primary/60" : "bg-primary"}`} title={`${key}: ${count} sessões`} />
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-3">
+          <div className="flex gap-[3px] overflow-x-auto">
+            {Array.from({ length: 90 }, (_, i) => {
+              const d = new Date(); d.setDate(d.getDate() - 89 + i);
+              const key = format(d, "yyyy-MM-dd");
+              const count = sessionDates.filter(sd => sd === key).length;
+              return (
+                <div key={i} className={`w-3 h-3 rounded-sm flex-shrink-0 transition-colors ${count === 0 ? "bg-muted" : count === 1 ? "bg-primary/30" : count === 2 ? "bg-primary/60" : "bg-primary"}`} title={`${format(d, "dd/MM")}: ${count} sessões`} />
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex gap-6">
         {/* Calendar Grid - takes most space */}
