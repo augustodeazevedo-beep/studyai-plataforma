@@ -146,6 +146,7 @@ const Onboarding = () => {
           exam_date: examDate ? format(examDate, "yyyy-MM-dd") : null,
           study_days: studyDays,
           daily_hours: Number(dailyHours),
+          banca: banca || null,
           onboarding_completed: true,
         })
         .eq("user_id", user.id);

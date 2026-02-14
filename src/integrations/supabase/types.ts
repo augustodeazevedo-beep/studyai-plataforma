@@ -85,6 +85,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          banca: string | null
           created_at: string
           daily_hours: number | null
           exam_date: string | null
@@ -99,6 +100,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          banca?: string | null
           created_at?: string
           daily_hours?: number | null
           exam_date?: string | null
@@ -113,6 +115,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          banca?: string | null
           created_at?: string
           daily_hours?: number | null
           exam_date?: string | null
