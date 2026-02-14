@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,33 +7,33 @@ import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkl
 const features = [
   {
     icon: Brain,
-    title: "IA Híbrida",
-    description: "A IA sugere, você ajusta. Planos personalizados com base em 5 vetores de aprendizagem.",
+    title: "IA que Estuda com Você",
+    description: "Chega de cronograma genérico. A IA analisa 5 dimensões do seu aprendizado e monta um plano sob medida — que se adapta a cada sessão.",
   },
   {
     icon: Clock,
-    title: "Curva do Esquecimento",
-    description: "Revisões espaçadas calculadas pela neurociência para fixar conteúdo de forma duradoura.",
+    title: "Nunca Mais Esqueça o que Estudou",
+    description: "Revisões espaçadas baseadas em neurociência garantem que o conteúdo fique na memória de longo prazo — exatamente quando a banca vai cobrar.",
   },
   {
     icon: Target,
-    title: "5 Vetores de Estudo",
-    description: "Relevância, Incidência, Acurácia, Desempenho e Lacuna definem suas prioridades.",
+    title: "Estude o que Mais Cai",
+    description: "Cruza relevância, incidência em provas anteriores e suas lacunas de conhecimento para priorizar o que realmente importa na sua aprovação.",
   },
   {
     icon: BarChart3,
-    title: "Dashboard Inteligente",
-    description: "Acompanhe sua evolução com gráficos, indicador de confiança e cronômetro de estudo.",
+    title: "Veja sua Evolução Real",
+    description: "Dashboard com métricas claras: horas estudadas, taxa de acerto, radar de competências e projeção de quando você estará pronto.",
   },
   {
     icon: BookOpen,
-    title: "Gestão de Materiais",
-    description: "Organize PDFs, flashcards e anotações vinculados ao seu plano de revisão.",
+    title: "Tudo em Um Só Lugar",
+    description: "PDFs, questões, flashcards e anotações integrados ao seu plano. Sem alternar entre 10 apps — foco total no que importa.",
   },
   {
     icon: Shield,
-    title: "Dados Protegidos",
-    description: "Segurança LGPD com criptografia e isolamento total dos seus dados pessoais.",
+    title: "Seus Dados, Sua Privacidade",
+    description: "Criptografia de ponta a ponta e conformidade LGPD. Seu desempenho e dados pessoais nunca são compartilhados.",
   },
 ];
 
@@ -46,6 +47,13 @@ const fadeUp = {
 };
 
 const Index = () => {
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+    return () => {
+      document.documentElement.classList.remove("dark");
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Navbar */}
@@ -86,7 +94,7 @@ const Index = () => {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 text-sm text-muted-foreground">
               <Sparkles className="h-4 w-4 text-primary" />
-              Plataforma inteligente para concursos públicos
+              A plataforma de estudos que aprovados recomendam
             </div>
           </motion.div>
 
@@ -96,11 +104,11 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            Estude com{" "}
-            <span className="text-gradient">inteligência</span>
+            Pare de estudar{" "}
+            <span className="text-gradient">no escuro.</span>
             <br />
-            aprovação com{" "}
-            <span className="text-gradient">estratégia</span>
+            Sua aprovação tem{" "}
+            <span className="text-gradient">método.</span>
           </motion.h1>
 
           <motion.p
@@ -109,8 +117,8 @@ const Index = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            A IA planeja seus estudos usando neurociência e 5 vetores de aprendizagem.
-            Você está na fila — sua vez vai chegar. Só não desista.
+            Enquanto outros estudam mais horas, você vai estudar de forma mais inteligente.
+            IA + neurociência para concurseiros que não podem perder mais tempo.
           </motion.p>
 
           <motion.div
@@ -138,9 +146,9 @@ const Index = () => {
             transition={{ duration: 0.8, delay: 0.8 }}
           >
             {[
-              { value: "5", label: "Vetores de IA" },
-              { value: "∞", label: "Revisões Adaptativas" },
-              { value: "100%", label: "LGPD Compliant" },
+              { value: "5", label: "Vetores de Priorização" },
+              { value: "∞", label: "Revisões Inteligentes" },
+              { value: "100%", label: "Dados Protegidos" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="font-display text-2xl sm:text-3xl font-bold text-primary">{stat.value}</div>
@@ -163,10 +171,10 @@ const Index = () => {
             custom={0}
           >
             <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4">
-              Recursos que fazem a <span className="text-gradient">diferença</span>
+              Por que concurseiros escolhem o <span className="text-gradient">COGNOS</span>
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Cada funcionalidade foi projetada com base em neurociência e nas necessidades reais de concurseiros.
+              Cada recurso foi desenhado para resolver os problemas reais de quem estuda para concurso — não para impressionar investidores.
             </p>
           </motion.div>
 
@@ -207,13 +215,13 @@ const Index = () => {
             <div className="relative z-10">
               <TrendingUp className="h-12 w-12 text-primary mx-auto mb-6" />
               <h2 className="font-display text-2xl sm:text-3xl font-bold mb-4">
-                Você está na fila.
+                Você já perdeu tempo demais
                 <br />
-                <span className="text-gradient">Sua vez vai chegar.</span>
+                <span className="text-gradient">estudando sem direção.</span>
               </h2>
               <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-                Sem cobranças agressivas. Sem punições. Apenas um planejamento inteligente
-                que respeita seu ritmo e te mantém no caminho da aprovação.
+                Sem cobranças tóxicas. Sem culpa. O COGNOS respeita seu ritmo, mas não te deixa estagnar.
+                É o equilíbrio entre empatia e alta performance.
               </p>
               <Button size="lg" asChild className="glow">
                 <Link to="/auth?tab=signup">
