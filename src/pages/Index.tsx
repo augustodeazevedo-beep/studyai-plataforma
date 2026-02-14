@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkles, BookOpen, Zap } from "lucide-react";
 import TestimonialsSection from "@/components/landing/TestimonialsSection";
+import PricingSection from "@/components/landing/PricingSection";
 import FAQSection from "@/components/landing/FAQSection";
 
 const features = [
@@ -237,6 +238,9 @@ const Index = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* Pricing */}
+      <PricingSection />
 
       {/* FAQ */}
       <FAQSection />
