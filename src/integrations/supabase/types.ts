@@ -283,6 +283,50 @@ export type Database = {
           },
         ]
       }
+      study_calendar_blocks: {
+        Row: {
+          block_date: string
+          created_at: string
+          duration_minutes: number
+          id: string
+          material_name: string | null
+          order_index: number
+          subject_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          block_date: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          material_name?: string | null
+          order_index?: number
+          subject_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          block_date?: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          material_name?: string | null
+          order_index?: number
+          subject_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_calendar_blocks_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "user_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_materials: {
         Row: {
           created_at: string
