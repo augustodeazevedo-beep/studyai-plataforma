@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAchievements } from "@/lib/checkAchievements";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,9 +52,13 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     const monthStart = format(startOfMonth(currentMonth), "yyyy-MM-dd");
     const monthEnd = format(endOfMonth(currentMonth), "yyyy-MM-dd");
 
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const heatmapStart = format(ninetyDaysAgo, "yyyy-MM-dd");
+
     const [subRes, sesRes, blockRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
-      supabase.from("study_sessions").select("*, user_subjects(name)").eq("user_id", userId).order("started_at", { ascending: false }).limit(10),
+      supabase.from("study_sessions").select("*, user_subjects(name)").eq("user_id", userId).gte("started_at", heatmapStart).order("started_at", { ascending: false }),
       supabase.from("study_calendar_blocks").select("*, user_subjects(name)").eq("user_id", userId).gte("block_date", monthStart).lte("block_date", monthEnd).order("order_index"),
     ]);
     setSubjects(subRes.data || []);
@@ -196,6 +201,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     toast.success("Sessão registrada!");
     setSessionForm({ subject_id: "", material_name: "", pages_start: "", pages_end: "", duration_minutes: "60", comprehension_rating: 3 });
     loadData();
+    checkAchievements(userId);
   };
 
   // Heatmap

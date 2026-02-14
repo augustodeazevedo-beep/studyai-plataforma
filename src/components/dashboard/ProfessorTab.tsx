@@ -33,12 +33,13 @@ const ProfessorTab = ({ userId }: ProfessorTabProps) => {
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
+      if (!token) { toast.error("Faça login novamente"); setLoading(false); return; }
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ messages: updatedMessages.filter(m => m.role !== "assistant" || m !== messages[0]).map(m => ({ role: m.role, content: m.content })) }),
       });

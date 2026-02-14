@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { Clock, Target, TrendingUp, CheckCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { checkAchievements } from "@/lib/checkAchievements";
+import { Loader2, Sparkles } from "lucide-react";
 
 interface AnalysisTabProps { userId: string; }
 
@@ -22,6 +24,7 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const [qForm, setQForm] = useState({ subject_id: "", attempted: "", correct: "" });
   const [reminderText, setReminderText] = useState("");
   const [reminderDate, setReminderDate] = useState("");
+  const [generatingPlan, setGeneratingPlan] = useState(false);
 
   const loadData = useCallback(async () => {
     const [subRes, topRes, sesRes, planRes, attRes, remRes] = await Promise.all([
@@ -68,8 +71,61 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
 
   const registerQuestions = async () => {
     if (!qForm.subject_id || !qForm.attempted) { toast.error("Preencha os campos"); return; }
-    toast.success("Questões registradas!");
-    setQForm({ subject_id: "", attempted: "", correct: "" });
+    const attempted = parseInt(qForm.attempted);
+    const correct = parseInt(qForm.correct) || 0;
+    if (attempted <= 0 || correct < 0 || correct > attempted) { toast.error("Valores inválidos"); return; }
+
+    try {
+      // Create question records and attempts
+      for (let i = 0; i < attempted; i++) {
+        const { data: qData, error: qError } = await supabase.from("questions").insert({
+          user_id: userId,
+          subject_id: qForm.subject_id,
+          question_text: `Questão registrada #${Date.now()}-${i}`,
+          correct_option: 0,
+          options: [],
+        }).select("id").single();
+        if (qError || !qData) continue;
+
+        await supabase.from("question_attempts").insert({
+          user_id: userId,
+          question_id: qData.id,
+          selected_option: 0,
+          is_correct: i < correct,
+        });
+      }
+
+      toast.success(`${attempted} questões registradas (${correct} corretas)!`);
+      setQForm({ subject_id: "", attempted: "", correct: "" });
+      loadData();
+      checkAchievements(userId);
+    } catch (e) {
+      toast.error("Erro ao registrar questões");
+    }
+  };
+
+  const generateStudyPlan = async () => {
+    setGeneratingPlan(true);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) { toast.error("Faça login novamente"); return; }
+
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-study-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Erro ao gerar plano");
+      toast.success("Plano de estudos gerado com IA! 🎯");
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao gerar plano");
+    } finally {
+      setGeneratingPlan(false);
+    }
   };
 
   const addReminder = async () => {
@@ -82,7 +138,13 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold font-display">📊 Análise de Batalha</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold font-display">📊 Análise de Batalha</h1>
+        <Button onClick={generateStudyPlan} disabled={generatingPlan}>
+          {generatingPlan ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+          {generatingPlan ? "Gerando..." : "Gerar Plano com IA"}
+        </Button>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
