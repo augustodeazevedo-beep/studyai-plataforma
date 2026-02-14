@@ -1,25 +1,46 @@
 
+## Resultado do Teste Mobile + Proximos Passos
 
-## Substituicao do Logotipo em Todos os Locais
+### 1. Teste Mobile (390px) -- Concluido
+A landing page foi verificada em viewport 390x844 (iPhone 14). Todos os elementos estao responsivos:
+- **Hero:** Titulo, subtitulo e botoes empilham corretamente
+- **Features:** Cards em coluna unica, bem espaçados
+- **Depoimentos:** Cards empilhados verticalmente com estrelas e textos legiveis
+- **FAQ:** Accordion funciona bem, perguntas longas quebram em duas linhas sem problemas
+- **Footer:** Links e copyright organizado em coluna
+- **Nenhum problema encontrado**
 
-### Situacao Atual
-O arquivo `public/logo-cognos.png` ja foi substituido pelo novo icone (cerebro geometrico em ciano) na etapa anterior. Todas as 5 ocorrencias no codigo ja apontam para `/logo-cognos.png`, entao o icone novo ja aparece em:
+### 2. Secao de Planos/Precos
+Criar um novo componente `src/components/landing/PricingSection.tsx` com dois cards comparativos:
 
-1. **Sidebar** (`src/components/dashboard/Sidebar.tsx`, linha 97)
-2. **Pagina de Login** (`src/pages/Auth.tsx`, linha 120)
-3. **Pagina de Onboarding** (`src/pages/Onboarding.tsx`, linha 194)
-4. **Pagina Inicial - Header** (`src/pages/Index.tsx`, linha 55)
-5. **Pagina Inicial - Footer** (`src/pages/Index.tsx`, linha 232)
+**Plano Gratuito:**
+- Planejamento inteligente basico
+- Revisoes espaçadas (limitadas)
+- Dashboard de evolucao
+- 1 edital ativo
 
-### O que falta
-O **favicon** (icone da aba do navegador) ainda usa o antigo `public/favicon.ico`. Precisa ser atualizado tambem.
+**Plano Premium:**
+- IA ilimitada (Coach + Professor)
+- Revisoes espaçadas ilimitadas
+- Simulados com analise detalhada
+- Editais ilimitados
+- Suporte prioritario
+- Preco: "Em breve" ou valor a definir
 
-### Alteracoes
+O componente sera inserido em `src/pages/Index.tsx` entre a secao de CTA motivacional e o FAQ, seguindo o mesmo padrao visual (glass cards, animacoes fadeUp, tema escuro).
 
-1. **Copiar o novo logotipo como favicon**
-   - Copiar `user-uploads://image-24.png` para `public/favicon.png`
+### 3. Publicacao
+Apos implementar a secao de precos, publicar a aplicacao para que as mudancas fiquem disponiveis na URL de producao.
 
-2. **Atualizar `index.html`**
-   - Adicionar `<link rel="icon" href="/favicon.png" type="image/png">` no `<head>`
+---
 
-Nenhuma outra alteracao de codigo e necessaria, pois todos os locais ja referenciam `/logo-cognos.png` que ja contem o novo icone.
+### Detalhes Tecnicos
+
+**Novo arquivo:**
+- `src/components/landing/PricingSection.tsx` -- componente com grid de 2 cards (Gratuito vs Premium), usando os componentes glass existentes, icones lucide-react (Check, Crown, Zap), e animacoes framer-motion com o padrao fadeUp ja usado nas outras secoes
+
+**Arquivo modificado:**
+- `src/pages/Index.tsx` -- importar e inserir `<PricingSection />` entre o CTA motivacional e o `<FAQSection />`
+
+**Publicacao:**
+- Clicar em "Publish" apos as alteracoes para atualizar a URL de producao
