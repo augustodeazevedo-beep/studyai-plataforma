@@ -205,33 +205,53 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold font-display">🗓️ Planner de Estudos</h1>
 
-      {/* Heatmap - 90 days */}
+      {/* Heatmap - 90 days with scroll buttons */}
       <Card className="glass">
         <CardHeader className="py-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Histórico de Intensidade</CardTitle>
+            <CardTitle className="text-sm font-bold">Histórico de Intensidade</CardTitle>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Menos</span>
               <div className="flex gap-0.5">
-                <div className="w-3 h-3 rounded-sm bg-muted" />
-                <div className="w-3 h-3 rounded-sm bg-primary/30" />
-                <div className="w-3 h-3 rounded-sm bg-primary/60" />
-                <div className="w-3 h-3 rounded-sm bg-primary" />
+                <div className="w-3 h-3 rounded-full bg-muted" />
+                <div className="w-3 h-3 rounded-full bg-primary/30" />
+                <div className="w-3 h-3 rounded-full bg-primary/60" />
+                <div className="w-3 h-3 rounded-full bg-primary" />
               </div>
               <span>Mais</span>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pb-3">
-          <div className="flex gap-[3px] overflow-x-auto">
-            {Array.from({ length: 90 }, (_, i) => {
-              const d = new Date(); d.setDate(d.getDate() - 89 + i);
-              const key = format(d, "yyyy-MM-dd");
-              const count = sessionDates.filter(sd => sd === key).length;
-              return (
-                <div key={i} className={`w-3 h-3 rounded-sm flex-shrink-0 transition-colors ${count === 0 ? "bg-muted" : count === 1 ? "bg-primary/30" : count === 2 ? "bg-primary/60" : "bg-primary"}`} title={`${format(d, "dd/MM")}: ${count} sessões`} />
-              );
-            })}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                const el = document.getElementById("heatmap-scroll");
+                if (el) el.scrollBy({ left: -200, behavior: "smooth" });
+              }}
+              className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div id="heatmap-scroll" className="flex gap-[3px] overflow-x-hidden flex-1">
+              {Array.from({ length: 90 }, (_, i) => {
+                const d = new Date(); d.setDate(d.getDate() - 89 + i);
+                const key = format(d, "yyyy-MM-dd");
+                const count = sessionDates.filter(sd => sd === key).length;
+                return (
+                  <div key={i} className={`w-3 h-3 rounded-sm flex-shrink-0 transition-colors ${count === 0 ? "bg-muted" : count === 1 ? "bg-primary/30" : count === 2 ? "bg-primary/60" : "bg-primary"}`} title={`${format(d, "dd/MM")}: ${count} sessões`} />
+                );
+              })}
+            </div>
+            <button
+              onClick={() => {
+                const el = document.getElementById("heatmap-scroll");
+                if (el) el.scrollBy({ left: 200, behavior: "smooth" });
+              }}
+              className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </CardContent>
       </Card>

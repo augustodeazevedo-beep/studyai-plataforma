@@ -2,10 +2,10 @@ import { cn } from "@/lib/utils";
 import {
   CalendarDays, Shield, BarChart3, BookOpen, History,
   Sparkles, Brain, MessageCircle, Trophy, Settings, LogOut, Menu, X,
-  ChevronLeft, HelpCircle,
+  ChevronLeft, HelpCircle, Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export type TabKey =
   | "planner" | "arsenal" | "analysis" | "notebooks" | "history"
@@ -34,6 +34,16 @@ const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: b
 const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) => {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+
+  // Initialize theme from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light") {
+      document.documentElement.classList.remove("dark");
+    } else {
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
 
   const nav = (
     <nav className="flex flex-col gap-1 flex-1">
@@ -83,12 +93,12 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           collapsed ? "w-16" : "w-64"
         )}
       >
-        <div className={cn("flex items-center gap-2 px-4 h-16 border-b border-sidebar-border", collapsed && "px-2 justify-center")}>
-          <img src="/logo-cognos.png" alt="COGNOS" className="h-7" />
+        <div className={cn("flex items-center gap-3 px-4 h-16 border-b border-sidebar-border", collapsed && "px-2 justify-center")}>
+          <img src="/logo-cognos.png" alt="COGNOS" className="h-8 w-8 object-contain" />
           {!collapsed && (
-            <div className="flex flex-col leading-tight">
-              <span className="font-display text-sm font-bold text-sidebar-foreground">COGNOS</span>
-              <span className="font-display text-xs font-bold text-sidebar-primary">Study.AI</span>
+            <div className="flex flex-col leading-none">
+              <span className="font-display text-base font-bold tracking-wide text-sidebar-foreground">COGNOS</span>
+              <span className="font-display text-[11px] font-semibold text-sidebar-primary">Study.AI</span>
             </div>
           )}
         </div>
@@ -109,6 +119,29 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
         </div>
 
         <div className="border-t border-sidebar-border p-3 space-y-2">
+          {/* Theme toggle */}
+          <button
+            onClick={() => {
+              const html = document.documentElement;
+              const isDark = html.classList.contains("dark");
+              if (isDark) {
+                html.classList.remove("dark");
+                localStorage.setItem("theme", "light");
+              } else {
+                html.classList.add("dark");
+                localStorage.setItem("theme", "dark");
+              }
+            }}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full",
+              collapsed && "justify-center px-2",
+              "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+            title={collapsed ? "Alternar Tema" : undefined}
+          >
+            <Palette className="h-4 w-4 flex-shrink-0" />
+            {!collapsed && <span>Alternar Tema</span>}
+          </button>
           {/* Settings button */}
           <button
             onClick={() => { onTabChange("settings"); setOpen(false); }}
