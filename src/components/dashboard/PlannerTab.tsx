@@ -262,7 +262,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
         </CardContent>
       </Card>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Calendar Grid - takes most space */}
         <Card className="glass flex-1 min-w-0">
           <CardHeader className="py-3">
@@ -296,7 +296,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                 return (
                   <div
                     key={i}
-                    className={`border border-border/30 min-h-[100px] p-1 transition-colors ${
+                    className={`border border-border/30 min-h-[60px] lg:min-h-[100px] p-1 transition-colors ${
                       !inMonth ? "opacity-30" : ""
                     } ${today ? "bg-primary/5 border-primary/40" : ""} ${
                       draggedBlock ? "hover:bg-primary/10" : ""
@@ -348,7 +348,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
         </Card>
 
         {/* Right sidebar: Timer + Quick Session */}
-        <div className="w-[320px] shrink-0 space-y-4">
+        <div className="w-full lg:w-[320px] shrink-0 space-y-4">
           {/* Pomodoro Timer */}
           <Card className="glass">
             <CardHeader className="py-3"><CardTitle className="text-sm">🍅 Foco Pomodoro</CardTitle></CardHeader>
