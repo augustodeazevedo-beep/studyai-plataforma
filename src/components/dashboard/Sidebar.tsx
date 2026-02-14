@@ -90,18 +90,18 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
 
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full bg-sidebar-background border-r border-sidebar-border flex flex-col z-40 transition-all duration-300",
+          "fixed top-0 left-0 h-full bg-sidebar-background flex flex-col z-40 transition-all duration-300",
           "lg:translate-x-0 lg:static",
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           collapsed ? "w-16" : "w-64"
         )}
       >
-        <div className={cn("flex items-center gap-2 px-4 h-16 border-b border-sidebar-border", collapsed && "px-2 justify-center")}>
-          <img src={isDark ? "/icon-dark.png" : "/icon-light.png"} alt="COGNOS" className="h-9 w-9 object-contain" />
+        <div className={cn("flex items-center gap-2 px-4 h-16", collapsed && "px-2 justify-center")}>
+          <img src={isDark ? "/icon-dark.png" : "/icon-light.png"} alt="COGNOS" className={cn("h-9 w-9 object-contain", isDark && "bg-transparent")} />
           {!collapsed && (
             <div className="flex flex-col leading-none">
-              <span className="text-lg font-bold tracking-widest text-white">COGNOS</span>
-              <span className="text-[11px] font-semibold text-cyan-400">Study.AI</span>
+              <span className={cn("text-lg font-bold tracking-widest", isDark ? "text-foreground" : "text-[hsl(210,78%,30%)]")}>COGNOS</span>
+              <span className="text-[11px] font-semibold text-primary">Study.AI</span>
             </div>
           )}
         </div>
@@ -121,7 +121,7 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           </button>
         </div>
 
-        <div className="border-t border-sidebar-border p-3 space-y-2">
+        <div className="p-3 space-y-2">
           {/* Theme toggle */}
           <button
             onClick={() => {
