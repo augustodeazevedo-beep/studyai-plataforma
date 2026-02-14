@@ -34,14 +34,17 @@ const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: b
 const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) => {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   // Initialize theme from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "light") {
       document.documentElement.classList.remove("dark");
+      setIsDark(false);
     } else {
       document.documentElement.classList.add("dark");
+      setIsDark(true);
     }
   }, []);
 
@@ -94,7 +97,7 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
         )}
       >
         <div className={cn("flex items-center gap-2 px-4 h-16 border-b border-sidebar-border", collapsed && "px-2 justify-center")}>
-          <img src="/logo-cognos.png" alt="COGNOS" className="h-9 w-9 object-contain" />
+          <img src={isDark ? "/icon-dark.png" : "/icon-light.png"} alt="COGNOS" className="h-9 w-9 object-contain" />
           {!collapsed && (
             <div className="flex flex-col leading-none">
               <span className="text-lg font-bold tracking-widest text-white">COGNOS</span>
@@ -123,13 +126,15 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           <button
             onClick={() => {
               const html = document.documentElement;
-              const isDark = html.classList.contains("dark");
-              if (isDark) {
+              const currentDark = html.classList.contains("dark");
+              if (currentDark) {
                 html.classList.remove("dark");
                 localStorage.setItem("theme", "light");
+                setIsDark(false);
               } else {
                 html.classList.add("dark");
                 localStorage.setItem("theme", "dark");
+                setIsDark(true);
               }
             }}
             className={cn(
