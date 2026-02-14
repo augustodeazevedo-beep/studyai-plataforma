@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkles, BookOpen, Zap } from "lucide-react";
+import TestimonialsSection from "@/components/landing/TestimonialsSection";
+import FAQSection from "@/components/landing/FAQSection";
 
 const features = [
   {
@@ -200,6 +202,9 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Testimonials */}
+      <TestimonialsSection />
+
       {/* Motivational CTA */}
       <section className="py-20 px-4">
         <div className="container mx-auto">
@@ -232,6 +237,9 @@ const Index = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* FAQ */}
+      <FAQSection />
 
       {/* Footer */}
       <footer className="border-t border-border py-8 px-4">
