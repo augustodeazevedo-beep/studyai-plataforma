@@ -63,7 +63,7 @@ const Index = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/icon-dark.png" alt="COGNOS Study.AI" className="h-8 w-8 object-contain" />
+            <img src="/icon-dark.png" alt="COGNOS Study.AI" className="h-8 w-8 object-contain rounded-xl" />
             <span className="font-display text-lg font-bold text-foreground">
               COGNOS <span className="text-primary">Study.AI</span>
             </span>
@@ -249,7 +249,7 @@ const Index = () => {
       <footer className="border-t border-border py-8 px-4">
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <img src="/icon-dark.png" alt="COGNOS" className="h-6" />
+            <img src="/icon-dark.png" alt="COGNOS" className="h-6 rounded-xl" />
             <span>© 2026 COGNOS Study.AI — Todos os direitos reservados</span>
           </div>
           <div className="flex gap-6">

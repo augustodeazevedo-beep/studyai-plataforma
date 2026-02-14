@@ -25,7 +25,7 @@ const DashboardLayout = ({ activeTab, onTabChange, onLogout, userName, children 
     <div className="min-h-screen bg-background flex">
       <Sidebar activeTab={activeTab} onTabChange={onTabChange} onLogout={onLogout} userName={userName} />
       <main className="flex-1 overflow-y-auto lg:ml-0">
-        <div className="flex items-center justify-end gap-2 px-6 py-3 border-b border-border">
+        <div className="flex items-center justify-end gap-2 px-6 py-3">
           <Sparkles className="h-4 w-4 text-primary" />
           <span className="text-sm text-muted-foreground italic">"{quote}"</span>
         </div>
