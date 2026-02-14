@@ -2,13 +2,14 @@ import { cn } from "@/lib/utils";
 import {
   CalendarDays, Shield, BarChart3, BookOpen, History,
   Sparkles, Brain, MessageCircle, Trophy, Settings, LogOut, Menu, X,
+  ChevronLeft, HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 export type TabKey =
   | "planner" | "arsenal" | "analysis" | "notebooks" | "history"
-  | "predictor" | "coach" | "professor" | "achievements" | "settings";
+  | "predictor" | "coach" | "professor" | "achievements" | "settings" | "tutorial";
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -27,11 +28,12 @@ const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: b
   { key: "coach", label: "Coach.IA", icon: Brain, ai: true },
   { key: "professor", label: "Professor.IA", icon: MessageCircle, ai: true },
   { key: "achievements", label: "Conquistas", icon: Trophy },
-  { key: "settings", label: "Configurações", icon: Settings },
+  { key: "tutorial", label: "Tutorial", icon: HelpCircle },
 ];
 
 const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) => {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const nav = (
     <nav className="flex flex-col gap-1 flex-1">
@@ -41,14 +43,16 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           onClick={() => { onTabChange(item.key); setOpen(false); }}
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left",
+            collapsed && "justify-center px-2",
             activeTab === item.key
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
           )}
+          title={collapsed ? item.label : undefined}
         >
           <item.icon className="h-4 w-4 flex-shrink-0" />
-          <span className="flex-1">{item.label}</span>
-          {item.ai && (
+          {!collapsed && <span className="flex-1">{item.label}</span>}
+          {!collapsed && item.ai && (
             <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">IA</span>
           )}
         </button>
@@ -73,33 +77,67 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
 
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full w-64 bg-sidebar-background border-r border-sidebar-border flex flex-col z-40 transition-transform duration-300",
+          "fixed top-0 left-0 h-full bg-sidebar-background border-r border-sidebar-border flex flex-col z-40 transition-all duration-300",
           "lg:translate-x-0 lg:static",
-          open ? "translate-x-0" : "-translate-x-full"
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          collapsed ? "w-16" : "w-64"
         )}
       >
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
+        <div className={cn("flex items-center gap-2 px-4 h-16 border-b border-sidebar-border", collapsed && "px-2 justify-center")}>
           <img src="/logo-cognos.png" alt="COGNOS" className="h-7" />
-          <span className="font-display text-base font-bold">
-            COGNOS <span className="text-sidebar-primary">Study.AI</span>
-          </span>
+          {!collapsed && (
+            <div className="flex flex-col leading-tight">
+              <span className="font-display text-sm font-bold text-sidebar-foreground">COGNOS</span>
+              <span className="font-display text-xs font-bold text-sidebar-primary">Study.AI</span>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
           {nav}
         </div>
 
+        {/* Collapse toggle */}
+        <div className="hidden lg:flex justify-end px-2 py-1">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            title={collapsed ? "Expandir" : "Recolher"}
+          >
+            <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+          </button>
+        </div>
+
         <div className="border-t border-sidebar-border p-3 space-y-2">
-          <div className="flex items-center gap-2 px-3 py-2">
-            <Brain className="h-4 w-4 text-sidebar-primary" />
-            <span className="text-sm text-sidebar-foreground truncate">{userName}</span>
+          {/* Settings button */}
+          <button
+            onClick={() => { onTabChange("settings"); setOpen(false); }}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full",
+              collapsed && "justify-center px-2",
+              activeTab === "settings"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+            title={collapsed ? "Configurações" : undefined}
+          >
+            <Settings className="h-4 w-4 flex-shrink-0" />
+            {!collapsed && <span>Configurações</span>}
+          </button>
+          <div className={cn("flex items-center gap-2 px-3 py-2", collapsed && "justify-center px-2")}>
+            <Brain className="h-4 w-4 text-sidebar-primary flex-shrink-0" />
+            {!collapsed && <span className="text-sm text-sidebar-foreground truncate">{userName}</span>}
           </div>
           <button
             onClick={onLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors w-full"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors w-full",
+              collapsed && "justify-center px-2"
+            )}
+            title={collapsed ? "Sair" : undefined}
           >
             <LogOut className="h-4 w-4" />
-            <span>Sair</span>
+            {!collapsed && <span>Sair</span>}
           </button>
         </div>
       </aside>
