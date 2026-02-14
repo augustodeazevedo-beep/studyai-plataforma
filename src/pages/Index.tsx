@@ -52,6 +52,7 @@ const Index = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <Link to="/" className="flex items-center gap-3">
+            <img src="/logo-cognos.png" alt="COGNOS Study.AI" className="h-8 w-8 object-contain" />
             <span className="font-display text-lg font-bold text-foreground">
               COGNOS <span className="text-primary">Study.AI</span>
             </span>
