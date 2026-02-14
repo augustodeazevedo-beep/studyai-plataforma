@@ -93,12 +93,12 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           collapsed ? "w-16" : "w-64"
         )}
       >
-        <div className={cn("flex items-center gap-3 px-4 h-16 border-b border-sidebar-border", collapsed && "px-2 justify-center")}>
-          <img src="/logo-cognos.png" alt="COGNOS" className="h-8 w-8 object-contain" />
+        <div className={cn("flex items-center gap-2 px-4 h-16 border-b border-sidebar-border", collapsed && "px-2 justify-center")}>
+          <img src="/logo-cognos.png" alt="COGNOS" className="h-9 w-9 object-contain" />
           {!collapsed && (
             <div className="flex flex-col leading-none">
-              <span className="font-display text-base font-bold tracking-wide text-sidebar-foreground">COGNOS</span>
-              <span className="font-display text-[11px] font-semibold text-sidebar-primary">Study.AI</span>
+              <span className="text-lg font-bold tracking-widest text-white">COGNOS</span>
+              <span className="text-[11px] font-semibold text-cyan-400">Study.AI</span>
             </div>
           )}
         </div>
