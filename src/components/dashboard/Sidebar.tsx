@@ -18,16 +18,16 @@ interface SidebarProps {
   userName: string;
 }
 
-const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: boolean }[] = [
-  { key: "planner", label: "Planner", icon: CalendarDays },
+const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: boolean; separator?: string }[] = [
+  { key: "psyche", label: "Bem-Estar", icon: Heart, separator: "Preparação" },
   { key: "arsenal", label: "Arsenal", icon: Shield },
-  { key: "analysis", label: "Análise", icon: BarChart3 },
+  { key: "planner", label: "Planner", icon: CalendarDays, separator: "Execução" },
   { key: "notebooks", label: "Cadernos", icon: BookOpen },
-  { key: "history", label: "Histórico", icon: History },
-  { key: "predictor", label: "Previsor.IA", icon: Sparkles, ai: true },
+  { key: "analysis", label: "Análise", icon: BarChart3, separator: "Inteligência" },
   { key: "coach", label: "Coach.IA", icon: Brain, ai: true },
   { key: "professor", label: "Professor.IA", icon: MessageCircle, ai: true },
-  { key: "psyche", label: "Bem-Estar", icon: Heart },
+  { key: "predictor", label: "Previsor.IA", icon: Sparkles, ai: true },
+  { key: "history", label: "Histórico", icon: History, separator: "Acompanhamento" },
   { key: "achievements", label: "Conquistas", icon: Trophy },
   { key: "tutorial", label: "Tutorial", icon: HelpCircle },
 ];
@@ -50,26 +50,33 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
   }, []);
 
   const nav = (
-    <nav className="flex flex-col gap-1 flex-1">
+    <nav className="flex flex-col gap-0.5 flex-1">
       {NAV_ITEMS.map((item) => (
-        <button
-          key={item.key}
-          onClick={() => { onTabChange(item.key); setOpen(false); }}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left",
-            collapsed && "justify-center px-2",
-            activeTab === item.key
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+        <div key={item.key}>
+          {item.separator && !collapsed && (
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 px-3 pt-3 pb-1">
+              {item.separator}
+            </p>
           )}
-          title={collapsed ? item.label : undefined}
-        >
-          <item.icon className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && <span className="flex-1">{item.label}</span>}
-          {!collapsed && item.ai && (
-            <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">IA</span>
-          )}
-        </button>
+          {item.separator && collapsed && <div className="my-1 mx-2 border-t border-border/30" />}
+          <button
+            onClick={() => { onTabChange(item.key); setOpen(false); }}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left w-full",
+              collapsed && "justify-center px-2",
+              activeTab === item.key
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+            title={collapsed ? item.label : undefined}
+          >
+            <item.icon className="h-4 w-4 flex-shrink-0" />
+            {!collapsed && <span className="flex-1">{item.label}</span>}
+            {!collapsed && item.ai && (
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">IA</span>
+            )}
+          </button>
+        </div>
       ))}
     </nav>
   );
