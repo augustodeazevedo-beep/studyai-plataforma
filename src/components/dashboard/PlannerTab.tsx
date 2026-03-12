@@ -32,8 +32,10 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [sessions, setSessions] = useState<any[]>([]);
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [pomodoroMinutes, setPomodoroMinutes] = useState(25);
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [editingPomodoro, setEditingPomodoro] = useState(false);
   const [draggedBlock, setDraggedBlock] = useState<CalendarBlock | null>(null);
 
   // Edit modal state
@@ -73,7 +75,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     if (!timerRunning) return;
     const interval = setInterval(() => {
       setTimerSeconds(prev => {
-        if (prev <= 0) { setTimerRunning(false); toast.success("Pomodoro concluído! 🎉"); return 25 * 60; }
+        if (prev <= 0) { setTimerRunning(false); toast.success("Pomodoro concluído! 🎉"); return pomodoroMinutes * 60; }
         return prev - 1;
       });
     }, 1000);
@@ -353,16 +355,44 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
           <Card className="glass">
             <CardHeader className="py-3"><CardTitle className="text-sm">🍅 Foco Pomodoro</CardTitle></CardHeader>
             <CardContent className="flex flex-col items-center gap-4 pb-4">
-              <div className="text-5xl font-mono font-bold text-primary">{formatTimer(timerSeconds)}</div>
+              {editingPomodoro && !timerRunning ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Tempo (minutos)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={pomodoroMinutes}
+                    onChange={e => {
+                      const val = Math.max(1, Math.min(120, Number(e.target.value) || 1));
+                      setPomodoroMinutes(val);
+                      setTimerSeconds(val * 60);
+                    }}
+                    className="w-24 text-center text-lg font-mono h-12"
+                  />
+                  <Button size="sm" variant="outline" onClick={() => setEditingPomodoro(false)}>OK</Button>
+                </div>
+              ) : (
+                <div
+                  className="text-5xl font-mono font-bold text-primary cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => { if (!timerRunning) setEditingPomodoro(true); }}
+                  title="Clique para editar o tempo"
+                >
+                  {formatTimer(timerSeconds)}
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => setTimerRunning(!timerRunning)}>
                   {timerRunning ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
                   {timerRunning ? "Pausar" : "Iniciar"}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => { setTimerRunning(false); setTimerSeconds(25 * 60); }}>
+                <Button size="sm" variant="outline" onClick={() => { setTimerRunning(false); setTimerSeconds(pomodoroMinutes * 60); setEditingPomodoro(false); }}>
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </div>
+              {!editingPomodoro && !timerRunning && (
+                <p className="text-[10px] text-muted-foreground">Clique no timer para ajustar</p>
+              )}
             </CardContent>
           </Card>
 
