@@ -2,41 +2,70 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkles, BookOpen, Zap } from "lucide-react";
-import TestimonialsSection from "@/components/landing/TestimonialsSection";
+import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkles, BookOpen, Zap, Heart, GraduationCap, MessageCircle } from "lucide-react";
 import PricingSection from "@/components/landing/PricingSection";
 import FAQSection from "@/components/landing/FAQSection";
+import heroBg from "@/assets/hero-bg.jpg";
+import ctaBg from "@/assets/cta-bg.jpg";
+import featuresBg from "@/assets/features-bg.jpg";
 
 const features = [
   {
     icon: Brain,
-    title: "IA que Estuda com Você",
-    description: "Chega de cronograma genérico. A IA analisa 5 dimensões do seu aprendizado e monta um plano sob medida — que se adapta a cada sessão.",
+    title: "Motor de Decisão Pedagógica",
+    description: "Não conta horas — maximiza aprendizado por unidade de carga cognitiva. A IA analisa 5 vetores do seu perfil e decide o quê, como e quando estudar.",
   },
   {
     icon: Clock,
-    title: "Nunca Mais Esqueça o que Estudou",
-    description: "Revisões espaçadas baseadas em neurociência garantem que o conteúdo fique na memória de longo prazo — exatamente quando a banca vai cobrar.",
+    title: "Revisões que Vencem o Esquecimento",
+    description: "Sistema SRS adaptativo com intervalos que se ajustam ao seu desempenho e ao seu dia emocional. Nos dias difíceis, a carga é aliviada — nunca eliminada.",
   },
   {
     icon: Target,
-    title: "Estude o que Mais Cai",
-    description: "Cruza relevância, incidência em provas anteriores e suas lacunas de conhecimento para priorizar o que realmente importa na sua aprovação.",
+    title: "G-Force: Seu Sensor de Prioridades",
+    description: "Radar de 5 vetores (Relevância, Incidência, Compreensão, Intensidade e Psique) que identifica lacunas e direciona seu esforço para onde dá mais resultado.",
   },
   {
-    icon: BarChart3,
-    title: "Veja sua Evolução Real",
-    description: "Dashboard com métricas claras: horas estudadas, taxa de acerto, radar de competências e projeção de quando você estará pronto.",
+    icon: Heart,
+    title: "Projetado para Neurodivergentes",
+    description: "Anamnese cognitiva, Pomodoro de 1 a 120 min, micro-metas, linguagem sem culpa e carga adaptável. TDAH, TEA e dislexia são considerados em cada decisão da IA.",
   },
   {
-    icon: BookOpen,
-    title: "Tudo em Um Só Lugar",
-    description: "PDFs, questões, flashcards e anotações integrados ao seu plano. Sem alternar entre 10 apps — foco total no que importa.",
+    icon: GraduationCap,
+    title: "Professor + Coach + Previsor",
+    description: "Três módulos de IA especializados: tire dúvidas, receba feedback estratégico com diagnóstico G-Force e projete cenários realistas de aprovação.",
   },
   {
     icon: Shield,
-    title: "Seus Dados, Sua Privacidade",
-    description: "Criptografia de ponta a ponta e conformidade LGPD. Seu desempenho e dados pessoais nunca são compartilhados.",
+    title: "Arsenal Inteligente de Edital",
+    description: "Envie o PDF do edital e a IA monta o grafo de conhecimento: disciplinas, tópicos, relevância, incidência e pré-requisitos — tudo automatizado.",
+  },
+];
+
+const howItWorks = [
+  {
+    step: "01",
+    icon: Heart,
+    title: "Conheça-se",
+    description: "Preencha a anamnese neurocognitiva. A IA precisa saber quem você é — não apenas o que estuda.",
+  },
+  {
+    step: "02",
+    icon: Shield,
+    title: "Mapeie o Território",
+    description: "Faça upload do edital. A IA extrai disciplinas, tópicos e monta seu grafo de conhecimento personalizado.",
+  },
+  {
+    step: "03",
+    icon: BookOpen,
+    title: "Estude com Propósito",
+    description: "A cada sessão, a IA recomenda o alvo (disciplina) e o formato (flashcard, simulado, resumo) com base no seu estado atual.",
+  },
+  {
+    step: "04",
+    icon: BarChart3,
+    title: "Evolua com Dados",
+    description: "O G-Force rastreia suas lacunas em tempo real. O Coach.IA corrige a rota. O Previsor.IA projeta quando você estará pronto.",
   },
 ];
 
@@ -82,11 +111,11 @@ const Index = () => {
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-32 pb-20 px-4">
-        {/* Background effects */}
+      <section className="relative pt-32 pb-24 px-4">
+        {/* Background image */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse-glow" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/8 rounded-full blur-3xl animate-pulse-glow" style={{ animationDelay: "1.5s" }} />
+          <img src={heroBg} alt="" className="w-full h-full object-cover opacity-30" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
         </div>
 
         <div className="container mx-auto text-center relative z-10">
@@ -96,32 +125,40 @@ const Index = () => {
             transition={{ duration: 0.8 }}
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 text-sm text-muted-foreground">
-              <Sparkles className="h-4 w-4 text-primary" />
-              A plataforma de estudos que aprovados recomendam
+              <Brain className="h-4 w-4 text-primary" />
+              Motor de inteligência pedagógica para concursos
             </div>
           </motion.div>
 
           <motion.h1
-            className="font-display text-4xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6 max-w-4xl mx-auto"
+            className="font-display text-4xl sm:text-5xl md:text-7xl font-bold leading-tight mb-6 max-w-5xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            Pare de estudar{" "}
-            <span className="text-gradient">no escuro.</span>
+            Não estude{" "}
+            <span className="text-gradient">mais horas.</span>
             <br />
-            Sua aprovação tem{" "}
-            <span className="text-gradient">método.</span>
+            Estude com{" "}
+            <span className="text-gradient">mais inteligência.</span>
           </motion.h1>
 
           <motion.p
-            className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
+            className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Enquanto outros estudam mais horas, você vai estudar de forma mais inteligente.
-            IA + neurociência para concurseiros que não podem perder mais tempo.
+            O COGNOS não é um cronograma. É um motor de decisão pedagógica que maximiza seu aprendizado por unidade de carga cognitiva — com empatia, neurociência e respeito ao seu ritmo.
+          </motion.p>
+
+          <motion.p
+            className="text-sm text-primary/80 max-w-xl mx-auto mb-10 italic"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+          >
+            Projetado especialmente para estudantes neurodivergentes e para quem não pode mais perder tempo com métodos genéricos.
           </motion.p>
 
           <motion.div
@@ -137,7 +174,7 @@ const Index = () => {
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="text-base px-8 py-6">
-              <a href="#features">Conhecer Recursos</a>
+              <a href="#how-it-works">Como Funciona</a>
             </Button>
           </motion.div>
 
@@ -149,9 +186,9 @@ const Index = () => {
             transition={{ duration: 0.8, delay: 0.8 }}
           >
             {[
-              { value: "5", label: "Vetores de Priorização" },
-              { value: "∞", label: "Revisões Inteligentes" },
-              { value: "100%", label: "Dados Protegidos" },
+              { value: "5", label: "Vetores G-Force" },
+              { value: "3", label: "Módulos de IA" },
+              { value: "∞", label: "Revisões Adaptativas" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="font-display text-2xl sm:text-3xl font-bold text-primary">{stat.value}</div>
@@ -159,6 +196,74 @@ const Index = () => {
               </div>
             ))}
           </motion.div>
+        </div>
+      </section>
+
+      {/* Philosophy Banner */}
+      <section className="py-16 px-4 relative">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div
+            className="glass rounded-2xl p-8 sm:p-10 text-center border-primary/20"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <Sparkles className="h-8 w-8 text-primary mx-auto mb-4" />
+            <h2 className="font-display text-xl sm:text-2xl font-bold mb-4">
+              O que torna o COGNOS <span className="text-gradient">diferente?</span>
+            </h2>
+            <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              A maioria das plataformas te diz <strong className="text-foreground">quando</strong> estudar. O COGNOS te diz <strong className="text-foreground">o quê</strong> estudar, <strong className="text-foreground">como</strong> estudar e <strong className="text-foreground">por quê</strong> — com base no seu estado real de conhecimento, desempenho e bem-estar emocional. Toda recomendação é pedagógica, empática, realista e baseada nos seus dados.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* How it Works */}
+      <section id="how-it-works" className="py-20 px-4 relative">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <img src={featuresBg} alt="" className="w-full h-full object-cover opacity-10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />
+        </div>
+        <div className="container mx-auto relative z-10">
+          <motion.div
+            className="text-center mb-16"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            custom={0}
+          >
+            <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4">
+              O Ciclo <span className="text-gradient">COGNOS</span>
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Quatro etapas que se retroalimentam. Você alimenta o sistema com dados honestos — a IA transforma em estratégia de aprovação.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+            {howItWorks.map((item, i) => (
+              <motion.div
+                key={item.step}
+                className="glass rounded-xl p-6 text-center relative group hover:border-primary/30 transition-colors"
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                variants={fadeUp}
+                custom={i + 1}
+              >
+                <div className="text-4xl font-display font-bold text-primary/20 mb-2">{item.step}</div>
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4 group-hover:glow transition-shadow">
+                  <item.icon className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="font-display text-lg font-semibold mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -174,10 +279,10 @@ const Index = () => {
             custom={0}
           >
             <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4">
-              Por que concurseiros escolhem o <span className="text-gradient">COGNOS</span>
+              Arquitetura pensada para <span className="text-gradient">sua aprovação</span>
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Cada recurso foi desenhado para resolver os problemas reais de quem estuda para concurso — não para impressionar investidores.
+              Cada recurso foi projetado sobre neurociência do aprendizado, teoria da carga cognitiva e sistemas adaptativos — não para impressionar, mas para funcionar.
             </p>
           </motion.div>
 
@@ -203,14 +308,15 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <TestimonialsSection />
-
       {/* Motivational CTA */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto">
+      <section className="py-20 px-4 relative">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <img src={ctaBg} alt="" className="w-full h-full object-cover opacity-20" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/60 to-background" />
+        </div>
+        <div className="container mx-auto relative z-10">
           <motion.div
-            className="glass rounded-2xl p-8 sm:p-12 text-center max-w-3xl mx-auto relative overflow-hidden"
+            className="glass rounded-2xl p-8 sm:p-12 text-center max-w-3xl mx-auto relative overflow-hidden border-primary/20"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
@@ -221,13 +327,14 @@ const Index = () => {
             <div className="relative z-10">
               <TrendingUp className="h-12 w-12 text-primary mx-auto mb-6" />
               <h2 className="font-display text-2xl sm:text-3xl font-bold mb-4">
-                Você já perdeu tempo demais
-                <br />
-                <span className="text-gradient">estudando sem direção.</span>
+                Chega de estudar{" "}
+                <span className="text-gradient">no escuro.</span>
               </h2>
-              <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-                Sem cobranças tóxicas. Sem culpa. O COGNOS respeita seu ritmo, mas não te deixa estagnar.
-                É o equilíbrio entre empatia e alta performance.
+              <p className="text-muted-foreground mb-4 max-w-lg mx-auto">
+                O COGNOS não cobra, não pune, não gera culpa. Ele entende seu ritmo, respeita seus dias difíceis e te guia com clareza quando você está pronto para avançar.
+              </p>
+              <p className="text-sm text-primary/80 italic mb-8 max-w-md mx-auto">
+                "Vamos ajustar a rota" — nunca "você deveria ter feito mais".
               </p>
               <Button size="lg" asChild className="glow">
                 <Link to="/auth?tab=signup">
