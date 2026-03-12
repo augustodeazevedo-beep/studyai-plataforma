@@ -90,8 +90,17 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
     return Math.round(((studyFrequency + reviewCompletion) / 2) * 20);
   })();
 
-  // 5. Psique: placeholder based on review ratings and session consistency (will be enhanced with anamnesis)
+  // 5. Psique: from psyche_profiles real data
   const avgPsyche = (() => {
+    if (psycheProfile) {
+      const mood = psycheProfile.current_mood || 3;
+      const stressInv = 6 - (psycheProfile.stress_level || 3); // invert: low stress = good
+      const sleep = psycheProfile.sleep_quality || 3;
+      const motivation = psycheProfile.motivation_level || 3;
+      const focus = psycheProfile.focus_capacity || 3;
+      return Math.round(((mood + stressInv + sleep + motivation + focus) / 5) * 20);
+    }
+    // Fallback: use review ratings
     const completedRevs = reviews.filter(r => r.completed && r.performance_rating);
     const avgRating = completedRevs.length > 0
       ? completedRevs.reduce((a, r) => a + r.performance_rating, 0) / completedRevs.length
