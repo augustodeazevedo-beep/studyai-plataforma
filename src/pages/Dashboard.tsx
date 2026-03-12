@@ -16,6 +16,7 @@ import ProfessorTab from "@/components/dashboard/ProfessorTab";
 import AchievementsTab from "@/components/dashboard/AchievementsTab";
 import SettingsTab from "@/components/dashboard/SettingsTab";
 import TutorialTab from "@/components/dashboard/TutorialTab";
+import PsycheTab from "@/components/dashboard/PsycheTab";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
