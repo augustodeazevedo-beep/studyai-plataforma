@@ -20,6 +20,7 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const [plan, setPlan] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [psycheProfile, setPsycheProfile] = useState<any>(null);
   const [reminders, setReminders] = useState<any[]>([]);
   const [qForm, setQForm] = useState({ subject_id: "", attempted: "", correct: "" });
   const [reminderText, setReminderText] = useState("");
