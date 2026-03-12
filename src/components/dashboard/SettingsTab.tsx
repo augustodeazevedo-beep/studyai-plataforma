@@ -91,13 +91,34 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Horas diárias</Label>
-            <div className="flex gap-2 flex-wrap">
-              {["1", "2", "3", "4", "5", "6", "8", "10"].map((h) => (
-                <button key={h} onClick={() => setDailyHours(h)} className={cn("px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all", dailyHours === h ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/30")}>
-                  {h}h
-                </button>
-              ))}
+            <Label>Tempo diário de estudo</Label>
+            <div className="flex gap-3 items-end">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Horas</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={16}
+                  value={dailyHours}
+                  onChange={(e) => setDailyHours(String(Math.max(0, Math.min(16, Number(e.target.value) || 0))))}
+                  className="w-20 text-center"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Minutos</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={59}
+                  step={5}
+                  value={dailyMinutes}
+                  onChange={(e) => setDailyMinutes(String(Math.max(0, Math.min(59, Number(e.target.value) || 0))))}
+                  className="w-20 text-center"
+                />
+              </div>
+              <span className="text-sm text-muted-foreground pb-2">
+                = {Number(dailyHours)}h{Number(dailyMinutes) > 0 ? `${dailyMinutes}min` : ""}
+              </span>
             </div>
           </div>
         </CardContent>
