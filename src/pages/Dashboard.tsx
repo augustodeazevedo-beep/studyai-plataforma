@@ -16,6 +16,7 @@ import ProfessorTab from "@/components/dashboard/ProfessorTab";
 import AchievementsTab from "@/components/dashboard/AchievementsTab";
 import SettingsTab from "@/components/dashboard/SettingsTab";
 import TutorialTab from "@/components/dashboard/TutorialTab";
+import PsycheTab from "@/components/dashboard/PsycheTab";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -91,6 +92,7 @@ const Dashboard = () => {
       case "predictor": return <PredictorTab userId={user.id} />;
       case "coach": return <CoachTab userId={user.id} />;
       case "professor": return <ProfessorTab userId={user.id} />;
+      case "psyche": return <PsycheTab userId={user.id} />;
       case "achievements": return <AchievementsTab userId={user.id} />;
       case "settings": return <SettingsTab userId={user.id} />;
       case "tutorial": return <TutorialTab userId={user.id} />;

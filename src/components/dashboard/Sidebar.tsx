@@ -2,14 +2,14 @@ import { cn } from "@/lib/utils";
 import {
   CalendarDays, Shield, BarChart3, BookOpen, History,
   Sparkles, Brain, MessageCircle, Trophy, Settings, LogOut, Menu, X,
-  ChevronLeft, HelpCircle, Palette,
+  ChevronLeft, HelpCircle, Palette, Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
 export type TabKey =
   | "planner" | "arsenal" | "analysis" | "notebooks" | "history"
-  | "predictor" | "coach" | "professor" | "achievements" | "settings" | "tutorial";
+  | "predictor" | "coach" | "professor" | "psyche" | "achievements" | "settings" | "tutorial";
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -27,6 +27,7 @@ const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: b
   { key: "predictor", label: "Previsor.IA", icon: Sparkles, ai: true },
   { key: "coach", label: "Coach.IA", icon: Brain, ai: true },
   { key: "professor", label: "Professor.IA", icon: MessageCircle, ai: true },
+  { key: "psyche", label: "Bem-Estar", icon: Heart },
   { key: "achievements", label: "Conquistas", icon: Trophy },
   { key: "tutorial", label: "Tutorial", icon: HelpCircle },
 ];

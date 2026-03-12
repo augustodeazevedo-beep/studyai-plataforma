@@ -20,6 +20,7 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const [plan, setPlan] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [psycheProfile, setPsycheProfile] = useState<any>(null);
   const [reminders, setReminders] = useState<any[]>([]);
   const [qForm, setQForm] = useState({ subject_id: "", attempted: "", correct: "" });
   const [reminderText, setReminderText] = useState("");
@@ -27,13 +28,14 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const [generatingPlan, setGeneratingPlan] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [subRes, topRes, sesRes, planRes, attRes, revRes, remRes] = await Promise.all([
+    const [subRes, topRes, sesRes, planRes, attRes, revRes, psyRes, remRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("topics").select("*").eq("user_id", userId),
       supabase.from("study_sessions").select("*").eq("user_id", userId),
       supabase.from("study_plan").select("*, user_subjects(name)").eq("user_id", userId),
       supabase.from("question_attempts").select("*, questions(subject_id)").eq("user_id", userId),
       supabase.from("spaced_reviews").select("*").eq("user_id", userId),
+      supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("reminders").select("*").eq("user_id", userId).eq("completed", false).order("reminder_date"),
     ]);
     setSubjects(subRes.data || []);
@@ -42,6 +44,7 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
     setPlan(planRes.data || []);
     setAttempts(attRes.data || []);
     setReviews(revRes.data || []);
+    setPsycheProfile(psyRes.data);
     setReminders(remRes.data || []);
   }, [userId]);
 
@@ -87,8 +90,17 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
     return Math.round(((studyFrequency + reviewCompletion) / 2) * 20);
   })();
 
-  // 5. Psique: placeholder based on review ratings and session consistency (will be enhanced with anamnesis)
+  // 5. Psique: from psyche_profiles real data
   const avgPsyche = (() => {
+    if (psycheProfile) {
+      const mood = psycheProfile.current_mood || 3;
+      const stressInv = 6 - (psycheProfile.stress_level || 3); // invert: low stress = good
+      const sleep = psycheProfile.sleep_quality || 3;
+      const motivation = psycheProfile.motivation_level || 3;
+      const focus = psycheProfile.focus_capacity || 3;
+      return Math.round(((mood + stressInv + sleep + motivation + focus) / 5) * 20);
+    }
+    // Fallback: use review ratings
     const completedRevs = reviews.filter(r => r.completed && r.performance_rating);
     const avgRating = completedRevs.length > 0
       ? completedRevs.reduce((a, r) => a + r.performance_rating, 0) / completedRevs.length
