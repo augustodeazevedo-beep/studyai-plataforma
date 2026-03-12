@@ -75,7 +75,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     if (!timerRunning) return;
     const interval = setInterval(() => {
       setTimerSeconds(prev => {
-        if (prev <= 0) { setTimerRunning(false); toast.success("Pomodoro concluído! 🎉"); return 25 * 60; }
+        if (prev <= 0) { setTimerRunning(false); toast.success("Pomodoro concluído! 🎉"); return pomodoroMinutes * 60; }
         return prev - 1;
       });
     }, 1000);
