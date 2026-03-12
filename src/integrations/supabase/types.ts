@@ -130,6 +130,105 @@ export type Database = {
         }
         Relationships: []
       }
+      psyche_checkins: {
+        Row: {
+          created_at: string
+          energy: number
+          focus: number
+          id: string
+          mood: number
+          notes: string | null
+          stress: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          energy?: number
+          focus?: number
+          id?: string
+          mood?: number
+          notes?: string | null
+          stress?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          energy?: number
+          focus?: number
+          id?: string
+          mood?: number
+          notes?: string | null
+          stress?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      psyche_profiles: {
+        Row: {
+          anamnesis_completed: boolean | null
+          anxiety_level: number | null
+          attention_span_minutes: number | null
+          best_study_period: string | null
+          created_at: string
+          current_mood: number | null
+          focus_capacity: number | null
+          has_neurodivergence: boolean | null
+          id: string
+          last_checkin_at: string | null
+          mood_notes: string | null
+          motivation_level: number | null
+          neurodivergence_notes: string | null
+          neurodivergence_type: string | null
+          preferred_study_method: string | null
+          sleep_quality: number | null
+          stress_level: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          anamnesis_completed?: boolean | null
+          anxiety_level?: number | null
+          attention_span_minutes?: number | null
+          best_study_period?: string | null
+          created_at?: string
+          current_mood?: number | null
+          focus_capacity?: number | null
+          has_neurodivergence?: boolean | null
+          id?: string
+          last_checkin_at?: string | null
+          mood_notes?: string | null
+          motivation_level?: number | null
+          neurodivergence_notes?: string | null
+          neurodivergence_type?: string | null
+          preferred_study_method?: string | null
+          sleep_quality?: number | null
+          stress_level?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          anamnesis_completed?: boolean | null
+          anxiety_level?: number | null
+          attention_span_minutes?: number | null
+          best_study_period?: string | null
+          created_at?: string
+          current_mood?: number | null
+          focus_capacity?: number | null
+          has_neurodivergence?: boolean | null
+          id?: string
+          last_checkin_at?: string | null
+          mood_notes?: string | null
+          motivation_level?: number | null
+          neurodivergence_notes?: string | null
+          neurodivergence_type?: string | null
+          preferred_study_method?: string | null
+          sleep_quality?: number | null
+          stress_level?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       question_attempts: {
         Row: {
           created_at: string
