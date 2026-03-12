@@ -9,7 +9,7 @@ import { useState, useEffect } from "react";
 
 export type TabKey =
   | "planner" | "arsenal" | "analysis" | "notebooks" | "history"
-  | "predictor" | "coach" | "professor" | "achievements" | "settings" | "tutorial";
+  | "predictor" | "coach" | "professor" | "psyche" | "achievements" | "settings" | "tutorial";
 
 interface SidebarProps {
   activeTab: TabKey;
