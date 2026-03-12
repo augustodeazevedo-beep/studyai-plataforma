@@ -28,13 +28,14 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const [generatingPlan, setGeneratingPlan] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [subRes, topRes, sesRes, planRes, attRes, revRes, remRes] = await Promise.all([
+    const [subRes, topRes, sesRes, planRes, attRes, revRes, psyRes, remRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("topics").select("*").eq("user_id", userId),
       supabase.from("study_sessions").select("*").eq("user_id", userId),
       supabase.from("study_plan").select("*, user_subjects(name)").eq("user_id", userId),
       supabase.from("question_attempts").select("*, questions(subject_id)").eq("user_id", userId),
       supabase.from("spaced_reviews").select("*").eq("user_id", userId),
+      supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("reminders").select("*").eq("user_id", userId).eq("completed", false).order("reminder_date"),
     ]);
     setSubjects(subRes.data || []);
