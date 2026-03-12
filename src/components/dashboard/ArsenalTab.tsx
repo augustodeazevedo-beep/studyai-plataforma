@@ -40,7 +40,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
   const getProfileData = async () => {
     const { data } = await supabase.from("profiles").select("target_exam, target_position, banca").eq("user_id", userId).maybeSingle();
-    return data || {};
+    return data || {} as Record<string, any>;
   };
 
   const processEdital = async () => {
