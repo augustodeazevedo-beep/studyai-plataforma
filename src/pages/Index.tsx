@@ -236,9 +236,12 @@ const Index = () => {
             variants={fadeUp}
             custom={0}
           >
-            <h2 className="font-display text-3xl sm:text-4xl font-bold mb-4">
+            <h2 className="font-display text-3xl sm:text-4xl font-bold mb-3">
               O Ciclo <span className="text-gradient">COGNOS</span>
             </h2>
+            <p className="font-display text-lg sm:text-xl text-primary font-semibold mb-4 italic">
+              "Aqui, todos os caminhos levam à sua Aprovação."
+            </p>
             <p className="text-muted-foreground max-w-xl mx-auto">
               Quatro etapas que se retroalimentam. Você alimenta o sistema com dados honestos — a IA transforma em estratégia de aprovação.
             </p>
