@@ -39,7 +39,9 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
         setFullName(data.full_name || "");
         setTargetExam(data.target_exam || "");
         setTargetPosition(data.target_position || "");
-        setDailyHours(String(data.daily_hours || 2));
+        const hours = data.daily_hours || 2;
+        setDailyHours(String(Math.floor(hours)));
+        setDailyMinutes(String(Math.round((hours - Math.floor(hours)) * 60)));
         setStudyDays(data.study_days || []);
       }
     });
