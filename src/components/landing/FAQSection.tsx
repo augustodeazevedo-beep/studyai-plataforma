@@ -11,27 +11,32 @@ const faqs = [
   {
     question: "Preciso pagar para usar?",
     answer:
-      "Não. O COGNOS tem um plano gratuito que permite acessar as funcionalidades essenciais — planejamento, revisões espaçadas e dashboard de evolução. Planos pagos desbloqueiam recursos avançados como IA ilimitada, simulados com análise detalhada e suporte prioritário.",
+      "Não. O COGNOS tem um plano gratuito com acesso às funcionalidades essenciais — planejamento inteligente, revisões espaçadas, dashboard G-Force e módulos de IA. Planos pagos desbloqueiam recursos avançados como IA ilimitada e suporte prioritário.",
   },
   {
     question: "Funciona para qual concurso?",
     answer:
-      "Para qualquer concurso público do Brasil. Você cadastra as disciplinas do seu edital e a IA monta o plano personalizado. Funciona para concursos federais, estaduais, municipais, tribunais, polícias, área fiscal e muito mais.",
+      "Para qualquer concurso público do Brasil. Você envia o PDF do edital e a IA extrai automaticamente disciplinas, tópicos, relevância e incidência, montando um plano personalizado. Federal, estadual, municipal, tribunais, polícias, área fiscal — tudo funciona.",
   },
   {
-    question: "Como a Inteligência Artificial funciona?",
+    question: "O que são os 5 vetores G-Force?",
     answer:
-      "A IA analisa 5 dimensões do seu aprendizado — relevância do tema, incidência em provas, seu nível de acurácia, desempenho e risco de esquecimento. Com esses dados, ela prioriza o que estudar, quando revisar e quanto tempo dedicar a cada matéria.",
+      "São as 5 dimensões que a IA analisa para tomar decisões: Relevância (peso no edital), Incidência (frequência em provas), Compreensão (seu domínio real), Intensidade (horas dedicadas) e Psique (estado emocional/cognitivo). Juntos, eles formam o \"sensor\" que guia toda a estratégia da plataforma.",
+  },
+  {
+    question: "Como funciona o suporte a neurodivergência?",
+    answer:
+      "O COGNOS foi projetado com foco em estudantes com TDAH, TEA, dislexia e outras condições. A anamnese captura seu perfil cognitivo. O Pomodoro é editável de 1 a 120 min. Em dias de baixa energia, a IA reduz a carga automaticamente e prioriza formatos leves. A linguagem nunca é punitiva — sempre empática e encorajadora.",
   },
   {
     question: "Preciso abandonar meu material atual?",
     answer:
-      "De jeito nenhum. O COGNOS integra com seus materiais existentes — PDFs, apostilas, videoaulas. Você organiza tudo dentro da plataforma e o sistema cria o cronograma em cima do que você já usa.",
+      "De jeito nenhum. O COGNOS integra com seus materiais existentes — PDFs, apostilas, videoaulas. Você organiza tudo dentro da plataforma e o sistema cria a estratégia em cima do que você já usa.",
   },
   {
-    question: "É seguro colocar meus dados na plataforma?",
+    question: "A IA realmente se adapta ao meu dia emocional?",
     answer:
-      "Sim. Utilizamos criptografia de ponta a ponta, conformidade total com a LGPD e isolamento de dados. Seu desempenho, anotações e informações pessoais nunca são compartilhados com terceiros.",
+      "Sim. Através dos check-ins diários na aba Bem-Estar (humor, estresse, energia, foco), a IA ajusta em tempo real o volume de estudo recomendado, o tipo de atividade e até a linguagem das respostas. Em dias difíceis, o foco é consistência mínima — porque um dia leve ainda é melhor que um dia zerado.",
   },
 ];
 
