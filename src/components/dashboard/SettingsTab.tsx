@@ -27,6 +27,7 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
   const [targetExam, setTargetExam] = useState("");
   const [targetPosition, setTargetPosition] = useState("");
   const [dailyHours, setDailyHours] = useState("2");
+  const [dailyMinutes, setDailyMinutes] = useState("0");
   const [studyDays, setStudyDays] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
