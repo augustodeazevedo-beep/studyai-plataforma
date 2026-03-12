@@ -51,9 +51,10 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
 
   const saveSettings = async () => {
     setSaving(true);
+    const totalHours = Number(dailyHours) + Number(dailyMinutes) / 60;
     const { error } = await supabase.from("profiles").update({
       full_name: fullName, target_exam: targetExam, target_position: targetPosition,
-      daily_hours: Number(dailyHours), study_days: studyDays,
+      daily_hours: Math.round(totalHours * 100) / 100, study_days: studyDays,
     }).eq("user_id", userId);
     setSaving(false);
     if (error) { toast({ title: "Erro ao salvar", variant: "destructive" }); return; }
