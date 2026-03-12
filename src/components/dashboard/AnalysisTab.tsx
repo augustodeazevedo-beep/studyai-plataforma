@@ -44,6 +44,7 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
     setPlan(planRes.data || []);
     setAttempts(attRes.data || []);
     setReviews(revRes.data || []);
+    setPsycheProfile(psyRes.data);
     setReminders(remRes.data || []);
   }, [userId]);
 
