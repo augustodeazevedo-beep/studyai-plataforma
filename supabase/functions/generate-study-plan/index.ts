@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { COGNOS_BASE_PROMPT, buildPsycheContext } from "../_shared/cognos-base-prompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,12 +23,13 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    // Fetch user data
-    const [profileRes, subjectsRes, sessionsRes, attemptsRes] = await Promise.all([
+    const [profileRes, subjectsRes, sessionsRes, attemptsRes, psycheRes, checkinsRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
       supabase.from("user_subjects").select("*").eq("user_id", user.id),
       supabase.from("study_sessions").select("*").eq("user_id", user.id),
       supabase.from("question_attempts").select("*, questions(subject_id)").eq("user_id", user.id),
+      supabase.from("psyche_profiles").select("*").eq("user_id", user.id).maybeSingle(),
+      supabase.from("psyche_checkins").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5),
     ]);
 
     const profile = profileRes.data;
@@ -41,7 +43,8 @@ serve(async (req) => {
       });
     }
 
-    // Build context for AI
+    const psycheContext = buildPsycheContext(psycheRes.data, checkinsRes.data || []);
+
     const subjectSummaries = subjects.map((s: any) => {
       const subjectSessions = sessions.filter((ss: any) => ss.subject_id === s.id);
       const totalHours = subjectSessions.reduce((acc: number, ss: any) => acc + (ss.duration_minutes || 0), 0) / 60;
@@ -67,16 +70,25 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `Você é um planejador de estudos especializado em concursos públicos brasileiros. 
-Analise os dados do aluno e calcule os 5 vetores para cada disciplina:
-- Relevância (0-10): peso do tema para o concurso "${profile?.target_exam || "geral"}" cargo "${profile?.target_position || "geral"}"
-- Incidência (0-10): frequência histórica em provas de concursos similares
-- Acurácia (0-10): baseado no knowledge_level informado e accuracy_rate real
-- Desempenho (0-10): baseado em horas estudadas e acertos
-- Lacuna/Gap (0-10): risco de esquecimento baseado no tempo desde última revisão
+    const systemPrompt = `${COGNOS_BASE_PROMPT}
 
-Calcule priority_score como média ponderada: (relevancia*3 + incidencia*2 + (10-acuracia)*2 + (10-desempenho)*1 + lacuna*2) / 10
-Recomende horas semanais proporcionais à prioridade com base em ${profile?.daily_hours || 2}h/dia × ${(profile?.study_days || []).length || 5} dias.`;
+FUNÇÃO ATUAL: Motor de Planejamento — Geração do Plano de Estudos G-Force
+
+${psycheContext}
+
+INSTRUÇÕES ESPECÍFICAS:
+Analise os dados do aluno e calcule os 5 vetores para cada disciplina, seguindo a arquitetura G-Force:
+- Relevância (0-10): peso do tema para o concurso "${profile?.target_exam || "geral"}" cargo "${profile?.target_position || "geral"}"
+- Incidência (0-10): frequência histórica em provas de concursos similares (banca: ${profile?.banca || "não definida"})
+- Acurácia (0-10): baseado no knowledge_level informado e accuracy_rate real
+- Desempenho (0-10): baseado em horas estudadas, acertos e consistência
+- Lacuna/Gap (0-10): risco de esquecimento baseado no tempo desde última revisão + carga cognitiva disponível (considere estado Psique)
+
+Calcule priority_score como: (relevancia*3 + incidencia*2 + (10-acuracia)*2 + (10-desempenho)*1 + lacuna*2) / 10
+
+Recomende horas semanais proporcionais à prioridade com base em ${profile?.daily_hours || 2}h/dia × ${(profile?.study_days || []).length || 5} dias.
+
+IMPORTANTE: Se o estado Psique indicar estresse elevado ou baixa energia, reduza levemente as horas recomendadas e priorize disciplinas de maior impacto (alta relevância + alta incidência) para maximizar ganho com menor desgaste.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -145,10 +157,8 @@ Recomende horas semanais proporcionais à prioridade com base em ${profile?.dail
     const planData = JSON.parse(toolCall.function.arguments);
     const plan = planData.plan;
 
-    // Delete existing plan for this user
     await supabase.from("study_plan").delete().eq("user_id", user.id);
 
-    // Insert new plan
     const rows = plan.map((p: any) => ({
       user_id: user.id,
       subject_id: p.subject_id,
