@@ -92,6 +92,7 @@ const Dashboard = () => {
       case "predictor": return <PredictorTab userId={user.id} />;
       case "coach": return <CoachTab userId={user.id} />;
       case "professor": return <ProfessorTab userId={user.id} />;
+      case "psyche": return <PsycheTab userId={user.id} />;
       case "achievements": return <AchievementsTab userId={user.id} />;
       case "settings": return <SettingsTab userId={user.id} />;
       case "tutorial": return <TutorialTab userId={user.id} />;
