@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import {
   CalendarDays, Shield, BarChart3, BookOpen, History,
   Sparkles, Brain, MessageCircle, Trophy, Settings, LogOut, Menu, X,
-  ChevronLeft, HelpCircle, Palette,
+  ChevronLeft, HelpCircle, Palette, Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
