@@ -1,52 +1,39 @@
 
 
-## Plano de Ajustes Visuais
+# Plano: Atualizar o Tutorial para refletir todas as funcionalidades da plataforma
 
-### 1. Arredondar bordas do icone do cerebro
-O icone atual (`icon-dark.png` e `icon-light.png`) possui cantos mais quadrados. O usuario quer bordas arredondadas (como na segunda imagem de referencia). Como os arquivos de imagem ja estao definidos, a solucao e aplicar `rounded-xl` (ou `rounded-2xl`) via CSS em todas as tags `<img>` que referenciam esses icones, em vez de editar os PNGs.
+## Problema
+O Tutorial atual esta desatualizado -- nao menciona funcionalidades recentes como: upload de edital por IA, ferramentas do Professor.IA (flashcards, mapas mentais, simulados, resumos), sistema de revisoes SRS com curva do esquecimento no Coach.IA, o grafico G-Force de 5 vetores na Analise, a aba Bem-Estar (Psique) com anamnese, o Pomodoro editavel e as horas/minutos granulares nas Configuracoes. Tambem nao explica a filosofia por tras dos 5 vetores do COGNOS.
 
-**Arquivos afetados:**
-- `src/components/dashboard/Sidebar.tsx` (linha 100) -- adicionar `rounded-xl`
-- `src/pages/Index.tsx` (linhas 66 e 252) -- adicionar `rounded-xl`
-- `src/pages/Auth.tsx` (linha 120) -- usa `logo-cognos.png`, tambem adicionar `rounded-xl`
-- `src/pages/Onboarding.tsx` (linha 194) -- usa `logo-cognos.png`, tambem adicionar `rounded-xl`
+## O que sera feito
 
-### 2. Remover linha divisoria entre a barra superior e o conteudo do Planner
-Na `DashboardLayout.tsx` (linha 28), a barra de citacoes tem `border-b border-border` que cria a linha clara visivel. Essa classe sera removida.
+### 1. Reescrever a secao "A Estrategia COGNOS"
+- Expandir para explicar os **5 vetores** (Relevancia, Incidencia, Compreensao, Intensidade, Psique) e como cada um alimenta o "cerebro" da plataforma.
+- Explicar o ciclo completo: Mapeamento -> Execucao -> Coleta -> Otimizacao -> Correcao de Rota.
+- Mencionar a curva do esquecimento e a neurociencia do aprendizado como principios fundadores.
 
-### 3. Auditoria de responsividade mobile
-Apos as alteracoes visuais, farei uma verificacao completa navegando pelo site em viewport 390x844 (iPhone 14), cobrindo:
-- Landing page (navbar, hero, features, depoimentos, precos, FAQ, footer)
-- Pagina de autenticacao
-- Dashboard (sidebar mobile, abas)
+### 2. Atualizar a "Visao Geral das Abas" com todas as funcionalidades atuais
+Cada aba sera descrita com suas funcionalidades reais:
+- **Planner**: Calendario, Registro Rapido, Pomodoro editavel (1-120 min), Heatmap.
+- **Arsenal**: Upload de PDF do edital com extracao automatica por IA de disciplinas/topicos/relevancia/incidencia. Gestao manual de materiais.
+- **Analise**: Metas, desempenho em questoes, grafico G-Force (Radar de 5 vetores) comparando situacao real vs ideal.
+- **Cadernos**: Notas por disciplina com expansao por IA.
+- **Previsor.IA**: Previsao de dias ate aprovacao baseada em eficiencia e dedicacao.
+- **Coach.IA**: Feedback estrategico + sistema SRS de revisoes espacadas integrado ao Planner e Arsenal.
+- **Professor.IA**: Chat + Ferramentas (Flashcards, Mapas Mentais, Simulados, Resumos gerados por IA).
+- **Bem-Estar (Psique)**: Anamnese neurocognitiva, check-in diario, dicas personalizadas.
+- **Conquistas**: Medalhas desbloqueadas automaticamente.
+- **Configuracoes**: Horas/minutos granulares, meta de questoes, periodo de estudo.
 
----
+### 3. Adicionar nova secao "Os 5 Vetores COGNOS"
+Um card dedicado explicando cada vetor em detalhe, sua fonte de dados e como influencia a trajetoria de estudos.
 
-### Detalhes Tecnicos
+### 4. Adicionar secao "Fluxo Recomendado para Novos Usuarios"
+Guia passo-a-passo: Onboarding -> Anamnese (Bem-Estar) -> Upload do Edital (Arsenal) -> Configurar horas (Settings) -> Estudar (Planner) -> Questoes (Analise) -> Revisoes (Coach) -> Previsao (Previsor).
 
-**Sidebar.tsx** -- linha 100:
-- De: `className={cn("h-9 w-9 object-contain", isDark && "bg-transparent")}`
-- Para: `className={cn("h-9 w-9 object-contain rounded-xl", isDark && "bg-transparent")}`
+### 5. Atualizar a lista de reset (TOOLS)
+Adicionar `psyche_profiles` e `psyche_checkins` na lista de ferramentas resetaveis.
 
-**Index.tsx** -- linha 66:
-- De: `className="h-8 w-8 object-contain"`
-- Para: `className="h-8 w-8 object-contain rounded-xl"`
-
-**Index.tsx** -- linha 252:
-- De: `className="h-6"`
-- Para: `className="h-6 rounded-xl"`
-
-**Auth.tsx** -- linha 120:
-- De: `className="h-10"`
-- Para: `className="h-10 rounded-xl"`
-
-**Onboarding.tsx** -- linha 194:
-- De: `className="h-8"`
-- Para: `className="h-8 rounded-xl"`
-
-**DashboardLayout.tsx** -- linha 28:
-- De: `className="flex items-center justify-end gap-2 px-6 py-3 border-b border-border"`
-- Para: `className="flex items-center justify-end gap-2 px-6 py-3"`
-
-**Auditoria mobile:** Navegacao em 390px para verificar todos os elementos apos as mudancas.
+## Arquivo afetado
+- `src/components/dashboard/TutorialTab.tsx` -- reescrita completa do conteudo.
 
