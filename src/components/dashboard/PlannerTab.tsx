@@ -32,8 +32,10 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [sessions, setSessions] = useState<any[]>([]);
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [pomodoroMinutes, setPomodoroMinutes] = useState(25);
   const [timerSeconds, setTimerSeconds] = useState(25 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [editingPomodoro, setEditingPomodoro] = useState(false);
   const [draggedBlock, setDraggedBlock] = useState<CalendarBlock | null>(null);
 
   // Edit modal state
