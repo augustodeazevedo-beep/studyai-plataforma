@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.expand-note]
 verify_jwt = false
+
+[functions.professor-tools]
+verify_jwt = false
