@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,39 +6,90 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Shield, BookOpen, CheckCircle, Target, Plus, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Shield, BookOpen, CheckCircle, Target, Plus, Loader2, Trash2, Upload, FileText, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ArsenalTabProps { userId: string; }
 
 const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [topics, setTopics] = useState<any[]>([]);
+  const [plan, setPlan] = useState<any[]>([]);
   const [editalText, setEditalText] = useState("");
   const [processing, setProcessing] = useState(false);
   const [newSubject, setNewSubject] = useState({ name: "", weight: 3, knowledge_level: 1 });
   const [newTopicInputs, setNewTopicInputs] = useState<Record<string, string>>({});
+  const [uploadMode, setUploadMode] = useState<"text" | "pdf">("pdf");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
-    const [subRes, topRes] = await Promise.all([
+    const [subRes, topRes, planRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("topics").select("*").eq("user_id", userId).order("order_index"),
+      supabase.from("study_plan").select("*, user_subjects(name)").eq("user_id", userId),
     ]);
     setSubjects(subRes.data || []);
     setTopics(topRes.data || []);
+    setPlan(planRes.data || []);
   }, [userId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const getProfileData = async () => {
+    const { data } = await supabase.from("profiles").select("target_exam, target_position, banca").eq("user_id", userId).maybeSingle();
+    return data || {} as Record<string, any>;
+  };
+
   const processEdital = async () => {
-    if (editalText.trim().length < 20) { toast.error("Texto do edital muito curto"); return; }
     setProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("process-edital", { body: { editalText } });
-      if (error) throw error;
-      toast.success(`Edital processado! ${data.subjects?.length || 0} disciplinas extraídas`);
+      const profile = await getProfileData();
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) { toast.error("Faça login novamente"); setProcessing(false); return; }
+
+      let body: any = {
+        targetExam: profile.target_exam,
+        targetPosition: profile.target_position,
+        banca: profile.banca,
+      };
+
+      if (uploadMode === "pdf" && selectedFile) {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]); // Remove data:...;base64, prefix
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(selectedFile);
+        });
+        body.pdfBase64 = base64;
+      } else if (uploadMode === "text") {
+        if (editalText.trim().length < 20) { toast.error("Texto do edital muito curto"); setProcessing(false); return; }
+        body.editalText = editalText;
+      } else {
+        toast.error("Selecione um arquivo PDF ou cole o texto do edital");
+        setProcessing(false);
+        return;
+      }
+
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-edital`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || `Erro ${resp.status}`);
+
+      toast.success(`Edital processado! ${data.subjects?.length || 0} disciplinas extraídas com análise de incidência e relevância`);
       setEditalText("");
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       loadData();
     } catch (e: any) { toast.error(e.message || "Erro ao processar edital"); }
     setProcessing(false);
@@ -73,9 +124,19 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     loadData();
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") { toast.error("Apenas arquivos PDF são aceitos"); return; }
+    if (file.size > 20 * 1024 * 1024) { toast.error("Arquivo muito grande (máx. 20MB)"); return; }
+    setSelectedFile(file);
+  };
+
   const totalTopics = topics.length;
   const completedTopics = topics.filter(t => t.completed).length;
   const completionPct = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+
+  const getSubjectPlan = (subjectId: string) => plan.find(p => p.subject_id === subjectId);
 
   return (
     <div className="space-y-6">
@@ -91,11 +152,62 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
       {/* Process Edital */}
       <Card className="glass">
-        <CardHeader><CardTitle className="text-sm">📄 Processar Novo Edital</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea value={editalText} onChange={e => setEditalText(e.target.value)} placeholder="Cole aqui o conteúdo programático do edital..." rows={5} />
-          <Button onClick={processEdital} disabled={processing}>
-            {processing ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Processando...</> : "Processar Edital com IA"}
+        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" />Processar Edital com IA</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as "text" | "pdf")}>
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="pdf"><Upload className="h-3 w-3 mr-1" />Upload PDF</TabsTrigger>
+              <TabsTrigger value="text"><FileText className="h-3 w-3 mr-1" />Colar Texto</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="pdf" className="space-y-3 mt-3">
+              <div
+                className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {selectedFile ? (
+                  <div className="space-y-2">
+                    <FileText className="h-10 w-10 mx-auto text-primary" />
+                    <p className="text-sm font-medium">{selectedFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>
+                      Remover
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Clique para selecionar o PDF do edital</p>
+                    <p className="text-xs text-muted-foreground">Máximo 20MB</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="text" className="mt-3">
+              <Textarea value={editalText} onChange={e => setEditalText(e.target.value)} placeholder="Cole aqui o conteúdo programático do edital..." rows={6} />
+            </TabsContent>
+          </Tabs>
+
+          <div className="bg-muted/20 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground/80">🤖 A IA irá automaticamente:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>Extrair todas as disciplinas e tópicos do conteúdo programático</li>
+              <li>Avaliar o grau de <strong className="text-primary">relevância</strong> (peso na prova) de cada disciplina</li>
+              <li>Estimar o grau de <strong className="text-primary">incidência</strong> com base em provas anteriores da mesma banca/cargo</li>
+              <li>Criar automaticamente o plano de estudos com prioridades</li>
+            </ul>
+          </div>
+
+          <Button onClick={processEdital} disabled={processing} className="w-full">
+            {processing ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Processando edital com IA...</> : <><TrendingUp className="h-4 w-4 mr-1" />Processar Edital com IA</>}
           </Button>
         </CardContent>
       </Card>
@@ -119,6 +231,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
           const subTopics = topics.filter(t => t.subject_id === s.id);
           const done = subTopics.filter(t => t.completed).length;
           const pct = subTopics.length > 0 ? Math.round((done / subTopics.length) * 100) : 0;
+          const subPlan = getSubjectPlan(s.id);
           return (
             <Card key={s.id} className="glass">
               <CardHeader className="pb-2">
@@ -126,11 +239,13 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
                   <CardTitle className="text-primary text-sm">{s.name}</CardTitle>
                   <Button variant="ghost" size="icon" onClick={() => deleteSubject(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
                 </div>
-                <div className="flex gap-3 text-xs text-muted-foreground">
-                  <span>Relevância: {s.weight}</span>
-                  <span>Conhecimento: {s.knowledge_level}</span>
+                <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
+                  <span>Relevância: <strong className="text-foreground">{subPlan?.relevance || s.weight}/5</strong></span>
+                  <span>Incidência: <strong className="text-foreground">{subPlan?.incidence || "—"}/5</strong></span>
+                  <span>Conhecimento: <strong className="text-foreground">{s.knowledge_level}/5</strong></span>
                 </div>
                 <Progress value={pct} className="h-1.5 mt-1" />
+                <span className="text-[10px] text-muted-foreground">{done}/{subTopics.length} tópicos concluídos</span>
               </CardHeader>
               <CardContent className="space-y-2">
                 {subTopics.map(t => (
