@@ -18,16 +18,16 @@ interface SidebarProps {
   userName: string;
 }
 
-const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: boolean }[] = [
-  { key: "planner", label: "Planner", icon: CalendarDays },
+const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: boolean; separator?: string }[] = [
+  { key: "psyche", label: "Bem-Estar", icon: Heart, separator: "Preparação" },
   { key: "arsenal", label: "Arsenal", icon: Shield },
-  { key: "analysis", label: "Análise", icon: BarChart3 },
+  { key: "planner", label: "Planner", icon: CalendarDays, separator: "Execução" },
   { key: "notebooks", label: "Cadernos", icon: BookOpen },
-  { key: "history", label: "Histórico", icon: History },
-  { key: "predictor", label: "Previsor.IA", icon: Sparkles, ai: true },
+  { key: "analysis", label: "Análise", icon: BarChart3, separator: "Inteligência" },
   { key: "coach", label: "Coach.IA", icon: Brain, ai: true },
   { key: "professor", label: "Professor.IA", icon: MessageCircle, ai: true },
-  { key: "psyche", label: "Bem-Estar", icon: Heart },
+  { key: "predictor", label: "Previsor.IA", icon: Sparkles, ai: true },
+  { key: "history", label: "Histórico", icon: History, separator: "Acompanhamento" },
   { key: "achievements", label: "Conquistas", icon: Trophy },
   { key: "tutorial", label: "Tutorial", icon: HelpCircle },
 ];
