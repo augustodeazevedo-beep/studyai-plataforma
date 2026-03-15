@@ -353,6 +353,9 @@ const Index = () => {
       {/* Pricing */}
       <PricingSection />
 
+      {/* Lead Capture */}
+      <LeadCaptureForm />
+
       {/* FAQ */}
       <FAQSection />
 
