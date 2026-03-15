@@ -9,6 +9,7 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Text,
@@ -20,32 +21,21 @@ interface InviteEmailProps {
   confirmationUrl: string
 }
 
-export const InviteEmail = ({
-  siteName,
-  siteUrl,
-  confirmationUrl,
-}: InviteEmailProps) => (
-  <Html lang="en" dir="ltr">
+export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailProps) => (
+  <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>You've been invited to join {siteName}</Preview>
+    <Preview>Você foi convidado para o COGNOS Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>You've been invited</Heading>
+        <Img src="https://cognosstudyai.lovable.app/logo-cognos.png" width="48" height="48" alt="COGNOS" style={{ borderRadius: '12px', marginBottom: '16px' }} />
+        <Heading style={h1}>Você foi convidado!</Heading>
         <Text style={text}>
-          You've been invited to join{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          . Click the button below to accept the invitation and create your
-          account.
+          Você recebeu um convite para o{' '}
+          <Link href={siteUrl} style={link}><strong>COGNOS Study.AI</strong></Link>.
+          Clique no botão abaixo para aceitar e criar sua conta.
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Accept Invitation
-        </Button>
-        <Text style={footer}>
-          If you weren't expecting this invitation, you can safely ignore this
-          email.
-        </Text>
+        <Button style={button} href={confirmationUrl}>Aceitar Convite</Button>
+        <Text style={footer}>Se você não esperava este convite, ignore este email com segurança.</Text>
       </Container>
     </Body>
   </Html>
@@ -53,27 +43,10 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const main = { backgroundColor: '#0d1117', fontFamily: "'Space Grotesk', 'Inter', Arial, sans-serif" }
+const container = { padding: '32px 28px', backgroundColor: '#151b25', borderRadius: '12px', margin: '40px auto', maxWidth: '480px' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#e5e7eb', margin: '0 0 20px' }
+const text = { fontSize: '14px', color: '#7b8794', lineHeight: '1.6', margin: '0 0 24px' }
+const link = { color: '#1ec8e6', textDecoration: 'underline' }
+const button = { backgroundColor: '#1ec8e6', color: '#0d1117', fontSize: '14px', fontWeight: 'bold' as const, borderRadius: '12px', padding: '12px 24px', textDecoration: 'none' }
+const footer = { fontSize: '12px', color: '#555d68', margin: '30px 0 0' }

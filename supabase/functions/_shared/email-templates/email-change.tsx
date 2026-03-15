@@ -9,6 +9,7 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Text,
@@ -21,39 +22,22 @@ interface EmailChangeEmailProps {
   confirmationUrl: string
 }
 
-export const EmailChangeEmail = ({
-  siteName,
-  email,
-  newEmail,
-  confirmationUrl,
-}: EmailChangeEmailProps) => (
-  <Html lang="en" dir="ltr">
+export const EmailChangeEmail = ({ siteName, email, newEmail, confirmationUrl }: EmailChangeEmailProps) => (
+  <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirm your email change for {siteName}</Preview>
+    <Preview>Confirme a alteração de email - COGNOS Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
+        <Img src="https://cognosstudyai.lovable.app/logo-cognos.png" width="48" height="48" alt="COGNOS" style={{ borderRadius: '12px', marginBottom: '16px' }} />
+        <Heading style={h1}>Confirme a alteração de email</Heading>
         <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
-          <Link href={`mailto:${email}`} style={link}>
-            {email}
-          </Link>{' '}
-          to{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>
-            {newEmail}
-          </Link>
-          .
+          Você solicitou alterar o email da sua conta de{' '}
+          <Link href={`mailto:${email}`} style={link}>{email}</Link> para{' '}
+          <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
         </Text>
-        <Text style={text}>
-          Click the button below to confirm this change:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
-        <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
-        </Text>
+        <Text style={text}>Clique no botão abaixo para confirmar:</Text>
+        <Button style={button} href={confirmationUrl}>Confirmar Alteração</Button>
+        <Text style={footer}>Se você não solicitou esta alteração, proteja sua conta imediatamente.</Text>
       </Container>
     </Body>
   </Html>
@@ -61,27 +45,10 @@ export const EmailChangeEmail = ({
 
 export default EmailChangeEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const main = { backgroundColor: '#0d1117', fontFamily: "'Space Grotesk', 'Inter', Arial, sans-serif" }
+const container = { padding: '32px 28px', backgroundColor: '#151b25', borderRadius: '12px', margin: '40px auto', maxWidth: '480px' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#e5e7eb', margin: '0 0 20px' }
+const text = { fontSize: '14px', color: '#7b8794', lineHeight: '1.6', margin: '0 0 24px' }
+const link = { color: '#1ec8e6', textDecoration: 'underline' }
+const button = { backgroundColor: '#1ec8e6', color: '#0d1117', fontSize: '14px', fontWeight: 'bold' as const, borderRadius: '12px', padding: '12px 24px', textDecoration: 'none' }
+const footer = { fontSize: '12px', color: '#555d68', margin: '30px 0 0' }
