@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkles, BookOpen, Zap, Heart, GraduationCap, MessageCircle } from "lucide-react";
 import PricingSection from "@/components/landing/PricingSection";
 import FAQSection from "@/components/landing/FAQSection";
+import LeadCaptureForm from "@/components/landing/LeadCaptureForm";
 import heroBg from "@/assets/hero-bg.jpg";
 import ctaBg from "@/assets/cta-bg.jpg";
 import featuresBg from "@/assets/features-bg.jpg";
