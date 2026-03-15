@@ -1,0 +1,43 @@
+/// <reference types="npm:@types/react@18.3.1" />
+
+import * as React from 'npm:react@18.3.1'
+
+import {
+  Body,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Img,
+  Preview,
+  Text,
+} from 'npm:@react-email/components@0.0.22'
+
+interface ReauthenticationEmailProps {
+  token: string
+}
+
+export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
+  <Html lang="pt-BR" dir="ltr">
+    <Head />
+    <Preview>Seu código de verificação - COGNOS Study.AI</Preview>
+    <Body style={main}>
+      <Container style={container}>
+        <Img src="https://cognosstudyai.lovable.app/logo-cognos.png" width="48" height="48" alt="COGNOS" style={{ borderRadius: '12px', marginBottom: '16px' }} />
+        <Heading style={h1}>Código de verificação</Heading>
+        <Text style={text}>Use o código abaixo para confirmar sua identidade:</Text>
+        <Text style={codeStyle}>{token}</Text>
+        <Text style={footer}>Este código expira em breve. Se você não solicitou, ignore este email.</Text>
+      </Container>
+    </Body>
+  </Html>
+)
+
+export default ReauthenticationEmail
+
+const main = { backgroundColor: '#0d1117', fontFamily: "'Space Grotesk', 'Inter', Arial, sans-serif" }
+const container = { padding: '32px 28px', backgroundColor: '#151b25', borderRadius: '12px', margin: '40px auto', maxWidth: '480px' }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#e5e7eb', margin: '0 0 20px' }
+const text = { fontSize: '14px', color: '#7b8794', lineHeight: '1.6', margin: '0 0 24px' }
+const codeStyle = { fontFamily: "'Space Grotesk', Courier, monospace", fontSize: '28px', fontWeight: 'bold' as const, color: '#1ec8e6', margin: '0 0 30px', letterSpacing: '4px' }
+const footer = { fontSize: '12px', color: '#555d68', margin: '30px 0 0' }
