@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, Save } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Settings, Save, Download, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +32,11 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
   const [dailyMinutes, setDailyMinutes] = useState("0");
   const [studyDays, setStudyDays] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle().then(({ data }) => {
@@ -59,6 +65,60 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
     setSaving(false);
     if (error) { toast({ title: "Erro ao salvar", variant: "destructive" }); return; }
     toast({ title: "Configurações salvas! ✅" });
+  };
+
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Não autenticado");
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/export-user-data`,
+        { headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" } }
+      );
+      if (!res.ok) throw new Error("Falha ao exportar");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cognos-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Dados exportados! 📦" });
+    } catch {
+      toast({ title: "Erro ao exportar dados", variant: "destructive" });
+    }
+    setExporting(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "EXCLUIR") {
+      toast({ title: "Digite EXCLUIR para confirmar", variant: "destructive" });
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Não autenticado");
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/delete-account`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        }
+      );
+      if (!res.ok) throw new Error("Falha ao excluir");
+      await supabase.auth.signOut();
+      navigate("/");
+      toast({ title: "Conta excluída com sucesso" });
+    } catch {
+      toast({ title: "Erro ao excluir conta", variant: "destructive" });
+    }
+    setDeleting(false);
   };
 
   return (
@@ -95,26 +155,11 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
             <div className="flex gap-3 items-end">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Horas</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={16}
-                  value={dailyHours}
-                  onChange={(e) => setDailyHours(String(Math.max(0, Math.min(16, Number(e.target.value) || 0))))}
-                  className="w-20 text-center"
-                />
+                <Input type="number" min={0} max={16} value={dailyHours} onChange={(e) => setDailyHours(String(Math.max(0, Math.min(16, Number(e.target.value) || 0))))} className="w-20 text-center" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Minutos</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={59}
-                  step={5}
-                  value={dailyMinutes}
-                  onChange={(e) => setDailyMinutes(String(Math.max(0, Math.min(59, Number(e.target.value) || 0))))}
-                  className="w-20 text-center"
-                />
+                <Input type="number" min={0} max={59} step={5} value={dailyMinutes} onChange={(e) => setDailyMinutes(String(Math.max(0, Math.min(59, Number(e.target.value) || 0))))} className="w-20 text-center" />
               </div>
               <span className="text-sm text-muted-foreground pb-2">
                 = {Number(dailyHours)}h{Number(dailyMinutes) > 0 ? `${dailyMinutes}min` : ""}
@@ -127,6 +172,55 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
       <Button onClick={saveSettings} disabled={saving} className="w-full glow">
         <Save className="h-4 w-4 mr-2" />{saving ? "Salvando..." : "Salvar Configurações"}
       </Button>
+
+      {/* LGPD Section */}
+      <Card className="glass border-border/50">
+        <CardHeader><CardTitle className="text-base">Privacidade e Dados (LGPD)</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button variant="outline" onClick={handleExportData} disabled={exporting} className="flex-1">
+              <Download className="h-4 w-4 mr-2" />{exporting ? "Exportando..." : "Exportar meus dados"}
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="flex-1">
+                  <Trash2 className="h-4 w-4 mr-2" />Excluir minha conta
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir conta permanentemente</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação é <strong>irreversível</strong>. Todos os seus dados serão apagados permanentemente, incluindo sessões de estudo, flashcards, anotações e progresso.
+                    <br /><br />
+                    Digite <strong>EXCLUIR</strong> abaixo para confirmar:
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Digite EXCLUIR"
+                  className="mt-2"
+                />
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setDeleteConfirmText("")}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmText !== "EXCLUIR" || deleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {deleting ? "Excluindo..." : "Excluir permanentemente"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Conforme a LGPD, você pode exportar todos os seus dados ou solicitar a exclusão completa da sua conta a qualquer momento.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };

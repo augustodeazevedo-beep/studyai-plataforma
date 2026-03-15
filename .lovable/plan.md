@@ -1,70 +1,52 @@
 
 
-# Plano de Melhorias de Segurança e Persistência - COGNOS
+## Plano de Ajustes Visuais
 
-## Diagnóstico Atual
+### 1. Arredondar bordas do icone do cerebro
+O icone atual (`icon-dark.png` e `icon-light.png`) possui cantos mais quadrados. O usuario quer bordas arredondadas (como na segunda imagem de referencia). Como os arquivos de imagem ja estao definidos, a solucao e aplicar `rounded-xl` (ou `rounded-2xl`) via CSS em todas as tags `<img>` que referenciam esses icones, em vez de editar os PNGs.
 
-O scan de segurança revelou 3 vulnerabilidades, e a análise do código identificou funcionalidades ausentes importantes:
+**Arquivos afetados:**
+- `src/components/dashboard/Sidebar.tsx` (linha 100) -- adicionar `rounded-xl`
+- `src/pages/Index.tsx` (linhas 66 e 252) -- adicionar `rounded-xl`
+- `src/pages/Auth.tsx` (linha 120) -- usa `logo-cognos.png`, tambem adicionar `rounded-xl`
+- `src/pages/Onboarding.tsx` (linha 194) -- usa `logo-cognos.png`, tambem adicionar `rounded-xl`
 
-1. **RLS com role `{public}` em 12+ tabelas** -- deveria ser `{authenticated}`
-2. **Leaked password protection desativada**
-3. **Achievements sem validação server-side** (usuários podem auto-atribuir conquistas)
-4. **Sem fluxo de recuperação de senha** (nem "esqueci minha senha", nem página `/reset-password`)
-5. **Sem funcionalidade de exclusão de conta** (exigência LGPD)
-6. **Sem exportação de dados do usuário** (exigência LGPD)
+### 2. Remover linha divisoria entre a barra superior e o conteudo do Planner
+Na `DashboardLayout.tsx` (linha 28), a barra de citacoes tem `border-b border-border` que cria a linha clara visivel. Essa classe sera removida.
 
----
-
-## Etapas de Implementação (em ordem de prioridade)
-
-### Etapa 1 -- Corrigir RLS Policies (migração SQL)
-
-Atualizar todas as tabelas que usam `FOR ... TO public` para `TO authenticated`. Tabelas afetadas: `reminders`, `topics`, `study_materials`, `study_calendar_blocks`, `user_subjects`, `study_sessions`, `ai_coaching_history`, `spaced_reviews`, `flashcards`, `user_notes`, `user_roles`, `study_plan`, `user_achievements`, `question_attempts`, `questions`, `profiles`.
-
-Para cada tabela: `DROP POLICY` existente e `CREATE POLICY` idêntica mas com `TO authenticated`.
-
-### Etapa 2 -- Habilitar Leaked Password Protection
-
-Usar a ferramenta de configuração de autenticação para ativar a proteção contra senhas vazadas.
-
-### Etapa 3 -- Validação Server-side de Achievements
-
-Criar uma função `SECURITY DEFINER` que valida conquistas antes de inserir, e alterar a policy de INSERT em `user_achievements` para usar essa função ou restringir inserções diretas.
-
-### Etapa 4 -- Fluxo de Recuperação de Senha
-
-- Adicionar link "Esqueci minha senha" na tela de login (`Auth.tsx`)
-- Criar componente de formulário que chama `supabase.auth.resetPasswordForEmail()`
-- Criar página `/reset-password` que captura o token de recovery e permite definir nova senha via `supabase.auth.updateUser()`
-- Adicionar rota `/reset-password` no `App.tsx`
-
-### Etapa 5 -- Exclusão de Conta (LGPD)
-
-- Criar edge function `delete-account` que:
-  - Valida autenticação do usuário
-  - Deleta todos os dados do usuário (as foreign keys com CASCADE já cuidam da maioria)
-  - Usa `supabase.auth.admin.deleteUser()` para remover da tabela auth
-- Adicionar botão "Excluir minha conta" no `SettingsTab.tsx` com confirmação dupla (AlertDialog + digitar "EXCLUIR")
-
-### Etapa 6 -- Exportação de Dados (LGPD)
-
-- Criar edge function `export-user-data` que:
-  - Coleta dados de todas as tabelas do usuário (profiles, subjects, sessions, notes, flashcards, etc.)
-  - Retorna JSON estruturado
-- Adicionar botão "Exportar meus dados" no `SettingsTab.tsx` que baixa o arquivo JSON
+### 3. Auditoria de responsividade mobile
+Apos as alteracoes visuais, farei uma verificacao completa navegando pelo site em viewport 390x844 (iPhone 14), cobrindo:
+- Landing page (navbar, hero, features, depoimentos, precos, FAQ, footer)
+- Pagina de autenticacao
+- Dashboard (sidebar mobile, abas)
 
 ---
 
-## Arquivos que serão criados/editados
+### Detalhes Tecnicos
 
-| Arquivo | Ação |
-|---|---|
-| Migração SQL | Recriar ~30 RLS policies com `TO authenticated` |
-| `supabase/functions/delete-account/index.ts` | Criar |
-| `supabase/functions/export-user-data/index.ts` | Criar |
-| `src/pages/ResetPassword.tsx` | Criar |
-| `src/pages/Auth.tsx` | Adicionar "esqueci minha senha" |
-| `src/App.tsx` | Adicionar rota `/reset-password` |
-| `src/components/dashboard/SettingsTab.tsx` | Adicionar botões de exclusão e exportação |
-| `supabase/config.toml` | Registrar novas edge functions |
+**Sidebar.tsx** -- linha 100:
+- De: `className={cn("h-9 w-9 object-contain", isDark && "bg-transparent")}`
+- Para: `className={cn("h-9 w-9 object-contain rounded-xl", isDark && "bg-transparent")}`
+
+**Index.tsx** -- linha 66:
+- De: `className="h-8 w-8 object-contain"`
+- Para: `className="h-8 w-8 object-contain rounded-xl"`
+
+**Index.tsx** -- linha 252:
+- De: `className="h-6"`
+- Para: `className="h-6 rounded-xl"`
+
+**Auth.tsx** -- linha 120:
+- De: `className="h-10"`
+- Para: `className="h-10 rounded-xl"`
+
+**Onboarding.tsx** -- linha 194:
+- De: `className="h-8"`
+- Para: `className="h-8 rounded-xl"`
+
+**DashboardLayout.tsx** -- linha 28:
+- De: `className="flex items-center justify-end gap-2 px-6 py-3 border-b border-border"`
+- Para: `className="flex items-center justify-end gap-2 px-6 py-3"`
+
+**Auditoria mobile:** Navegacao em 390px para verificar todos os elementos apos as mudancas.
 

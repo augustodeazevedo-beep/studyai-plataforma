@@ -177,6 +177,26 @@ const Auth = () => {
                   <Button type="submit" className="w-full glow" disabled={loading}>
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!email.trim()) {
+                        toast({ title: "Digite seu email primeiro", variant: "destructive" });
+                        return;
+                      }
+                      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      });
+                      if (error) {
+                        toast({ title: "Erro", description: error.message, variant: "destructive" });
+                      } else {
+                        toast({ title: "Email enviado!", description: "Verifique sua caixa de entrada para redefinir a senha." });
+                      }
+                    }}
+                    className="w-full text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Esqueci minha senha
+                  </button>
                 </form>
               </TabsContent>
 
