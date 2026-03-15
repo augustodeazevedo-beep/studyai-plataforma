@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
