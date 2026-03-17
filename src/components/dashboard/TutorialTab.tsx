@@ -42,7 +42,20 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
     setLoading(true);
     try {
       for (const table of tables) {
-        await supabase.from(table as any).delete().eq("user_id", userId);
+        if (table === "profiles") {
+          // Reset profile fields to defaults instead of deleting the row
+          await supabase.from("profiles").update({
+            target_exam: null,
+            target_position: null,
+            exam_date: null,
+            daily_hours: null,
+            study_days: null,
+            banca: null,
+            avatar_url: null,
+          }).eq("user_id", userId);
+        } else {
+          await supabase.from(table as any).delete().eq("user_id", userId);
+        }
       }
       toast.success(`${label} resetado com sucesso!`);
     } catch {
