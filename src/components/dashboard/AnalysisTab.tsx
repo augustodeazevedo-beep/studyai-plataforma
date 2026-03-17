@@ -238,7 +238,48 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
             </CardContent>
           </Card>
 
-          {/* Progress by subject */}
+          {/* G-Force Recommendations */}
+          {recommendations.length > 0 && (
+            <Card className="glass">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <ArrowUp className="h-4 w-4 text-primary" />Recomendações G-Force
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Prioridades calculadas pelo algoritmo adaptativo</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {recommendations.slice(0, 5).map((rec) => {
+                  const colorMap = {
+                    critical: "bg-destructive/10 border-destructive/30 text-destructive",
+                    high: "bg-warning/10 border-warning/30 text-warning",
+                    medium: "bg-primary/10 border-primary/30 text-primary",
+                    low: "bg-muted/20 border-border text-muted-foreground",
+                  };
+                  const badgeMap = {
+                    critical: "destructive" as const,
+                    high: "secondary" as const,
+                    medium: "outline" as const,
+                    low: "outline" as const,
+                  };
+                  return (
+                    <div key={rec.disciplineId} className={`p-3 rounded-lg border ${colorMap[rec.priority]}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">{rec.disciplineName}</span>
+                        <Badge variant={badgeMap[rec.priority]} className="text-[10px]">
+                          {rec.priority === "critical" ? "🔴 Crítico" : rec.priority === "high" ? "🟡 Alto" : rec.priority === "medium" ? "🟢 Médio" : "⚪ Baixo"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs opacity-80">{rec.reason}</p>
+                      <p className="text-xs font-medium mt-1">{rec.suggestedAction}</p>
+                      <p className="text-[10px] opacity-60 mt-1">⏱️ {rec.estimatedMinutes} min sugeridos</p>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+
           <Card className="glass">
             <CardHeader><CardTitle className="text-sm">Progresso por Disciplina</CardTitle></CardHeader>
             <CardContent className="space-y-3">
