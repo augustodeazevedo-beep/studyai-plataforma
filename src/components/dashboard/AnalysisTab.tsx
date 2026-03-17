@@ -36,6 +36,9 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const [reminderText, setReminderText] = useState("");
   const [reminderDate, setReminderDate] = useState("");
   const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [priorities, setPriorities] = useState<DisciplinePriority[]>([]);
+  const [recommendations, setRecommendations] = useState<StudyRecommendation[]>([]);
+  const [checkins, setCheckins] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     const [subRes, topRes, sesRes, planRes, attRes, revRes, psyRes, remRes] = await Promise.all([
