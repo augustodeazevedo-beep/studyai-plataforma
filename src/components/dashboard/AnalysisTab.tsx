@@ -6,10 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Clock, Target, TrendingUp, CheckCircle, Plus, Loader2, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Clock, Target, TrendingUp, CheckCircle, Plus, Loader2, Sparkles, AlertTriangle, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { checkAchievements } from "@/lib/checkAchievements";
+import {
+  buildDisciplinesFromData,
+  buildPsycheState,
+  calculateDisciplinePriorities,
+  getStudyRecommendations,
+  calculatePsycheIndex,
+  type DisciplinePriority,
+  type StudyRecommendation,
+} from "@/lib/adaptive-algorithm";
 
 interface AnalysisTabProps { userId: string; }
 
@@ -26,9 +36,12 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const [reminderText, setReminderText] = useState("");
   const [reminderDate, setReminderDate] = useState("");
   const [generatingPlan, setGeneratingPlan] = useState(false);
+  const [priorities, setPriorities] = useState<DisciplinePriority[]>([]);
+  const [recommendations, setRecommendations] = useState<StudyRecommendation[]>([]);
+  const [checkins, setCheckins] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
-    const [subRes, topRes, sesRes, planRes, attRes, revRes, psyRes, remRes] = await Promise.all([
+    const [subRes, topRes, sesRes, planRes, attRes, revRes, psyRes, remRes, checkRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("topics").select("*").eq("user_id", userId),
       supabase.from("study_sessions").select("*").eq("user_id", userId),
@@ -37,15 +50,27 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
       supabase.from("spaced_reviews").select("*").eq("user_id", userId),
       supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("reminders").select("*").eq("user_id", userId).eq("completed", false).order("reminder_date"),
+      supabase.from("psyche_checkins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
     ]);
-    setSubjects(subRes.data || []);
+    const subs = subRes.data || [];
+    const sess = sesRes.data || [];
+    const atts = attRes.data || [];
+    setSubjects(subs);
     setTopics(topRes.data || []);
-    setSessions(sesRes.data || []);
+    setSessions(sess);
     setPlan(planRes.data || []);
-    setAttempts(attRes.data || []);
+    setAttempts(atts);
     setReviews(revRes.data || []);
     setPsycheProfile(psyRes.data);
     setReminders(remRes.data || []);
+    setCheckins(checkRes.data || []);
+
+    // Calculate G-Force priorities using the formal algorithm
+    const disciplines = buildDisciplinesFromData(subs, sess, atts);
+    const psycheState = buildPsycheState(psyRes.data, checkRes.data || []);
+    const prios = calculateDisciplinePriorities(disciplines, psycheState);
+    setPriorities(prios);
+    setRecommendations(getStudyRecommendations(prios));
   }, [userId]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -57,63 +82,25 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const correctAttempts = attempts.filter(a => a.is_correct).length;
   const avgAccuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
 
-  // === 5 VECTORS - F1 G-FORCE SENSOR STYLE ===
-  // 1. Relevância: avg weight across subjects
-  const avgRelevance = subjects.length > 0 
-    ? Math.round(subjects.reduce((a, s) => a + (s.weight || 3), 0) / subjects.length * 20) 
-    : 0;
+  // === G-FORCE from formal algorithm ===
+  const psycheState = buildPsycheState(psycheProfile, checkins);
+  const psycheIndex = calculatePsycheIndex(psycheState);
 
-  // 2. Incidência: avg incidence from study_plan
-  const avgIncidence = plan.length > 0 
-    ? Math.round(plan.reduce((a, p) => a + (p.incidence || 0), 0) / plan.length * 20) 
-    : 0;
-
-  // 3. Compreensão: derived from sessions comprehension + question accuracy
-  const avgComprehension = (() => {
-    const sessionComp = sessions.filter(s => s.comprehension_rating).length > 0
-      ? sessions.reduce((a, s) => a + (s.comprehension_rating || 0), 0) / sessions.filter(s => s.comprehension_rating).length
-      : 0;
-    const questionComp = avgAccuracy / 20; // scale to 0-5
-    const combined = sessionComp > 0 && questionComp > 0 ? (sessionComp + questionComp) / 2 : sessionComp || questionComp;
-    return Math.round(combined * 20);
-  })();
-
-  // 4. Intensidade: based on study frequency, review completion, consistency
-  const avgIntensity = (() => {
-    const daysSinceStart = sessions.length > 0
-      ? Math.max(1, Math.round((Date.now() - new Date(sessions[sessions.length - 1]?.started_at || Date.now()).getTime()) / 86400000))
-      : 1;
-    const studyFrequency = Math.min(5, sessions.length / Math.max(1, daysSinceStart) * 5);
-    const completedReviews = reviews.filter(r => r.completed).length;
-    const totalReviews = reviews.length || 1;
-    const reviewCompletion = (completedReviews / totalReviews) * 5;
-    return Math.round(((studyFrequency + reviewCompletion) / 2) * 20);
-  })();
-
-  // 5. Psique: from psyche_profiles real data
-  const avgPsyche = (() => {
-    if (psycheProfile) {
-      const mood = psycheProfile.current_mood || 3;
-      const stressInv = 6 - (psycheProfile.stress_level || 3); // invert: low stress = good
-      const sleep = psycheProfile.sleep_quality || 3;
-      const motivation = psycheProfile.motivation_level || 3;
-      const focus = psycheProfile.focus_capacity || 3;
-      return Math.round(((mood + stressInv + sleep + motivation + focus) / 5) * 20);
-    }
-    // Fallback: use review ratings
-    const completedRevs = reviews.filter(r => r.completed && r.performance_rating);
-    const avgRating = completedRevs.length > 0
-      ? completedRevs.reduce((a, r) => a + r.performance_rating, 0) / completedRevs.length
-      : 3;
-    return Math.round(avgRating * 20);
-  })();
+  // Aggregate vectors from priorities
+  const avgVectors = priorities.length > 0 ? {
+    relevance: Math.round(priorities.reduce((s, p) => s + p.vectors.relevance, 0) / priorities.length),
+    incidence: Math.round(priorities.reduce((s, p) => s + p.vectors.incidence, 0) / priorities.length),
+    comprehension: Math.round(priorities.reduce((s, p) => s + (100 - p.vectors.comprehension), 0) / priorities.length), // Show as mastery, not gap
+    intensity: Math.round(priorities.reduce((s, p) => s + p.vectors.intensity, 0) / priorities.length),
+    psyche: psycheIndex,
+  } : { relevance: 0, incidence: 0, comprehension: 0, intensity: 0, psyche: 0 };
 
   const gForceData = [
-    { vector: "Relevância", value: avgRelevance, fullMark: 100 },
-    { vector: "Incidência", value: avgIncidence, fullMark: 100 },
-    { vector: "Compreensão", value: avgComprehension, fullMark: 100 },
-    { vector: "Intensidade", value: avgIntensity, fullMark: 100 },
-    { vector: "Psique", value: avgPsyche, fullMark: 100 },
+    { vector: "Relevância", value: avgVectors.relevance, fullMark: 100 },
+    { vector: "Incidência", value: avgVectors.incidence, fullMark: 100 },
+    { vector: "Compreensão", value: avgVectors.comprehension, fullMark: 100 },
+    { vector: "Intensidade", value: avgVectors.intensity, fullMark: 100 },
+    { vector: "Psique", value: avgVectors.psyche, fullMark: 100 },
   ];
 
   // Per-subject radar
@@ -251,7 +238,48 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
             </CardContent>
           </Card>
 
-          {/* Progress by subject */}
+          {/* G-Force Recommendations */}
+          {recommendations.length > 0 && (
+            <Card className="glass">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <ArrowUp className="h-4 w-4 text-primary" />Recomendações G-Force
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Prioridades calculadas pelo algoritmo adaptativo</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {recommendations.slice(0, 5).map((rec) => {
+                  const colorMap = {
+                    critical: "bg-destructive/10 border-destructive/30 text-destructive",
+                    high: "bg-warning/10 border-warning/30 text-warning",
+                    medium: "bg-primary/10 border-primary/30 text-primary",
+                    low: "bg-muted/20 border-border text-muted-foreground",
+                  };
+                  const badgeMap = {
+                    critical: "destructive" as const,
+                    high: "secondary" as const,
+                    medium: "outline" as const,
+                    low: "outline" as const,
+                  };
+                  return (
+                    <div key={rec.disciplineId} className={`p-3 rounded-lg border ${colorMap[rec.priority]}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">{rec.disciplineName}</span>
+                        <Badge variant={badgeMap[rec.priority]} className="text-[10px]">
+                          {rec.priority === "critical" ? "🔴 Crítico" : rec.priority === "high" ? "🟡 Alto" : rec.priority === "medium" ? "🟢 Médio" : "⚪ Baixo"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs opacity-80">{rec.reason}</p>
+                      <p className="text-xs font-medium mt-1">{rec.suggestedAction}</p>
+                      <p className="text-[10px] opacity-60 mt-1">⏱️ {rec.estimatedMinutes} min sugeridos</p>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+
           <Card className="glass">
             <CardHeader><CardTitle className="text-sm">Progresso por Disciplina</CardTitle></CardHeader>
             <CardContent className="space-y-3">
