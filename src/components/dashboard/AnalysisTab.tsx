@@ -102,8 +102,6 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
     { vector: "Intensidade", value: avgVectors.intensity, fullMark: 100 },
     { vector: "Psique", value: avgVectors.psyche, fullMark: 100 },
   ];
-    { vector: "Psique", value: avgPsyche, fullMark: 100 },
-  ];
 
   // Per-subject radar
   const subjectRadarData = plan.map((p: any) => ({
