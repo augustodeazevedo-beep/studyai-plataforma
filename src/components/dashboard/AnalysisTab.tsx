@@ -82,62 +82,26 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const correctAttempts = attempts.filter(a => a.is_correct).length;
   const avgAccuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
 
-  // === 5 VECTORS - F1 G-FORCE SENSOR STYLE ===
-  // 1. Relevância: avg weight across subjects
-  const avgRelevance = subjects.length > 0 
-    ? Math.round(subjects.reduce((a, s) => a + (s.weight || 3), 0) / subjects.length * 20) 
-    : 0;
+  // === G-FORCE from formal algorithm ===
+  const psycheState = buildPsycheState(psycheProfile, checkins);
+  const psycheIndex = calculatePsycheIndex(psycheState);
 
-  // 2. Incidência: avg incidence from study_plan
-  const avgIncidence = plan.length > 0 
-    ? Math.round(plan.reduce((a, p) => a + (p.incidence || 0), 0) / plan.length * 20) 
-    : 0;
-
-  // 3. Compreensão: derived from sessions comprehension + question accuracy
-  const avgComprehension = (() => {
-    const sessionComp = sessions.filter(s => s.comprehension_rating).length > 0
-      ? sessions.reduce((a, s) => a + (s.comprehension_rating || 0), 0) / sessions.filter(s => s.comprehension_rating).length
-      : 0;
-    const questionComp = avgAccuracy / 20; // scale to 0-5
-    const combined = sessionComp > 0 && questionComp > 0 ? (sessionComp + questionComp) / 2 : sessionComp || questionComp;
-    return Math.round(combined * 20);
-  })();
-
-  // 4. Intensidade: based on study frequency, review completion, consistency
-  const avgIntensity = (() => {
-    const daysSinceStart = sessions.length > 0
-      ? Math.max(1, Math.round((Date.now() - new Date(sessions[sessions.length - 1]?.started_at || Date.now()).getTime()) / 86400000))
-      : 1;
-    const studyFrequency = Math.min(5, sessions.length / Math.max(1, daysSinceStart) * 5);
-    const completedReviews = reviews.filter(r => r.completed).length;
-    const totalReviews = reviews.length || 1;
-    const reviewCompletion = (completedReviews / totalReviews) * 5;
-    return Math.round(((studyFrequency + reviewCompletion) / 2) * 20);
-  })();
-
-  // 5. Psique: from psyche_profiles real data
-  const avgPsyche = (() => {
-    if (psycheProfile) {
-      const mood = psycheProfile.current_mood || 3;
-      const stressInv = 6 - (psycheProfile.stress_level || 3); // invert: low stress = good
-      const sleep = psycheProfile.sleep_quality || 3;
-      const motivation = psycheProfile.motivation_level || 3;
-      const focus = psycheProfile.focus_capacity || 3;
-      return Math.round(((mood + stressInv + sleep + motivation + focus) / 5) * 20);
-    }
-    // Fallback: use review ratings
-    const completedRevs = reviews.filter(r => r.completed && r.performance_rating);
-    const avgRating = completedRevs.length > 0
-      ? completedRevs.reduce((a, r) => a + r.performance_rating, 0) / completedRevs.length
-      : 3;
-    return Math.round(avgRating * 20);
-  })();
+  // Aggregate vectors from priorities
+  const avgVectors = priorities.length > 0 ? {
+    relevance: Math.round(priorities.reduce((s, p) => s + p.vectors.relevance, 0) / priorities.length),
+    incidence: Math.round(priorities.reduce((s, p) => s + p.vectors.incidence, 0) / priorities.length),
+    comprehension: Math.round(priorities.reduce((s, p) => s + (100 - p.vectors.comprehension), 0) / priorities.length), // Show as mastery, not gap
+    intensity: Math.round(priorities.reduce((s, p) => s + p.vectors.intensity, 0) / priorities.length),
+    psyche: psycheIndex,
+  } : { relevance: 0, incidence: 0, comprehension: 0, intensity: 0, psyche: 0 };
 
   const gForceData = [
-    { vector: "Relevância", value: avgRelevance, fullMark: 100 },
-    { vector: "Incidência", value: avgIncidence, fullMark: 100 },
-    { vector: "Compreensão", value: avgComprehension, fullMark: 100 },
-    { vector: "Intensidade", value: avgIntensity, fullMark: 100 },
+    { vector: "Relevância", value: avgVectors.relevance, fullMark: 100 },
+    { vector: "Incidência", value: avgVectors.incidence, fullMark: 100 },
+    { vector: "Compreensão", value: avgVectors.comprehension, fullMark: 100 },
+    { vector: "Intensidade", value: avgVectors.intensity, fullMark: 100 },
+    { vector: "Psique", value: avgVectors.psyche, fullMark: 100 },
+  ];
     { vector: "Psique", value: avgPsyche, fullMark: 100 },
   ];
 
