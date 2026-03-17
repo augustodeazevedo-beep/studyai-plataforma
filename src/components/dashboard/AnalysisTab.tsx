@@ -41,7 +41,7 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
   const [checkins, setCheckins] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
-    const [subRes, topRes, sesRes, planRes, attRes, revRes, psyRes, remRes] = await Promise.all([
+    const [subRes, topRes, sesRes, planRes, attRes, revRes, psyRes, remRes, checkRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("topics").select("*").eq("user_id", userId),
       supabase.from("study_sessions").select("*").eq("user_id", userId),
@@ -50,15 +50,27 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
       supabase.from("spaced_reviews").select("*").eq("user_id", userId),
       supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("reminders").select("*").eq("user_id", userId).eq("completed", false).order("reminder_date"),
+      supabase.from("psyche_checkins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
     ]);
-    setSubjects(subRes.data || []);
+    const subs = subRes.data || [];
+    const sess = sesRes.data || [];
+    const atts = attRes.data || [];
+    setSubjects(subs);
     setTopics(topRes.data || []);
-    setSessions(sesRes.data || []);
+    setSessions(sess);
     setPlan(planRes.data || []);
-    setAttempts(attRes.data || []);
+    setAttempts(atts);
     setReviews(revRes.data || []);
     setPsycheProfile(psyRes.data);
     setReminders(remRes.data || []);
+    setCheckins(checkRes.data || []);
+
+    // Calculate G-Force priorities using the formal algorithm
+    const disciplines = buildDisciplinesFromData(subs, sess, atts);
+    const psycheState = buildPsycheState(psyRes.data, checkRes.data || []);
+    const prios = calculateDisciplinePriorities(disciplines, psycheState);
+    setPriorities(prios);
+    setRecommendations(getStudyRecommendations(prios));
   }, [userId]);
 
   useEffect(() => { loadData(); }, [loadData]);
