@@ -6,10 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Clock, Target, TrendingUp, CheckCircle, Plus, Loader2, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Clock, Target, TrendingUp, CheckCircle, Plus, Loader2, Sparkles, AlertTriangle, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
 import { checkAchievements } from "@/lib/checkAchievements";
+import {
+  buildDisciplinesFromData,
+  buildPsycheState,
+  calculateDisciplinePriorities,
+  getStudyRecommendations,
+  calculatePsycheIndex,
+  type DisciplinePriority,
+  type StudyRecommendation,
+} from "@/lib/adaptive-algorithm";
 
 interface AnalysisTabProps { userId: string; }
 
