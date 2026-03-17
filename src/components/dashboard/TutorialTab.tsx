@@ -13,7 +13,8 @@ interface TutorialTabProps {
 const TOOLS: { key: string; label: string; tables: string[] }[] = [
   { key: "planner", label: "Planner (Sessões + Blocos)", tables: ["study_sessions", "study_calendar_blocks"] },
   { key: "arsenal", label: "Arsenal (Disciplinas + Tópicos + Materiais)", tables: ["user_subjects", "topics", "study_materials"] },
-  { key: "analysis", label: "Análise (Questões + Tentativas + Plano)", tables: ["questions", "question_attempts", "study_plan"] },
+  { key: "analysis", label: "Análise (Questões + Tentativas)", tables: ["questions", "question_attempts"] },
+  { key: "study_plan", label: "Plano de Estudo / G-Force", tables: ["study_plan"] },
   { key: "notebooks", label: "Cadernos (Notas)", tables: ["user_notes"] },
   { key: "flashcards", label: "Flashcards", tables: ["flashcards"] },
   { key: "reviews", label: "Revisões Espaçadas", tables: ["spaced_reviews"] },
