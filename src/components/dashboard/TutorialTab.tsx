@@ -21,6 +21,7 @@ const TOOLS: { key: string; label: string; tables: string[] }[] = [
   { key: "achievements", label: "Conquistas", tables: ["user_achievements"] },
   { key: "coaching", label: "Coach.IA (Histórico)", tables: ["ai_coaching_history"] },
   { key: "psyche", label: "Bem-Estar (Perfil + Check-ins)", tables: ["psyche_profiles", "psyche_checkins"] },
+  { key: "profile", label: "Perfil / Configurações", tables: ["profiles"] },
 ];
 
 const FLOW_STEPS = [
