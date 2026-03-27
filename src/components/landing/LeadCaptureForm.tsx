@@ -61,17 +61,17 @@ const LeadCaptureForm = () => {
 
     try {
       const res = await fetch(
-        "https://beqxnykzgwckyblwwyrc.supabase.co/functions/v1/capture-lead",
+        "https://fhgayxeqwrbnnxwqvcwd.supabase.co/functions/v1/lead-ingestion",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: form.name.trim(),
+            nome: form.name.trim(),
             email: form.email.trim() || null,
-            phone: form.phone.replace(/\D/g, "") || null,
-            message: form.message.trim() || null,
+            telefone: form.phone.replace(/\D/g, "") || null,
+            mensagem: form.message.trim() || null,
             projeto: "cognos",
-            source: "instagram_landing",
+            fonte: "instagram_landing",
           }),
         }
       );
