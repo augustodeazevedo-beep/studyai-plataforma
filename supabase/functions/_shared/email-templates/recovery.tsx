@@ -22,12 +22,12 @@ interface RecoveryEmailProps {
 export const RecoveryEmail = ({ siteName, confirmationUrl }: RecoveryEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Redefinir sua senha - COGNOS Study.AI</Preview>
+    <Preview>Redefinir sua senha - Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://cognosstudyai.lovable.app/logo-cognos.png" width="48" height="48" alt="COGNOS" style={{ borderRadius: '12px', marginBottom: '16px' }} />
+        <Img src="https://studyai.lovable.app/icon-dark.png" width="48" height="48" alt="Study.AI" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Redefinir sua senha</Heading>
-        <Text style={text}>Recebemos uma solicitação para redefinir a senha da sua conta no COGNOS Study.AI. Clique no botão abaixo para criar uma nova senha.</Text>
+        <Text style={text}>Recebemos uma solicitação para redefinir a senha da sua conta no Study.AI. Clique no botão abaixo para criar uma nova senha.</Text>
         <Button style={button} href={confirmationUrl}>Redefinir Senha</Button>
         <Text style={footer}>Se você não solicitou a redefinição de senha, ignore este email. Sua senha não será alterada.</Text>
       </Container>

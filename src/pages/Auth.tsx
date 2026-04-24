@@ -117,9 +117,9 @@ const Auth = () => {
             Voltar
           </Link>
           <div className="flex items-center justify-center gap-3 mb-2">
-            <img src="/logo-cognos.png" alt="COGNOS" className="h-10 rounded-xl" />
+            <img src="/icon-dark.png" alt="Study.AI" className="h-10 rounded-xl" />
             <h1 className="font-display text-2xl font-bold">
-              COGNOS <span className="text-primary">Study.AI</span>
+              Study.AI <span className="text-primary">Study.AI</span>
             </h1>
           </div>
           <p className="text-sm text-muted-foreground">Sua plataforma inteligente para concursos</p>

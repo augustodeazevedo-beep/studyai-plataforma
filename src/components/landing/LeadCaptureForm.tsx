@@ -70,7 +70,7 @@ const LeadCaptureForm = () => {
             email: form.email.trim() || null,
             telefone: form.phone.replace(/\D/g, "") || null,
             mensagem: form.message.trim() || null,
-            projeto: "cognos",
+            projeto: "studyai",
             fonte: "instagram_landing",
           }),
         }
@@ -106,7 +106,7 @@ const LeadCaptureForm = () => {
               Mensagem enviada!
             </h3>
             <p className="text-muted-foreground">
-              Obrigado pelo interesse no COGNOS. Entraremos em contato em breve!
+              Obrigado pelo interesse no Study.AI. Entraremos em contato em breve!
             </p>
             <Button
               variant="outline"
@@ -134,7 +134,7 @@ const LeadCaptureForm = () => {
         >
           <MessageCircle className="h-8 w-8 text-primary mx-auto mb-4" />
           <h2 className="font-display text-3xl sm:text-4xl font-bold mb-3">
-            Fale com o <span className="text-gradient">COGNOS</span>
+            Fale com o <span className="text-gradient">Study.AI</span>
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
             Deixe seus dados e conte qual concurso você está estudando. Vamos te

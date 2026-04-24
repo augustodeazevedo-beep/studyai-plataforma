@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { COGNOS_BASE_PROMPT, buildPsycheContext } from "../_shared/cognos-base-prompt.ts";
+import { Study.AI_BASE_PROMPT, buildPsycheContext } from "../_shared/study-ai-base-prompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +46,7 @@ serve(async (req) => {
       recentReviews: reviewsRes.data || [],
     };
 
-    const systemPrompt = `${COGNOS_BASE_PROMPT}
+    const systemPrompt = `${Study.AI_BASE_PROMPT}
 
 FUNÇÃO ATUAL: Coach.IA — Conselheiro Estratégico e Motor de Decisão
 Você está atuando como coach estratégico de estudos para concursos públicos brasileiros.
@@ -54,7 +54,7 @@ Você está atuando como coach estratégico de estudos para concursos públicos 
 ${psycheContext}
 
 INSTRUÇÕES ESPECÍFICAS:
-Analise os dados do aluno e forneça um conselho estratégico personalizado seguindo a arquitetura COGNOS:
+Analise os dados do aluno e forneça um conselho estratégico personalizado seguindo a arquitetura Study.AI:
 
 1. DIAGNÓSTICO G-FORCE: Identifique os desalinhamentos entre Real e Ideal nos 5 vetores para cada disciplina.
 2. PRÓXIMA AÇÃO: Recomende a ação de maior ganho esperado com menor custo cognitivo no estado emocional atual.

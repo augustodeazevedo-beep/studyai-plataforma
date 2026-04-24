@@ -20,10 +20,10 @@ interface ReauthenticationEmailProps {
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Seu código de verificação - COGNOS Study.AI</Preview>
+    <Preview>Seu código de verificação - Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://cognosstudyai.lovable.app/logo-cognos.png" width="48" height="48" alt="COGNOS" style={{ borderRadius: '12px', marginBottom: '16px' }} />
+        <Img src="https://studyai.lovable.app/icon-dark.png" width="48" height="48" alt="Study.AI" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Código de verificação</Heading>
         <Text style={text}>Use o código abaixo para confirmar sua identidade:</Text>
         <Text style={codeStyle}>{token}</Text>

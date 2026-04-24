@@ -1,5 +1,5 @@
 /**
- * Algoritmo Adaptativo G-Force para COGNOS Study.AI
+ * Algoritmo Adaptativo G-Force para Study.AI
  * 5 Vetores: Relevância, Incidência, Compreensão, Intensidade, Psique
  * 
  * Adaptado para o schema existente do Lovable:

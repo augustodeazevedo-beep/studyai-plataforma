@@ -22,12 +22,12 @@ interface MagicLinkEmailProps {
 export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Seu link de acesso - COGNOS Study.AI</Preview>
+    <Preview>Seu link de acesso - Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://cognosstudyai.lovable.app/logo-cognos.png" width="48" height="48" alt="COGNOS" style={{ borderRadius: '12px', marginBottom: '16px' }} />
+        <Img src="https://studyai.lovable.app/icon-dark.png" width="48" height="48" alt="Study.AI" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Seu link de acesso</Heading>
-        <Text style={text}>Clique no botão abaixo para acessar o COGNOS Study.AI. Este link expira em breve.</Text>
+        <Text style={text}>Clique no botão abaixo para acessar o Study.AI. Este link expira em breve.</Text>
         <Button style={button} href={confirmationUrl}>Entrar</Button>
         <Text style={footer}>Se você não solicitou este link, ignore este email com segurança.</Text>
       </Container>

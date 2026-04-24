@@ -83,7 +83,7 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `cognos-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `studyai-data-export-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       toast({ title: "Dados exportados! 📦" });

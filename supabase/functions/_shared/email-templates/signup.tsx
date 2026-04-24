@@ -25,14 +25,14 @@ interface SignupEmailProps {
 export const SignupEmail = ({ siteName, siteUrl, recipient, confirmationUrl }: SignupEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirme seu email para COGNOS Study.AI</Preview>
+    <Preview>Confirme seu email para Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://cognosstudyai.lovable.app/logo-cognos.png" width="48" height="48" alt="COGNOS" style={{ borderRadius: '12px', marginBottom: '16px' }} />
+        <Img src="https://studyai.lovable.app/icon-dark.png" width="48" height="48" alt="Study.AI" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Confirme seu email</Heading>
         <Text style={text}>
           Obrigado por se cadastrar no{' '}
-          <Link href={siteUrl} style={link}><strong>COGNOS Study.AI</strong></Link>!
+          <Link href={siteUrl} style={link}><strong>Study.AI</strong></Link>!
           Sua jornada de estudos inteligente começa agora.
         </Text>
         <Text style={text}>
