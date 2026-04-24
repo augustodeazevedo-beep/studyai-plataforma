@@ -10,7 +10,7 @@ import BrandLogo from "@/components/brand/BrandLogo";
 
 export type TabKey =
   | "planner" | "arsenal" | "analysis" | "notebooks" | "history"
-  | "predictor" | "coach" | "professor" | "psyche" | "achievements" | "settings" | "tutorial" | "brand-kit";
+  | "predictor" | "coach" | "professor" | "psyche" | "achievements" | "settings" | "tutorial";
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -164,20 +164,6 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
           >
             <Settings className="h-4 w-4 flex-shrink-0" />
             {!collapsed && <span>Configurações</span>}
-          </button>
-          <button
-            onClick={() => { onTabChange("brand-kit"); setOpen(false); }}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full",
-              collapsed && "justify-center px-2",
-              activeTab === "brand-kit"
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            )}
-            title={collapsed ? "Brand Kit" : undefined}
-          >
-            <Sparkles className="h-4 w-4 flex-shrink-0" />
-            {!collapsed && <span>Brand Kit</span>}
           </button>
           <div className={cn("flex items-center gap-2 px-3 py-2", collapsed && "justify-center px-2")}>
             <Brain className="h-4 w-4 text-sidebar-primary flex-shrink-0" />
