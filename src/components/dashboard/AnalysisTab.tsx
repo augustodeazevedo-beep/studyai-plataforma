@@ -20,6 +20,7 @@ import {
   type DisciplinePriority,
   type StudyRecommendation,
 } from "@/lib/adaptive-algorithm";
+import { recalculateAndPersistPlan, enforceForgettingCurve } from "@/lib/planner-adaptation";
 
 interface AnalysisTabProps { userId: string; }
 
@@ -137,8 +138,10 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
           user_id: userId, question_id: qData.id, selected_option: 0, is_correct: i < correct,
         });
       }
-      toast.success(`${attempted} questões registradas (${correct} corretas)!`);
+      toast.success(`${attempted} questões registradas (${correct} corretas)! G-Force recalculando…`);
       setQForm({ subject_id: "", attempted: "", correct: "" });
+      await recalculateAndPersistPlan(userId, { eventType: "question_performance_registered", eventSource: "analysis_questions", subjectId: qForm.subject_id, explanation: "Performance em questões alterou a acurácia e a lacuna de compreensão do G-Force." });
+      await enforceForgettingCurve(userId);
       loadData();
       checkAchievements(userId);
     } catch { toast.error("Erro ao registrar questões"); }
