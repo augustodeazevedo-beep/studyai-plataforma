@@ -1,5 +1,12 @@
 export type BrandLogoVariant = "wordmark" | "mark";
 
+export const BRAND_ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"] as const;
+export const BRAND_MAX_UPLOAD_SIZE_BYTES = 4 * 1024 * 1024;
+export const BRAND_OPTIMIZED_IMAGE_TYPE = "image/webp";
+export const BRAND_OPTIMIZED_IMAGE_QUALITY = 0.86;
+
+export const formatBrandFileSize = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
 export interface BrandLogoSettings {
   name: string;
   tagline: string;
