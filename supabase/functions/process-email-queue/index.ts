@@ -7,6 +7,26 @@ const DEFAULT_SEND_DELAY_MS = 200
 const DEFAULT_AUTH_TTL_MINUTES = 15
 const DEFAULT_TRANSACTIONAL_TTL_MINUTES = 60
 
+type EmailQueueMessage = {
+  msg_id: number
+  read_ct: number
+  message: Record<string, unknown> & {
+    message_id?: string
+    queued_at?: string
+    label?: string
+    to?: string
+    run_id?: string
+    from?: string
+    sender_domain?: string
+    subject?: string
+    html?: string
+    text?: string
+    purpose?: string
+    idempotency_key?: string
+    unsubscribe_token?: string
+  }
+}
+
 // Check if an error is a rate-limit (429) response.
 // Uses EmailAPIError.status when available (email-js >=0.x with structured errors),
 // falls back to parsing the error message for older versions.
@@ -119,15 +139,16 @@ Deno.serve(async (req) => {
     // Retry budget is based on real send failures, not pgmq read_ct.
     // read_ct increments for every message in a claimed batch, including
     // messages not attempted when a 429 stops processing early.
+    const typedMessages = (messages ?? []) as EmailQueueMessage[]
     const messageIds = Array.from(
       new Set(
-        messages
-          .map((msg) =>
+        typedMessages
+          .map((msg: EmailQueueMessage) =>
             msg?.message?.message_id && typeof msg.message.message_id === 'string'
               ? msg.message.message_id
               : null
           )
-          .filter((id): id is string => Boolean(id))
+          .filter((id: string | null): id is string => Boolean(id))
       )
     )
     const failedAttemptsByMessageId = new Map<string, number>()
@@ -155,8 +176,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i]
+    for (let i = 0; i < typedMessages.length; i++) {
+      const msg = typedMessages[i]
       const payload = msg.message
       const failedAttempts =
         payload?.message_id && typeof payload.message_id === 'string'
@@ -333,7 +354,7 @@ Deno.serve(async (req) => {
       }
 
       // Small delay between sends to smooth bursts
-      if (i < messages.length - 1) {
+      if (i < typedMessages.length - 1) {
         await new Promise((r) => setTimeout(r, sendDelayMs))
       }
     }
