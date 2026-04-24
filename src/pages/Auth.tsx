@@ -116,11 +116,8 @@ const Auth = () => {
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Link>
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <img src="/icon-dark.png" alt="Study.AI" className="h-10 rounded-xl" />
-            <h1 className="font-display text-2xl font-bold">
-              Study<span className="text-primary">.AI</span>
-            </h1>
+          <div className="flex items-center justify-center mb-2">
+            <img src="/logo-studyai.png" alt="Study.AI" className="h-12 w-auto max-w-[190px] object-contain" />
           </div>
           <p className="text-sm text-muted-foreground">Sua plataforma inteligente para concursos</p>
         </div>

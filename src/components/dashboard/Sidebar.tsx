@@ -105,11 +105,9 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
         )}
       >
         <div className={cn("flex items-center gap-2 px-4 h-16", collapsed && "px-2 justify-center")}>
-          <img src={isDark ? "/icon-dark.png" : "/icon-light.png"} alt="Study.AI" className={cn("h-9 w-9 object-contain rounded-xl", isDark && "bg-transparent")} />
+          <img src={collapsed ? "/logo-studyai-icon.png" : "/logo-studyai.png"} alt="Study.AI" className={cn(collapsed ? "h-9 w-9" : "h-10 w-auto max-w-[154px]", "object-contain")} />
           {!collapsed && (
-            <div className="flex flex-col leading-none">
-              <span className="text-lg font-bold tracking-widest text-foreground">Study.AI</span>
-            </div>
+            <span className="sr-only">Study.AI</span>
           )}
         </div>
 
