@@ -258,6 +258,8 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     setSessionForm({ subject_id: "", material_name: "", pages_start: "", pages_end: "", duration_minutes: "60", comprehension_rating: 3 });
     loadData();
     checkAchievements(userId);
+    // Deterministic G-Force recalculation (no AI cost)
+    recalculateAndPersistPlan(userId).then(() => loadData());
   };
 
   // Heatmap
@@ -266,6 +268,49 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold font-display">🗓️ Planner de Estudos</h1>
+
+      {/* Adaptive Next Action Panel — connects G-Force to the calendar */}
+      {nextAction && (
+        <Card className={`glass border-l-4 ${
+          nextAction.priorityLevel === "critical" ? "border-l-destructive" :
+          nextAction.priorityLevel === "high" ? "border-l-warning" :
+          nextAction.priorityLevel === "medium" ? "border-l-primary" : "border-l-muted"
+        }`}>
+          <CardContent className="py-3">
+            <div className="flex items-start gap-3 flex-wrap">
+              <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-[200px]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold">Próxima ação G-Force:</span>
+                  <Badge variant="outline" className="text-xs">{nextAction.subjectName}</Badge>
+                  <Badge className="text-xs">{nextAction.durationMinutes} min</Badge>
+                  {psycheState && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Heart className="h-3 w-3 mr-1" />
+                      {classifyPsycheMode(psycheState) === "low" ? "Modo leve" :
+                       classifyPsycheMode(psycheState) === "good" ? "Modo intensivo" : "Modo padrão"}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{nextAction.reason}</p>
+                <p className="text-xs text-primary/80 mt-0.5 italic">💡 {nextAction.loadHint}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  toast.info("Recalibrando plano G-Force…");
+                  await recalculateAndPersistPlan(userId);
+                  await loadData();
+                  toast.success("Plano atualizado com base nos dados mais recentes ⚡");
+                }}
+              >
+                <Zap className="h-3 w-3 mr-1" /> Recalcular
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Heatmap - 90 days with scroll buttons */}
       <Card className="glass">
