@@ -530,13 +530,14 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                           draggable
                           onDragStart={() => handleDragStart(block)}
                           onClick={() => openEditModal(block)}
-                          className="group bg-primary/15 hover:bg-primary/25 border border-primary/20 rounded px-1 py-0.5 cursor-grab active:cursor-grabbing transition-colors"
+                          className={`group border rounded px-1 py-0.5 cursor-grab active:cursor-grabbing transition-colors ${highlightedBlockId === block.id ? "bg-primary/30 border-primary shadow-lg" : block.block_type === "review" ? "bg-warning/15 hover:bg-warning/25 border-warning/30" : "bg-primary/15 hover:bg-primary/25 border-primary/20"}`}
                         >
                           <div className="flex items-center gap-0.5">
                             <GripVertical className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="text-[10px] font-semibold text-primary truncate">{block.duration_minutes} min</div>
                               <div className="text-[10px] text-foreground/80 truncate">{block.subject_name || "—"}</div>
+                              {block.block_type === "review" && <div className="text-[9px] text-warning truncate">Revisão</div>}
                             </div>
                           </div>
                         </div>
