@@ -46,6 +46,7 @@ export interface DisciplinePriority {
   recommendation: string;
   suggestedDailyMinutes: number;
   priorityLevel: "critical" | "high" | "medium" | "low";
+  urgencyMultiplier?: number; // 1.0–1.5 boost when exam is near and gap is high
 }
 
 export interface StudyRecommendation {
