@@ -366,3 +366,22 @@ export function buildPsycheState(
 
   return null;
 }
+
+/**
+ * Maps a DisciplinePriority to a study_plan row payload (deterministic, no AI).
+ * Used for instant recalculations triggered by sessions, attempts or check-ins.
+ */
+export function priorityToPlanRow(p: DisciplinePriority, userId: string) {
+  // Convert 0-100 vectors back to the 0-10 scale used in study_plan
+  return {
+    user_id: userId,
+    subject_id: p.disciplineId,
+    priority_score: Math.round(p.gforceScore) / 10, // study_plan uses 0-10 numeric
+    relevance: Math.round(p.vectors.relevance) / 10,
+    incidence: Math.round(p.vectors.incidence) / 10,
+    accuracy: Math.round(100 - p.vectors.comprehension) / 10, // mastery, not gap
+    performance: Math.round(p.vectors.intensity) / 10,
+    gap_score: Math.round(p.vectors.comprehension) / 10,
+    recommended_hours_weekly: Math.round((p.suggestedDailyMinutes * 5) / 60 * 10) / 10,
+  };
+}
