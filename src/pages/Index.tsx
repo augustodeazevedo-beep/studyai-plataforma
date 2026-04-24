@@ -92,11 +92,8 @@ const Index = () => {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="/icon-dark.png" alt="Study.AI" className="h-8 w-8 object-contain rounded-xl" />
-            <span className="font-display text-lg font-bold text-foreground">
-              Study<span className="text-primary">.AI</span>
-            </span>
+          <Link to="/" className="flex items-center gap-3" aria-label="Study.AI">
+            <img src="/logo-studyai.png" alt="Study.AI" className="h-9 w-auto max-w-[150px] object-contain" />
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
@@ -362,8 +359,8 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border py-8 px-4">
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <img src="/icon-dark.png" alt="Study.AI" className="h-6 rounded-xl" />
+          <div className="flex items-center gap-3">
+            <img src="/logo-studyai.png" alt="Study.AI" className="h-7 w-auto max-w-[130px] object-contain" />
             <span>© 2026 Study.AI — Todos os direitos reservados</span>
           </div>
           <div className="flex gap-6">
