@@ -6,6 +6,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MAX_NOTE_CONTENT_CHARS = 20_000;
+const MAX_SUBJECT_NAME_CHARS = 120;
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -21,7 +31,15 @@ serve(async (req) => {
     if (!user) throw new Error("Unauthorized");
 
     const { noteContent, subjectName } = await req.json();
-    if (!noteContent) throw new Error("Note content required");
+    if (typeof noteContent !== "string" || noteContent.trim().length === 0) {
+      return jsonResponse({ error: "Note content required" }, 400);
+    }
+    if (noteContent.length > MAX_NOTE_CONTENT_CHARS) {
+      return jsonResponse({ error: "Note content too large" }, 400);
+    }
+    if (subjectName !== undefined && (typeof subjectName !== "string" || subjectName.length > MAX_SUBJECT_NAME_CHARS)) {
+      return jsonResponse({ error: "Invalid subject name" }, 400);
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
