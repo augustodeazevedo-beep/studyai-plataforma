@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import BrandLogo from "@/components/brand/BrandLogo";
 import { defaultBrandSettings, getBrandSettings, resetBrandSettings, saveBrandSettings, type BrandLogoSettings } from "@/lib/brand";
-import { Palette, RotateCcw, Save, Upload } from "lucide-react";
+import { Palette, RotateCcw, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const BrandKitTab = () => {
