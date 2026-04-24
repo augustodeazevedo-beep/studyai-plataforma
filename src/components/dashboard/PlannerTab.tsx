@@ -348,20 +348,82 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                 variant="outline"
                 onClick={async () => {
                   toast.info("Recalibrando plano G-Force…");
-                  await recalculateAndPersistPlan(userId);
+                  await recalculateAndPersistPlan(userId, { eventType: "manual_recalculation", eventSource: "planner_button", explanation: "Recálculo manual solicitado para sincronizar o Planner com os dados atuais." });
+                  await enforceForgettingCurve(userId);
                   await loadData();
                   toast.success("Plano atualizado com base nos dados mais recentes ⚡");
                 }}
               >
                 <Zap className="h-3 w-3 mr-1" /> Recalcular
               </Button>
+              <Button size="sm" onClick={() => handleGoToBlock()}>
+                <ArrowRight className="h-3 w-3 mr-1" /> Ir para o bloco
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant={plannerView === "calendar" ? "default" : "outline"} onClick={() => setPlannerView("calendar")}>
+          <ClipboardList className="h-4 w-4 mr-1" /> Calendário
+        </Button>
+        <Button size="sm" variant={plannerView === "queue" ? "default" : "outline"} onClick={() => setPlannerView("queue")}>
+          <ListChecks className="h-4 w-4 mr-1" /> Fila Agora
+        </Button>
+        <Button size="sm" variant={plannerView === "audit" ? "default" : "outline"} onClick={() => setPlannerView("audit")}>
+          <SearchCheck className="h-4 w-4 mr-1" /> Auditoria
+        </Button>
+      </div>
+
+      {plannerView === "queue" && (
+        <Card className="glass">
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><ListChecks className="h-4 w-4 text-primary" />Fila Agora</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {nowQueue.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ação urgente agora.</p> : nowQueue.map(item => (
+              <div key={item.id} className="flex items-start gap-3 rounded border border-border/50 bg-muted/20 p-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold">{item.title}</span>
+                    <Badge variant="outline" className="text-xs">{item.subjectName}</Badge>
+                    <Badge className="text-xs">{item.durationMinutes} min</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{item.reason}</p>
+                  <p className="text-xs text-primary/80 mt-0.5">{item.loadHint}</p>
+                </div>
+                <Button size="sm" onClick={() => handleGoToBlock(item)}>
+                  <ArrowRight className="h-3 w-3 mr-1" /> Ir para o bloco
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {plannerView === "audit" && (
+        <Card className="glass">
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><SearchCheck className="h-4 w-4 text-primary" />Auditoria do Planner</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {auditLogs.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum recálculo auditado ainda.</p> : auditLogs.map(log => (
+              <div key={log.id} className="rounded border border-border/50 bg-muted/20 p-3 space-y-1">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-xs">{log.event_type}</Badge>
+                    <Badge variant="secondary" className="text-xs">{log.event_source}</Badge>
+                    {log.user_subjects?.name && <span className="text-xs text-muted-foreground">{log.user_subjects.name}</span>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd/MM HH:mm")}</span>
+                </div>
+                <p className="text-sm">{log.explanation}</p>
+                {log.metadata && <p className="text-xs text-muted-foreground">Detalhes: {JSON.stringify(log.metadata)}</p>}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Heatmap - 90 days with scroll buttons */}
-      <Card className="glass">
+      {plannerView === "calendar" && <Card className="glass">
         <CardHeader className="py-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-bold">Histórico de Intensidade</CardTitle>
