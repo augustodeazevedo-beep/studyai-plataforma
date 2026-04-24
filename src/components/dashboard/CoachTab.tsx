@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Brain, Loader2, Sparkles, Calendar, CheckCircle, Clock, Star, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { recalculateAndPersistPlan, enforceForgettingCurve, logPlannerEvent } from "@/lib/planner-adaptation";
 import { format, addDays, isPast, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -115,16 +116,23 @@ const CoachTab = ({ userId }: CoachTabProps) => {
       });
 
       // Create calendar block for next review
-      await supabase.from("study_calendar_blocks").insert({
+      await (supabase as any).from("study_calendar_blocks").insert({
         user_id: userId,
         subject_id: review.subject_id,
         block_date: nextDate,
         duration_minutes: 30,
-        material_name: `📝 Revisão SRS (${nextInterval}d)`,
+        material_name: `Revisão SRS (${nextInterval}d)`,
         order_index: 99,
+        block_type: "review",
+        cognitive_load: rating <= 2 ? "low" : "medium",
+        auto_generated: true,
+        source: "srs_completion",
       });
     }
 
+    await recalculateAndPersistPlan(userId, { eventType: "srs_review_completed", eventSource: "coach_srs", subjectId: review.subject_id, explanation: `Revisão concluída com desempenho ${rating}/5; G-Force e curva do esquecimento recalculados.` });
+    await enforceForgettingCurve(userId);
+    await logPlannerEvent({ userId, eventType: "srs_next_review_scheduled", eventSource: "coach_srs", subjectId: review.subject_id, beforeState: { interval_days: review.interval_days }, afterState: { interval_days: nextInterval, next_review_date: nextDate, rating }, explanation: "Nova revisão SRS agendada conforme desempenho informado." });
     toast.success(`Revisão concluída! Próxima em ${nextInterval} dias.`);
     loadData();
   };
