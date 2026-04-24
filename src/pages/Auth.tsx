@@ -117,8 +117,15 @@ const Auth = () => {
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Link>
-          <div className="flex items-center justify-center mb-2">
-            <BrandLogo size="auth" imgClassName="max-w-[210px]" showTagline />
+          <div className="flex items-center justify-center mb-3 px-4">
+            <BrandLogo
+              size="auth"
+              tone="auto"
+              responsiveHeight="clamp(44px, 8vw, 62px)"
+              className="w-full justify-center"
+              imgClassName="w-auto max-w-[min(78vw,260px)]"
+              showTagline
+            />
           </div>
           <p className="text-sm text-muted-foreground">Sua plataforma inteligente para concursos</p>
         </div>
