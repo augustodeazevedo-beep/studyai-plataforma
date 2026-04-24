@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
-import { applyDailyAdaptation, recalculateAndPersistPlan } from "@/lib/planner-adaptation";
+import { applyDailyAdaptation, recalculateAndPersistPlan, enforceForgettingCurve } from "@/lib/planner-adaptation";
 
 interface PsycheTabProps { userId: string; }
 
@@ -147,7 +147,8 @@ const PsycheTab = ({ userId }: PsycheTabProps) => {
     // INSTANT G-FORCE ADAPTATION (no AI calls)
     try {
       // 1) Recompute study_plan with new psyche state
-      await recalculateAndPersistPlan(userId);
+      await recalculateAndPersistPlan(userId, { eventType: "psyche_checkin_recalculation", eventSource: "psyche_checkin", explanation: "Check-in de Bem-Estar alterou o vetor Psique e recalibrou o plano." });
+      await enforceForgettingCurve(userId);
       // 2) Adapt today's calendar blocks (light/intensive mode + TDAH fragmentation)
       const result = await applyDailyAdaptation(userId);
       if (result.blocksAffected > 0) {

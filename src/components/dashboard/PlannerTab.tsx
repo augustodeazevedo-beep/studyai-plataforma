@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Pencil, Trash2, Sparkles, Zap, Heart } from "lucide-react";
+import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,7 +16,12 @@ import {
   pickNextAction,
   adaptivePomodoroMinutes,
   classifyPsycheMode,
+  buildNowQueue,
+  enforceForgettingCurve,
+  goToSuggestedBlock,
+  logPlannerEvent,
   type NextActionSuggestion,
+  type NowQueueItem,
 } from "@/lib/planner-adaptation";
 import { buildPsycheState, type PsycheState } from "@/lib/adaptive-algorithm";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +37,10 @@ interface CalendarBlock {
   material_name: string | null;
   order_index: number;
   subject_name?: string;
+  block_type?: string;
+  cognitive_load?: string;
+  auto_generated?: boolean;
+  source?: string;
 }
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -49,6 +58,10 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [nextAction, setNextAction] = useState<NextActionSuggestion | null>(null);
   const [psycheState, setPsycheStateLocal] = useState<PsycheState | null>(null);
   const [psycheProfile, setPsycheProfile] = useState<any>(null);
+  const [nowQueue, setNowQueue] = useState<NowQueueItem[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
+  const [plannerView, setPlannerView] = useState<"calendar" | "queue" | "audit">("calendar");
 
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -70,17 +83,21 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const heatmapStart = format(ninetyDaysAgo, "yyyy-MM-dd");
 
-    const [subRes, sesRes, blockRes, psyRes, checkRes] = await Promise.all([
+    const [subRes, sesRes, blockRes, psyRes, checkRes, queueData, auditRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("study_sessions").select("*, user_subjects(name)").eq("user_id", userId).gte("started_at", heatmapStart).order("started_at", { ascending: false }),
       supabase.from("study_calendar_blocks").select("*, user_subjects(name)").eq("user_id", userId).gte("block_date", monthStart).lte("block_date", monthEnd).order("order_index"),
       supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("psyche_checkins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
+      buildNowQueue(userId),
+      (supabase as any).from("planner_audit_logs").select("*, user_subjects(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(30),
     ]);
     setSubjects(subRes.data || []);
     setSessions(sesRes.data || []);
     setBlocks((blockRes.data || []).map((b: any) => ({ ...b, subject_name: b.user_subjects?.name })));
     setPsycheProfile(psyRes.data);
+    setNowQueue(queueData || []);
+    setAuditLogs(auditRes.data || []);
     const ps = buildPsycheState(psyRes.data, checkRes.data || []);
     setPsycheStateLocal(ps);
 
@@ -178,7 +195,8 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     } else {
       toast.success("Bloco reagendado! Recalibrando G-Force…");
       // Trigger deterministic recalculation
-      recalculateAndPersistPlan(userId).then(() => {
+      recalculateAndPersistPlan(userId, { eventType: "calendar_block_moved", eventSource: "planner_drag_drop", subjectId: draggedBlock.subject_id, explanation: "Bloco movido no calendário; G-Force recalculado para refletir o plano real do dia." }).then(async () => {
+        await enforceForgettingCurve(userId);
         toast.success("Cronograma G-Force recalibrado ⚡");
         loadData();
       });
@@ -205,6 +223,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
       material_name: editForm.material_name || null,
     }).eq("id", editingBlock.id);
     if (error) { toast.error("Erro ao salvar"); return; }
+    await recalculateAndPersistPlan(userId, { eventType: "calendar_block_updated", eventSource: "planner_edit", subjectId: editForm.subject_id || null, explanation: "Bloco de estudo editado; G-Force recalculado automaticamente." });
     toast.success("Bloco atualizado!");
     setEditModalOpen(false);
     loadData();
@@ -215,6 +234,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     if (error) { toast.error("Erro ao excluir"); return; }
     setBlocks(prev => prev.filter(b => b.id !== blockId));
     setEditModalOpen(false);
+    await recalculateAndPersistPlan(userId, { eventType: "calendar_block_deleted", eventSource: "planner_delete", explanation: "Bloco removido; plano recalibrado automaticamente." });
     toast.success("Bloco removido!");
   };
 
@@ -235,8 +255,13 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
       duration_minutes: parseInt(editForm.duration_minutes) || 60,
       material_name: editForm.material_name || null,
       order_index: dayBlocks.length,
-    });
+      block_type: "study",
+      cognitive_load: "medium",
+      auto_generated: false,
+      source: "manual",
+    } as any);
     if (error) { toast.error("Erro ao adicionar bloco"); return; }
+    await recalculateAndPersistPlan(userId, { eventType: "calendar_block_created", eventSource: "planner_manual", subjectId: editForm.subject_id, explanation: "Novo bloco adicionado; G-Force recalculado automaticamente." });
     toast.success("Bloco adicionado!");
     setAddModalOpen(false);
     loadData();
@@ -254,16 +279,39 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
       started_at: new Date().toISOString(),
     });
     if (error) { toast.error("Erro ao salvar sessão"); return; }
-    toast.success("Sessão registrada!");
+    toast.success("Sessão registrada! G-Force recalculando automaticamente…");
     setSessionForm({ subject_id: "", material_name: "", pages_start: "", pages_end: "", duration_minutes: "60", comprehension_rating: 3 });
-    loadData();
     checkAchievements(userId);
-    // Deterministic G-Force recalculation (no AI cost)
-    recalculateAndPersistPlan(userId).then(() => loadData());
+    await recalculateAndPersistPlan(userId, { eventType: "study_session_registered", eventSource: "planner_quick_session", subjectId: sessionForm.subject_id, explanation: "Tempo real e compreensão da sessão alteraram os vetores de intensidade e compreensão." });
+    await enforceForgettingCurve(userId);
+    loadData();
   };
 
   // Heatmap
   const sessionDates = sessions.map(s => format(new Date(s.started_at), "yyyy-MM-dd"));
+
+  const handleGoToBlock = async (item?: Partial<NowQueueItem>) => {
+    const source = item || (nextAction ? {
+      subjectId: nextAction.subjectId,
+      durationMinutes: nextAction.durationMinutes,
+      title: "Próxima Ação G-Force",
+      type: classifyPsycheMode(psycheState) === "low" ? "flashcards" as const : "study" as const,
+    } : null);
+    if (!source?.subjectId) { toast.error("Sem disciplina sugerida para criar bloco"); return; }
+    const blockId = await goToSuggestedBlock(userId, {
+      subjectId: source.subjectId,
+      durationMinutes: source.durationMinutes || 30,
+      title: source.title || "Próxima Ação G-Force",
+      type: source.type || "study",
+    });
+    if (!blockId) { toast.error("Não consegui criar ou localizar o bloco"); return; }
+    setCurrentMonth(new Date());
+    setPlannerView("calendar");
+    setHighlightedBlockId(blockId);
+    toast.success("Bloco pronto no calendário");
+    await loadData();
+    window.setTimeout(() => setHighlightedBlockId(null), 6000);
+  };
 
   return (
     <div className="space-y-6">
@@ -300,19 +348,82 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                 variant="outline"
                 onClick={async () => {
                   toast.info("Recalibrando plano G-Force…");
-                  await recalculateAndPersistPlan(userId);
+                  await recalculateAndPersistPlan(userId, { eventType: "manual_recalculation", eventSource: "planner_button", explanation: "Recálculo manual solicitado para sincronizar o Planner com os dados atuais." });
+                  await enforceForgettingCurve(userId);
                   await loadData();
                   toast.success("Plano atualizado com base nos dados mais recentes ⚡");
                 }}
               >
                 <Zap className="h-3 w-3 mr-1" /> Recalcular
               </Button>
+              <Button size="sm" onClick={() => handleGoToBlock()}>
+                <ArrowRight className="h-3 w-3 mr-1" /> Ir para o bloco
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant={plannerView === "calendar" ? "default" : "outline"} onClick={() => setPlannerView("calendar")}>
+          <ClipboardList className="h-4 w-4 mr-1" /> Calendário
+        </Button>
+        <Button size="sm" variant={plannerView === "queue" ? "default" : "outline"} onClick={() => setPlannerView("queue")}>
+          <ListChecks className="h-4 w-4 mr-1" /> Fila Agora
+        </Button>
+        <Button size="sm" variant={plannerView === "audit" ? "default" : "outline"} onClick={() => setPlannerView("audit")}>
+          <SearchCheck className="h-4 w-4 mr-1" /> Auditoria
+        </Button>
+      </div>
+
+      {plannerView === "queue" && (
+        <Card className="glass">
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><ListChecks className="h-4 w-4 text-primary" />Fila Agora</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {nowQueue.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ação urgente agora.</p> : nowQueue.map(item => (
+              <div key={item.id} className="flex items-start gap-3 rounded border border-border/50 bg-muted/20 p-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold">{item.title}</span>
+                    <Badge variant="outline" className="text-xs">{item.subjectName}</Badge>
+                    <Badge className="text-xs">{item.durationMinutes} min</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{item.reason}</p>
+                  <p className="text-xs text-primary/80 mt-0.5">{item.loadHint}</p>
+                </div>
+                <Button size="sm" onClick={() => handleGoToBlock(item)}>
+                  <ArrowRight className="h-3 w-3 mr-1" /> Ir para o bloco
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {plannerView === "audit" && (
+        <Card className="glass">
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><SearchCheck className="h-4 w-4 text-primary" />Auditoria do Planner</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {auditLogs.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum recálculo auditado ainda.</p> : auditLogs.map(log => (
+              <div key={log.id} className="rounded border border-border/50 bg-muted/20 p-3 space-y-1">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-xs">{log.event_type}</Badge>
+                    <Badge variant="secondary" className="text-xs">{log.event_source}</Badge>
+                    {log.user_subjects?.name && <span className="text-xs text-muted-foreground">{log.user_subjects.name}</span>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd/MM HH:mm")}</span>
+                </div>
+                <p className="text-sm">{log.explanation}</p>
+                {log.metadata && <p className="text-xs text-muted-foreground">Detalhes: {JSON.stringify(log.metadata)}</p>}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Heatmap - 90 days with scroll buttons */}
+      {plannerView === "calendar" && <>
       <Card className="glass">
         <CardHeader className="py-3">
           <div className="flex items-center justify-between">
@@ -419,13 +530,14 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                           draggable
                           onDragStart={() => handleDragStart(block)}
                           onClick={() => openEditModal(block)}
-                          className="group bg-primary/15 hover:bg-primary/25 border border-primary/20 rounded px-1 py-0.5 cursor-grab active:cursor-grabbing transition-colors"
+                          className={`group border rounded px-1 py-0.5 cursor-grab active:cursor-grabbing transition-colors ${highlightedBlockId === block.id ? "bg-primary/30 border-primary shadow-lg" : block.block_type === "review" ? "bg-warning/15 hover:bg-warning/25 border-warning/30" : "bg-primary/15 hover:bg-primary/25 border-primary/20"}`}
                         >
                           <div className="flex items-center gap-0.5">
                             <GripVertical className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="text-[10px] font-semibold text-primary truncate">{block.duration_minutes} min</div>
                               <div className="text-[10px] text-foreground/80 truncate">{block.subject_name || "—"}</div>
+                              {block.block_type === "review" && <div className="text-[9px] text-warning truncate">Revisão</div>}
                             </div>
                           </div>
                         </div>
@@ -535,6 +647,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
           </Card>
         </div>
       </div>
+      </>}
 
       {/* Recent sessions */}
       <Card className="glass">

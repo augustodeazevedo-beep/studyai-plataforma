@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
       "study_plan", "study_calendar_blocks", "study_materials",
       "flashcards", "spaced_reviews", "questions", "question_attempts",
       "user_notes", "user_achievements", "ai_coaching_history",
-      "reminders", "psyche_profiles", "psyche_checkins",
+      "reminders", "psyche_profiles", "psyche_checkins", "planner_audit_logs",
     ];
 
     const exportData: Record<string, unknown[]> = {};
