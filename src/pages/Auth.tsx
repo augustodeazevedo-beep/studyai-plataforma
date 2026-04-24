@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import BrandLogo from "@/components/brand/BrandLogo";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -117,7 +118,7 @@ const Auth = () => {
             Voltar
           </Link>
           <div className="flex items-center justify-center mb-2">
-            <img src="/logo-studyai.png" alt="Study.AI" className="h-12 w-auto max-w-[190px] object-contain" />
+            <BrandLogo size="auth" imgClassName="max-w-[210px]" showTagline />
           </div>
           <p className="text-sm text-muted-foreground">Sua plataforma inteligente para concursos</p>
         </div>

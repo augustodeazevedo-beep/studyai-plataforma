@@ -19,6 +19,7 @@ import {
   Plus, X, Sparkles, GraduationCap, Star, Check,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import BrandLogo from "@/components/brand/BrandLogo";
 
 const EXAMS = [
   "Concurso Público Federal",
@@ -178,7 +179,7 @@ const Onboarding = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Brain className="h-8 w-8 animate-pulse text-primary" />
+        <BrandLogo variant="mark" size="sidebarCollapsed" imgClassName="animate-pulse" />
       </div>
     );
   }
@@ -191,7 +192,7 @@ const Onboarding = () => {
       <header className="border-b border-border glass sticky top-0 z-40">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-3">
-            <img src="/logo-studyai.png" alt="Study.AI" className="h-9 w-auto max-w-[150px] object-contain" />
+            <BrandLogo size="nav" imgClassName="max-w-[160px]" />
           </div>
           <div className="text-sm text-muted-foreground">
             Passo {step + 1} de {STEPS.length}

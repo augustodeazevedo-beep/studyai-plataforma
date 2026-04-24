@@ -6,6 +6,7 @@ import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkl
 import PricingSection from "@/components/landing/PricingSection";
 import FAQSection from "@/components/landing/FAQSection";
 import LeadCaptureForm from "@/components/landing/LeadCaptureForm";
+import BrandLogo from "@/components/brand/BrandLogo";
 import heroBg from "@/assets/hero-bg.jpg";
 import ctaBg from "@/assets/cta-bg.jpg";
 import featuresBg from "@/assets/features-bg.jpg";
@@ -93,7 +94,7 @@ const Index = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <Link to="/" className="flex items-center gap-3" aria-label="Study.AI">
-            <img src="/logo-studyai.png" alt="Study.AI" className="h-9 w-auto max-w-[150px] object-contain" />
+            <BrandLogo size="nav" imgClassName="max-w-[148px] sm:max-w-[170px]" />
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
@@ -360,7 +361,7 @@ const Index = () => {
       <footer className="border-t border-border py-8 px-4">
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-3">
-            <img src="/logo-studyai.png" alt="Study.AI" className="h-7 w-auto max-w-[130px] object-contain" />
+            <BrandLogo size="footer" imgClassName="max-w-[130px]" />
             <span>© 2026 Study.AI — Todos os direitos reservados</span>
           </div>
           <div className="flex gap-6">

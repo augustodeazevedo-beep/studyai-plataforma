@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Brain } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import type { TabKey } from "@/components/dashboard/Sidebar";
@@ -15,8 +14,10 @@ import CoachTab from "@/components/dashboard/CoachTab";
 import ProfessorTab from "@/components/dashboard/ProfessorTab";
 import AchievementsTab from "@/components/dashboard/AchievementsTab";
 import SettingsTab from "@/components/dashboard/SettingsTab";
+import BrandKitTab from "@/components/dashboard/BrandKitTab";
 import TutorialTab from "@/components/dashboard/TutorialTab";
 import PsycheTab from "@/components/dashboard/PsycheTab";
+import BrandLogo from "@/components/brand/BrandLogo";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -73,7 +74,7 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-3 text-muted-foreground">
-          <Brain className="h-6 w-6 animate-pulse text-primary" />
+          <BrandLogo variant="mark" size="sidebarCollapsed" imgClassName="animate-pulse" />
           <span>Carregando...</span>
         </div>
       </div>
@@ -95,6 +96,7 @@ const Dashboard = () => {
       case "psyche": return <PsycheTab userId={user.id} />;
       case "achievements": return <AchievementsTab userId={user.id} />;
       case "settings": return <SettingsTab userId={user.id} />;
+      case "brand-kit": return <BrandKitTab />;
       case "tutorial": return <TutorialTab userId={user.id} />;
       default: return <PlannerTab userId={user.id} />;
     }
