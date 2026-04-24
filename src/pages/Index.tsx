@@ -95,7 +95,7 @@ const Index = () => {
           <Link to="/" className="flex items-center gap-3">
             <img src="/icon-dark.png" alt="Study.AI" className="h-8 w-8 object-contain rounded-xl" />
             <span className="font-display text-lg font-bold text-foreground">
-              Study.AI <span className="text-primary">Study.AI</span>
+              Study<span className="text-primary">.AI</span>
             </span>
           </Link>
           <div className="flex items-center gap-3">

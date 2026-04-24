@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Study.AI_BASE_PROMPT, buildPsycheContext } from "../_shared/study-ai-base-prompt.ts";
+import { STUDY_AI_BASE_PROMPT, buildPsycheContext } from "../_shared/study-ai-base-prompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +46,7 @@ serve(async (req) => {
       recentReviews: reviewsRes.data || [],
     };
 
-    const systemPrompt = `${Study.AI_BASE_PROMPT}
+    const systemPrompt = `${STUDY_AI_BASE_PROMPT}
 
 FUNÇÃO ATUAL: Coach.IA — Conselheiro Estratégico e Motor de Decisão
 Você está atuando como coach estratégico de estudos para concursos públicos brasileiros.

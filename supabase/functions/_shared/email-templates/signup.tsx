@@ -9,7 +9,6 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Link,
   Preview,
   Text,
@@ -28,7 +27,6 @@ export const SignupEmail = ({ siteName, siteUrl, recipient, confirmationUrl }: S
     <Preview>Confirme seu email para Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://studyai.lovable.app/icon-dark.png" width="48" height="48" alt="Study.AI" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Confirme seu email</Heading>
         <Text style={text}>
           Obrigado por se cadastrar no{' '}

@@ -9,7 +9,6 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Link,
   Preview,
   Text,
@@ -27,7 +26,6 @@ export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailP
     <Preview>Você foi convidado para o Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://studyai.lovable.app/icon-dark.png" width="48" height="48" alt="Study.AI" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Você foi convidado!</Heading>
         <Text style={text}>
           Você recebeu um convite para o{' '}

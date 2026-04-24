@@ -9,7 +9,6 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
@@ -25,7 +24,6 @@ export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProp
     <Preview>Seu link de acesso - Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://studyai.lovable.app/icon-dark.png" width="48" height="48" alt="Study.AI" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Seu link de acesso</Heading>
         <Text style={text}>Clique no botão abaixo para acessar o Study.AI. Este link expira em breve.</Text>
         <Button style={button} href={confirmationUrl}>Entrar</Button>

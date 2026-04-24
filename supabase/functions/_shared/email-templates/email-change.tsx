@@ -9,7 +9,6 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Link,
   Preview,
   Text,
@@ -28,7 +27,6 @@ export const EmailChangeEmail = ({ siteName, email, newEmail, confirmationUrl }:
     <Preview>Confirme a alteração de email - Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://studyai.lovable.app/icon-dark.png" width="48" height="48" alt="Study.AI" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Confirme a alteração de email</Heading>
         <Text style={text}>
           Você solicitou alterar o email da sua conta de{' '}

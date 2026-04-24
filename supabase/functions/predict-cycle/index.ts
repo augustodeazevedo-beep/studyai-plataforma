@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Study.AI_BASE_PROMPT, buildPsycheContext } from "../_shared/study-ai-base-prompt.ts";
+import { STUDY_AI_BASE_PROMPT, buildPsycheContext } from "../_shared/study-ai-base-prompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,7 +49,7 @@ serve(async (req) => {
       ? `Com ${dailyMinutes} min/dia a partir de ${startDate}, preveja a data de conclusão para cada disciplina selecionada. Considere a prioridade G-Force, quantidade de tópicos, nível de compreensão atual e o estado Psique do aluno.`
       : `Para concluir todas as disciplinas até ${startDate}, calcule quantos minutos por dia o aluno precisa estudar. Distribua por disciplina usando os vetores G-Force. Se a carga for excessiva para o estado Psique atual, indique isso e sugira ajustes realistas.`;
 
-    const systemPrompt = `${Study.AI_BASE_PROMPT}
+    const systemPrompt = `${STUDY_AI_BASE_PROMPT}
 
 FUNÇÃO ATUAL: Previsor.IA — Previsão de Ciclos de Estudo
 
