@@ -1,16 +1,16 @@
 
-# Auditoria da Moldura Didática G-Force — COGNOS Study.AI
+# Auditoria da Moldura Didática G-Force — Study.AI
 
 ## Veredito geral
 
-A **arquitetura conceitual** do G-Force (Constituição COGNOS + 5 vetores) está bem traduzida em código nas camadas de **análise** e **IA**, mas existe uma **fratura crítica entre o cérebro (algoritmo) e o corpo (Planner)**: o calendário de estudos é uma agenda manual desacoplada das prioridades calculadas. A plataforma "pensa adaptativamente, mas não age adaptativamente".
+A **arquitetura conceitual** do G-Force (Constituição Study.AI + 5 vetores) está bem traduzida em código nas camadas de **análise** e **IA**, mas existe uma **fratura crítica entre o cérebro (algoritmo) e o corpo (Planner)**: o calendário de estudos é uma agenda manual desacoplada das prioridades calculadas. A plataforma "pensa adaptativamente, mas não age adaptativamente".
 
 ---
 
 ## O que está correto (pontos fortes)
 
 ### 1. Constituição pedagógica centralizada
-`supabase/functions/_shared/cognos-base-prompt.ts` codifica os princípios (carga cognitiva, neurodivergência, empatia, 5 vetores) e é injetada em **todas** as Edge Functions de IA (`ai-coach`, `ai-professor`, `professor-tools`, `generate-study-plan`, `predict-cycle`). Isso garante coerência didática nas respostas da IA. ✅
+`supabase/functions/_shared/study-ai-base-prompt.ts` codifica os princípios (carga cognitiva, neurodivergência, empatia, 5 vetores) e é injetada em **todas** as Edge Functions de IA (`ai-coach`, `ai-professor`, `professor-tools`, `generate-study-plan`, `predict-cycle`). Isso garante coerência didática nas respostas da IA. ✅
 
 ### 2. Algoritmo G-Force formalizado
 `src/lib/adaptive-algorithm.ts` implementa corretamente:

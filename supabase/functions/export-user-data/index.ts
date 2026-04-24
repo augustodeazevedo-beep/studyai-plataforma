@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "Content-Disposition": `attachment; filename="cognos-data-export-${new Date().toISOString().slice(0, 10)}.json"`,
+        "Content-Disposition": `attachment; filename="studyai-data-export-${new Date().toISOString().slice(0, 10)}.json"`,
       },
     });
   } catch (err) {

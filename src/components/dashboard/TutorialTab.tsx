@@ -76,7 +76,7 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-display font-bold flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" /> Tutorial & Estratégia COGNOS
+          <Brain className="h-5 w-5 text-primary" /> Tutorial & Estratégia Study.AI
         </h2>
         <p className="text-sm text-muted-foreground">Entenda a arquitetura por trás da sua aprovação e como extrair o máximo da plataforma.</p>
       </div>
@@ -85,7 +85,7 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
       <Card className="glass border-primary/20">
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Brain className="h-4 w-4 text-primary" /> Princípio Fundamental</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm text-foreground/90">
-          <p>O COGNOS <strong>não</strong> é um contador de horas. É um <span className="text-primary font-semibold">motor de decisão pedagógica</span> que busca maximizar seu <strong>aprendizado por unidade de carga cognitiva</strong> — não simplesmente o tempo que você passa sentado.</p>
+          <p>O Study.AI <strong>não</strong> é um contador de horas. É um <span className="text-primary font-semibold">motor de decisão pedagógica</span> que busca maximizar seu <strong>aprendizado por unidade de carga cognitiva</strong> — não simplesmente o tempo que você passa sentado.</p>
           <p>Isso significa que a plataforma não vai te pedir para "estudar mais". Ela vai te dizer <strong>o quê</strong> estudar, <strong>como</strong> estudar e <strong>quando</strong> revisar, com base no seu estado real — incluindo como você está se sentindo hoje.</p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li><strong>Curva do Esquecimento (Ebbinghaus):</strong> Sem revisão espaçada, você esquece ~70% do conteúdo em 24h. O sistema SRS do Coach.IA combate isso com intervalos adaptativos que se ajustam ao seu desempenho.</li>
@@ -127,7 +127,7 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
       <Card className="glass">
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> O Ciclo de Feedback Contínuo</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm text-foreground/90">
-          <p>A inteligência do COGNOS opera em um ciclo de 5 etapas que se retroalimenta continuamente:</p>
+          <p>A inteligência do Study.AI opera em um ciclo de 5 etapas que se retroalimenta continuamente:</p>
           <ol className="list-decimal pl-5 space-y-2">
             <li><strong>Mapeamento:</strong> Você define o território (edital) no <span className="text-primary font-semibold">Arsenal</span>. A IA extrai disciplinas e tópicos, montando um <strong>grafo de conhecimento</strong> com relevância, incidência, dificuldade estimada e pré-requisitos entre tópicos.</li>
             <li><strong>Execução:</strong> Você estuda no <span className="text-primary font-semibold">Planner</span> (com Pomodoro editável de 1–120 min) e registra cada sessão com compreensão e páginas. A autoavaliação de compreensão é um dos dados mais valiosos — seja honesto.</li>
@@ -206,7 +206,7 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
       <Card className="glass">
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Heart className="h-4 w-4 text-primary" /> Suporte a Neurodivergência</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm text-foreground/90">
-          <p>O COGNOS foi projetado considerando que muitos concurseiros convivem com TDAH, TEA, dislexia e outras condições. Isso se reflete em toda a arquitetura:</p>
+          <p>O Study.AI foi projetado considerando que muitos concurseiros convivem com TDAH, TEA, dislexia e outras condições. Isso se reflete em toda a arquitetura:</p>
           <ul className="list-disc pl-5 space-y-1.5">
             <li><strong>Sessões adaptáveis:</strong> O Pomodoro é editável de 1 a 120 minutos. Se seu span de atenção é de 15 min, a IA trabalha com 15 min. Sem julgamento.</li>
             <li><strong>Micro-metas:</strong> Tarefas grandes são automaticamente quebradas em passos menores e mais concretos.</li>

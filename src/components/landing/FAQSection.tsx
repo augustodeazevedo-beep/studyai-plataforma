@@ -11,7 +11,7 @@ const faqs = [
   {
     question: "Preciso pagar para usar?",
     answer:
-      "Não. O COGNOS tem um plano gratuito com acesso às funcionalidades essenciais — planejamento inteligente, revisões espaçadas, dashboard G-Force e módulos de IA. Planos pagos desbloqueiam recursos avançados como IA ilimitada e suporte prioritário.",
+      "Não. O Study.AI tem um plano gratuito com acesso às funcionalidades essenciais — planejamento inteligente, revisões espaçadas, dashboard G-Force e módulos de IA. Planos pagos desbloqueiam recursos avançados como IA ilimitada e suporte prioritário.",
   },
   {
     question: "Funciona para qual concurso?",
@@ -26,12 +26,12 @@ const faqs = [
   {
     question: "Como funciona o suporte a neurodivergência?",
     answer:
-      "O COGNOS foi projetado com foco em estudantes com TDAH, TEA, dislexia e outras condições. A anamnese captura seu perfil cognitivo. O Pomodoro é editável de 1 a 120 min. Em dias de baixa energia, a IA reduz a carga automaticamente e prioriza formatos leves. A linguagem nunca é punitiva — sempre empática e encorajadora.",
+      "O Study.AI foi projetado com foco em estudantes com TDAH, TEA, dislexia e outras condições. A anamnese captura seu perfil cognitivo. O Pomodoro é editável de 1 a 120 min. Em dias de baixa energia, a IA reduz a carga automaticamente e prioriza formatos leves. A linguagem nunca é punitiva — sempre empática e encorajadora.",
   },
   {
     question: "Preciso abandonar meu material atual?",
     answer:
-      "De jeito nenhum. O COGNOS integra com seus materiais existentes — PDFs, apostilas, videoaulas. Você organiza tudo dentro da plataforma e o sistema cria a estratégia em cima do que você já usa.",
+      "De jeito nenhum. O Study.AI integra com seus materiais existentes — PDFs, apostilas, videoaulas. Você organiza tudo dentro da plataforma e o sistema cria a estratégia em cima do que você já usa.",
   },
   {
     question: "A IA realmente se adapta ao meu dia emocional?",

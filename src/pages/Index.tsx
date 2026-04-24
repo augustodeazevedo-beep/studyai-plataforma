@@ -93,9 +93,9 @@ const Index = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/icon-dark.png" alt="COGNOS Study.AI" className="h-8 w-8 object-contain rounded-xl" />
+            <img src="/icon-dark.png" alt="Study.AI" className="h-8 w-8 object-contain rounded-xl" />
             <span className="font-display text-lg font-bold text-foreground">
-              COGNOS <span className="text-primary">Study.AI</span>
+              Study<span className="text-primary">.AI</span>
             </span>
           </Link>
           <div className="flex items-center gap-3">
@@ -150,7 +150,7 @@ const Index = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            O COGNOS não é um cronograma. É um motor de decisão pedagógica que maximiza seu aprendizado por unidade de carga cognitiva — com empatia, neurociência e respeito ao seu ritmo.
+            O Study.AI não é um cronograma. É um motor de decisão pedagógica que maximiza seu aprendizado por unidade de carga cognitiva — com empatia, neurociência e respeito ao seu ritmo.
           </motion.p>
 
           <motion.p
@@ -213,10 +213,10 @@ const Index = () => {
           >
             <Sparkles className="h-8 w-8 text-primary mx-auto mb-4" />
             <h2 className="font-display text-xl sm:text-2xl font-bold mb-4">
-              O que torna o COGNOS <span className="text-gradient">diferente?</span>
+              O que torna o Study.AI <span className="text-gradient">diferente?</span>
             </h2>
             <p className="text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              A maioria das plataformas te diz <strong className="text-foreground">quando</strong> estudar. O COGNOS te diz <strong className="text-foreground">o quê</strong> estudar, <strong className="text-foreground">como</strong> estudar e <strong className="text-foreground">por quê</strong> — com base no seu estado real de conhecimento, desempenho e bem-estar emocional. Toda recomendação é pedagógica, empática, realista e baseada nos seus dados.
+              A maioria das plataformas te diz <strong className="text-foreground">quando</strong> estudar. O Study.AI te diz <strong className="text-foreground">o quê</strong> estudar, <strong className="text-foreground">como</strong> estudar e <strong className="text-foreground">por quê</strong> — com base no seu estado real de conhecimento, desempenho e bem-estar emocional. Toda recomendação é pedagógica, empática, realista e baseada nos seus dados.
             </p>
           </motion.div>
         </div>
@@ -238,7 +238,7 @@ const Index = () => {
             custom={0}
           >
             <h2 className="font-display text-3xl sm:text-4xl font-bold mb-3">
-              O Ciclo <span className="text-gradient">COGNOS</span>
+              O Ciclo <span className="text-gradient">Study.AI</span>
             </h2>
             <p className="font-display text-lg sm:text-xl text-primary font-semibold mb-4 italic">
               "Aqui, todos os caminhos levam à sua Aprovação."
@@ -335,7 +335,7 @@ const Index = () => {
                 <span className="text-gradient">no escuro.</span>
               </h2>
               <p className="text-muted-foreground mb-4 max-w-lg mx-auto">
-                O COGNOS não cobra, não pune, não gera culpa. Ele entende seu ritmo, respeita seus dias difíceis e te guia com clareza quando você está pronto para avançar.
+                O Study.AI não cobra, não pune, não gera culpa. Ele entende seu ritmo, respeita seus dias difíceis e te guia com clareza quando você está pronto para avançar.
               </p>
               <p className="text-sm text-primary/80 italic mb-8 max-w-md mx-auto">
                 "Vamos ajustar a rota" — nunca "você deveria ter feito mais".
@@ -363,8 +363,8 @@ const Index = () => {
       <footer className="border-t border-border py-8 px-4">
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <img src="/icon-dark.png" alt="COGNOS" className="h-6 rounded-xl" />
-            <span>© 2026 COGNOS Study.AI — Todos os direitos reservados</span>
+            <img src="/icon-dark.png" alt="Study.AI" className="h-6 rounded-xl" />
+            <span>© 2026 Study.AI — Todos os direitos reservados</span>
           </div>
           <div className="flex gap-6">
             <a href="#" className="hover:text-foreground transition-colors">Termos</a>

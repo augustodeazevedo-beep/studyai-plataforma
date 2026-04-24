@@ -196,7 +196,7 @@ const AnalysisTab = ({ userId }: AnalysisTabProps) => {
           <Card className="glass">
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
-                🏎️ Sensor G-Force COGNOS — 5 Vetores
+                🏎️ Sensor G-Force Study.AI — 5 Vetores
               </CardTitle>
               <p className="text-xs text-muted-foreground">Visão global da sua situação com base nos 5 vetores do motor de estudo</p>
             </CardHeader>

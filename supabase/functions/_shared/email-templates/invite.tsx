@@ -9,7 +9,6 @@ import {
   Head,
   Heading,
   Html,
-  Img,
   Link,
   Preview,
   Text,
@@ -24,14 +23,13 @@ interface InviteEmailProps {
 export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailProps) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Você foi convidado para o COGNOS Study.AI</Preview>
+    <Preview>Você foi convidado para o Study.AI</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Img src="https://cognosstudyai.lovable.app/logo-cognos.png" width="48" height="48" alt="COGNOS" style={{ borderRadius: '12px', marginBottom: '16px' }} />
         <Heading style={h1}>Você foi convidado!</Heading>
         <Text style={text}>
           Você recebeu um convite para o{' '}
-          <Link href={siteUrl} style={link}><strong>COGNOS Study.AI</strong></Link>.
+          <Link href={siteUrl} style={link}><strong>Study.AI</strong></Link>.
           Clique no botão abaixo para aceitar e criar sua conta.
         </Text>
         <Button style={button} href={confirmationUrl}>Aceitar Convite</Button>

@@ -5,7 +5,7 @@ const testimonials = [
   {
     name: "Camila R.",
     role: "Aprovada — Analista do TRF-3",
-    text: "Eu estudava 10h por dia e não via resultado. Com o COGNOS, em 4 meses consegui focar no que realmente caía na prova. Passei em 7º lugar.",
+    text: "Eu estudava 10h por dia e não via resultado. Com o Study.AI, em 4 meses consegui focar no que realmente caía na prova. Passei em 7º lugar.",
     stars: 5,
   },
   {
@@ -17,7 +17,7 @@ const testimonials = [
   {
     name: "Ana Paula S.",
     role: "Aprovada — Técnica do INSS",
-    text: "Tenho TDAH e sempre tive dificuldade com cronogramas rígidos. O COGNOS respeita meu ritmo sem me deixar parada. Foi a ferramenta que faltava.",
+    text: "Tenho TDAH e sempre tive dificuldade com cronogramas rígidos. O Study.AI respeita meu ritmo sem me deixar parada. Foi a ferramenta que faltava.",
     stars: 5,
   },
 ];
@@ -46,7 +46,7 @@ const TestimonialsSection = () => (
           Quem usa, <span className="text-gradient">aprova</span>
         </h2>
         <p className="text-muted-foreground max-w-xl mx-auto">
-          Histórias reais de concurseiros que transformaram sua rotina de estudos com o COGNOS.
+          Histórias reais de concurseiros que transformaram sua rotina de estudos com o Study.AI.
         </p>
       </motion.div>
 

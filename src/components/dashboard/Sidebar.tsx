@@ -105,11 +105,10 @@ const Sidebar = ({ activeTab, onTabChange, onLogout, userName }: SidebarProps) =
         )}
       >
         <div className={cn("flex items-center gap-2 px-4 h-16", collapsed && "px-2 justify-center")}>
-          <img src={isDark ? "/icon-dark.png" : "/icon-light.png"} alt="COGNOS" className={cn("h-9 w-9 object-contain rounded-xl", isDark && "bg-transparent")} />
+          <img src={isDark ? "/icon-dark.png" : "/icon-light.png"} alt="Study.AI" className={cn("h-9 w-9 object-contain rounded-xl", isDark && "bg-transparent")} />
           {!collapsed && (
             <div className="flex flex-col leading-none">
-              <span className={cn("text-lg font-bold tracking-widest", isDark ? "text-foreground" : "text-[hsl(210,78%,30%)]")}>COGNOS</span>
-              <span className="text-[11px] font-semibold text-primary">Study.AI</span>
+              <span className="text-lg font-bold tracking-widest text-foreground">Study.AI</span>
             </div>
           )}
         </div>
