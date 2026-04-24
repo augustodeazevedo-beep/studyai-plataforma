@@ -7,10 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Pencil, Trash2 } from "lucide-react";
+import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Pencil, Trash2, Sparkles, Zap, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  recalculateAndPersistPlan,
+  pickNextAction,
+  adaptivePomodoroMinutes,
+  classifyPsycheMode,
+  type NextActionSuggestion,
+} from "@/lib/planner-adaptation";
+import { buildPsycheState, type PsycheState } from "@/lib/adaptive-algorithm";
+import { Badge } from "@/components/ui/badge";
 
 interface PlannerTabProps { userId: string; }
 
@@ -37,6 +46,9 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [timerRunning, setTimerRunning] = useState(false);
   const [editingPomodoro, setEditingPomodoro] = useState(false);
   const [draggedBlock, setDraggedBlock] = useState<CalendarBlock | null>(null);
+  const [nextAction, setNextAction] = useState<NextActionSuggestion | null>(null);
+  const [psycheState, setPsycheStateLocal] = useState<PsycheState | null>(null);
+  const [psycheProfile, setPsycheProfile] = useState<any>(null);
 
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -58,14 +70,51 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const heatmapStart = format(ninetyDaysAgo, "yyyy-MM-dd");
 
-    const [subRes, sesRes, blockRes] = await Promise.all([
+    const [subRes, sesRes, blockRes, psyRes, checkRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("study_sessions").select("*, user_subjects(name)").eq("user_id", userId).gte("started_at", heatmapStart).order("started_at", { ascending: false }),
       supabase.from("study_calendar_blocks").select("*, user_subjects(name)").eq("user_id", userId).gte("block_date", monthStart).lte("block_date", monthEnd).order("order_index"),
+      supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("psyche_checkins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
     ]);
     setSubjects(subRes.data || []);
     setSessions(sesRes.data || []);
     setBlocks((blockRes.data || []).map((b: any) => ({ ...b, subject_name: b.user_subjects?.name })));
+    setPsycheProfile(psyRes.data);
+    const ps = buildPsycheState(psyRes.data, checkRes.data || []);
+    setPsycheStateLocal(ps);
+
+    // Adaptive Pomodoro: initialize using psyche + ND profile
+    const adaptiveMin = adaptivePomodoroMinutes(ps, psyRes.data?.attention_span_minutes || 25);
+    if (!timerRunning) {
+      setPomodoroMinutes(adaptiveMin);
+      setTimerSeconds(adaptiveMin * 60);
+    }
+
+    // Compute next action from current study_plan + algorithm
+    const planRes = await supabase.from("study_plan").select("*, user_subjects(name)").eq("user_id", userId).order("priority_score", { ascending: false });
+    const planData = planRes.data || [];
+    if (planData.length > 0) {
+      // Reconstruct minimal DisciplinePriority list from study_plan rows for pickNextAction
+      const fauxPriorities = planData.map((row: any) => ({
+        disciplineId: row.subject_id,
+        disciplineName: row.user_subjects?.name || "Disciplina",
+        gforceScore: Math.round((row.priority_score || 0) * 10),
+        vectors: {
+          relevance: (row.relevance || 0) * 10,
+          incidence: (row.incidence || 0) * 10,
+          comprehension: (row.gap_score || 0) * 10,
+          intensity: (row.performance || 0) * 10,
+          psyche: 50,
+        },
+        recommendation: "Recomendação baseada no seu plano G-Force",
+        suggestedDailyMinutes: Math.round(((row.recommended_hours_weekly || 1) * 60) / 5),
+        priorityLevel: row.priority_score >= 7.5 ? "critical" : row.priority_score >= 5 ? "high" : row.priority_score >= 2.5 ? "medium" : "low",
+      })) as any;
+      setNextAction(pickNextAction(fauxPriorities, ps));
+    } else {
+      setNextAction(null);
+    }
   }, [userId, currentMonth]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -127,7 +176,12 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
       toast.error("Erro ao mover bloco");
       loadData();
     } else {
-      toast.success("Bloco reagendado!");
+      toast.success("Bloco reagendado! Recalibrando G-Force…");
+      // Trigger deterministic recalculation
+      recalculateAndPersistPlan(userId).then(() => {
+        toast.success("Cronograma G-Force recalibrado ⚡");
+        loadData();
+      });
     }
     setDraggedBlock(null);
   };
@@ -204,6 +258,8 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     setSessionForm({ subject_id: "", material_name: "", pages_start: "", pages_end: "", duration_minutes: "60", comprehension_rating: 3 });
     loadData();
     checkAchievements(userId);
+    // Deterministic G-Force recalculation (no AI cost)
+    recalculateAndPersistPlan(userId).then(() => loadData());
   };
 
   // Heatmap
@@ -212,6 +268,49 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold font-display">🗓️ Planner de Estudos</h1>
+
+      {/* Adaptive Next Action Panel — connects G-Force to the calendar */}
+      {nextAction && (
+        <Card className={`glass border-l-4 ${
+          nextAction.priorityLevel === "critical" ? "border-l-destructive" :
+          nextAction.priorityLevel === "high" ? "border-l-warning" :
+          nextAction.priorityLevel === "medium" ? "border-l-primary" : "border-l-muted"
+        }`}>
+          <CardContent className="py-3">
+            <div className="flex items-start gap-3 flex-wrap">
+              <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-[200px]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold">Próxima ação G-Force:</span>
+                  <Badge variant="outline" className="text-xs">{nextAction.subjectName}</Badge>
+                  <Badge className="text-xs">{nextAction.durationMinutes} min</Badge>
+                  {psycheState && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Heart className="h-3 w-3 mr-1" />
+                      {classifyPsycheMode(psycheState) === "low" ? "Modo leve" :
+                       classifyPsycheMode(psycheState) === "good" ? "Modo intensivo" : "Modo padrão"}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{nextAction.reason}</p>
+                <p className="text-xs text-primary/80 mt-0.5 italic">💡 {nextAction.loadHint}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  toast.info("Recalibrando plano G-Force…");
+                  await recalculateAndPersistPlan(userId);
+                  await loadData();
+                  toast.success("Plano atualizado com base nos dados mais recentes ⚡");
+                }}
+              >
+                <Zap className="h-3 w-3 mr-1" /> Recalcular
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Heatmap - 90 days with scroll buttons */}
       <Card className="glass">

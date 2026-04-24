@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
+import { applyDailyAdaptation, recalculateAndPersistPlan } from "@/lib/planner-adaptation";
 
 interface PsycheTabProps { userId: string; }
 
@@ -142,6 +143,19 @@ const PsycheTab = ({ userId }: PsycheTabProps) => {
     toast.success("Check-in registrado! 💚");
     setCheckinForm({ mood: 3, stress: 3, energy: 3, focus: 3, notes: "" });
     loadData();
+
+    // INSTANT G-FORCE ADAPTATION (no AI calls)
+    try {
+      // 1) Recompute study_plan with new psyche state
+      await recalculateAndPersistPlan(userId);
+      // 2) Adapt today's calendar blocks (light/intensive mode + TDAH fragmentation)
+      const result = await applyDailyAdaptation(userId);
+      if (result.blocksAffected > 0) {
+        toast.success(result.message, { duration: 6000 });
+      }
+    } catch (e) {
+      console.error("Adaptive recalibration failed:", e);
+    }
   };
 
   // Calculate Psique score

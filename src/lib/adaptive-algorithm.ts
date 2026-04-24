@@ -46,6 +46,7 @@ export interface DisciplinePriority {
   recommendation: string;
   suggestedDailyMinutes: number;
   priorityLevel: "critical" | "high" | "medium" | "low";
+  urgencyMultiplier?: number; // 1.0–1.5 boost when exam is near and gap is high
 }
 
 export interface StudyRecommendation {
@@ -150,8 +151,16 @@ export function calculateGForceScore(vectors: GForceVector): number {
 
 export function calculateDisciplinePriorities(
   disciplines: Discipline[],
-  psycheState: PsycheState | null
+  psycheState: PsycheState | null,
+  examDate?: string | null
 ): DisciplinePriority[] {
+  // Compute urgency multiplier from exam proximity
+  let daysUntilExam: number | null = null;
+  if (examDate) {
+    const diff = new Date(examDate).getTime() - Date.now();
+    daysUntilExam = Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
+  }
+
   return disciplines.map((discipline) => {
     const vectors: GForceVector = {
       relevance: calculateRelevanceVector(discipline.weight),
@@ -164,7 +173,18 @@ export function calculateDisciplinePriorities(
       psyche: calculatePsycheVector(psycheState),
     };
 
-    const gforceScore = calculateGForceScore(vectors);
+    let gforceScore = calculateGForceScore(vectors);
+
+    // Urgency boost: if exam is near AND comprehension gap is high, amplify priority
+    let urgencyMultiplier = 1;
+    if (daysUntilExam !== null && daysUntilExam <= 90) {
+      // Linear boost: at 90 days = 1.0, at 0 days = 1.5, scaled by comprehension gap
+      const proximityFactor = (90 - daysUntilExam) / 90; // 0 → 1
+      const gapFactor = vectors.comprehension / 100; // 0 → 1
+      urgencyMultiplier = 1 + 0.5 * proximityFactor * gapFactor;
+      gforceScore = Math.min(100, gforceScore * urgencyMultiplier);
+    }
+
     const psycheScore = psycheState
       ? (psycheState.mood + (6 - psycheState.stress) + psycheState.energy + psycheState.focus + psycheState.sleepQuality) / 5
       : 3;
@@ -186,6 +206,7 @@ export function calculateDisciplinePriorities(
       recommendation,
       suggestedDailyMinutes,
       priorityLevel,
+      urgencyMultiplier: Math.round(urgencyMultiplier * 100) / 100,
     };
   }).sort((a, b) => b.gforceScore - a.gforceScore);
 }
@@ -344,4 +365,23 @@ export function buildPsycheState(
   }
 
   return null;
+}
+
+/**
+ * Maps a DisciplinePriority to a study_plan row payload (deterministic, no AI).
+ * Used for instant recalculations triggered by sessions, attempts or check-ins.
+ */
+export function priorityToPlanRow(p: DisciplinePriority, userId: string) {
+  // Convert 0-100 vectors back to the 0-10 scale used in study_plan
+  return {
+    user_id: userId,
+    subject_id: p.disciplineId,
+    priority_score: Math.round(p.gforceScore) / 10, // study_plan uses 0-10 numeric
+    relevance: Math.round(p.vectors.relevance) / 10,
+    incidence: Math.round(p.vectors.incidence) / 10,
+    accuracy: Math.round(100 - p.vectors.comprehension) / 10, // mastery, not gap
+    performance: Math.round(p.vectors.intensity) / 10,
+    gap_score: Math.round(p.vectors.comprehension) / 10,
+    recommended_hours_weekly: Math.round((p.suggestedDailyMinutes * 5) / 60 * 10) / 10,
+  };
 }
