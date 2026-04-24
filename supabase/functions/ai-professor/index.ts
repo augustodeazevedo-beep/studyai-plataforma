@@ -7,6 +7,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_CHARS = 4_000;
+const ALLOWED_ROLES = new Set(["user", "assistant", "system"]);
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function normalizeMessages(messages: unknown[]) {
+  return messages.slice(-MAX_MESSAGES).map((message) => {
+    if (!message || typeof message !== "object") throw new Error("Invalid message format");
+    const record = message as Record<string, unknown>;
+    if (typeof record.content !== "string") throw new Error("Invalid message content");
+    const role = typeof record.role === "string" && ALLOWED_ROLES.has(record.role) ? record.role : "user";
+    return { role, content: record.content.slice(0, MAX_MESSAGE_CHARS) };
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -22,7 +43,10 @@ serve(async (req) => {
     if (!user) throw new Error("Unauthorized");
 
     const { messages } = await req.json();
-    if (!messages || !Array.isArray(messages)) throw new Error("Messages required");
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return jsonResponse({ error: "Messages required" }, 400);
+    }
+    const safeMessages = normalizeMessages(messages);
 
     const [profileRes, subjectsRes, topicsRes, psycheRes, checkinsRes, planRes] = await Promise.all([
       supabase.from("profiles").select("target_exam, target_position, daily_hours, study_days, exam_date, banca").eq("user_id", user.id).maybeSingle(),
@@ -66,7 +90,7 @@ INSTRUÇÕES ESPECÍFICAS:
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        messages: [{ role: "system", content: systemPrompt }, ...safeMessages],
         stream: true,
       }),
     });
