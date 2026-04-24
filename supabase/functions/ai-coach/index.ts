@@ -7,6 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MAX_SUBJECTS = 80;
+const MAX_PLAN_ROWS = 80;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -23,10 +26,10 @@ serve(async (req) => {
 
     const [profileRes, subjectsRes, sessionsRes, attemptsRes, planRes, psycheRes, checkinsRes, reviewsRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
-      supabase.from("user_subjects").select("*").eq("user_id", user.id),
+      supabase.from("user_subjects").select("*").eq("user_id", user.id).limit(MAX_SUBJECTS),
       supabase.from("study_sessions").select("*").eq("user_id", user.id).order("started_at", { ascending: false }).limit(30),
       supabase.from("question_attempts").select("*, questions(subject_id, difficulty)").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100),
-      supabase.from("study_plan").select("*").eq("user_id", user.id),
+      supabase.from("study_plan").select("*").eq("user_id", user.id).limit(MAX_PLAN_ROWS),
       supabase.from("psyche_profiles").select("*").eq("user_id", user.id).maybeSingle(),
       supabase.from("psyche_checkins").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(7),
       supabase.from("spaced_reviews").select("*").eq("user_id", user.id).order("review_date", { ascending: false }).limit(20),
