@@ -169,6 +169,45 @@ export type Database = {
           },
         ]
       }
+      planner_audit_logs: {
+        Row: {
+          after_state: Json | null
+          before_state: Json | null
+          created_at: string
+          event_source: string
+          event_type: string
+          explanation: string
+          id: string
+          metadata: Json | null
+          subject_id: string | null
+          user_id: string
+        }
+        Insert: {
+          after_state?: Json | null
+          before_state?: Json | null
+          created_at?: string
+          event_source: string
+          event_type: string
+          explanation: string
+          id?: string
+          metadata?: Json | null
+          subject_id?: string | null
+          user_id: string
+        }
+        Update: {
+          after_state?: Json | null
+          before_state?: Json | null
+          created_at?: string
+          event_source?: string
+          event_type?: string
+          explanation?: string
+          id?: string
+          metadata?: Json | null
+          subject_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -474,34 +513,46 @@ export type Database = {
       }
       study_calendar_blocks: {
         Row: {
+          auto_generated: boolean
           block_date: string
+          block_type: string
+          cognitive_load: string
           created_at: string
           duration_minutes: number
           id: string
           material_name: string | null
           order_index: number
+          source: string
           subject_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_generated?: boolean
           block_date: string
+          block_type?: string
+          cognitive_load?: string
           created_at?: string
           duration_minutes?: number
           id?: string
           material_name?: string | null
           order_index?: number
+          source?: string
           subject_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_generated?: boolean
           block_date?: string
+          block_type?: string
+          cognitive_load?: string
           created_at?: string
           duration_minutes?: number
           id?: string
           material_name?: string | null
           order_index?: number
+          source?: string
           subject_id?: string | null
           updated_at?: string
           user_id?: string
