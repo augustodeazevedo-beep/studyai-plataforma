@@ -7,6 +7,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MAX_SUBJECT_IDS = 50;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -22,9 +32,21 @@ serve(async (req) => {
     if (!user) throw new Error("Unauthorized");
 
     const { mode, dailyMinutes, startDate, subjectIds } = await req.json();
+    if (mode !== "predict_date" && mode !== "daily_minutes") {
+      return jsonResponse({ error: "Invalid prediction mode" }, 400);
+    }
+    if (!Array.isArray(subjectIds) || subjectIds.length === 0 || subjectIds.length > MAX_SUBJECT_IDS || !subjectIds.every((id) => typeof id === "string" && UUID_REGEX.test(id))) {
+      return jsonResponse({ error: "Invalid subject selection" }, 400);
+    }
+    if (typeof dailyMinutes !== "number" || !Number.isFinite(dailyMinutes) || dailyMinutes < 15 || dailyMinutes > 1_440) {
+      return jsonResponse({ error: "Invalid daily minutes" }, 400);
+    }
+    if (typeof startDate !== "string" || startDate.length > 20) {
+      return jsonResponse({ error: "Invalid start date" }, 400);
+    }
 
     const [subjectsRes, topicsRes, planRes, psycheRes, checkinsRes, sessionsRes] = await Promise.all([
-      supabase.from("user_subjects").select("*").eq("user_id", user.id).in("id", subjectIds || []),
+      supabase.from("user_subjects").select("*").eq("user_id", user.id).in("id", subjectIds),
       supabase.from("topics").select("*").eq("user_id", user.id),
       supabase.from("study_plan").select("*").eq("user_id", user.id),
       supabase.from("psyche_profiles").select("*").eq("user_id", user.id).maybeSingle(),
