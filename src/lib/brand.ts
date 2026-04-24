@@ -1,0 +1,63 @@
+export type BrandLogoVariant = "wordmark" | "mark";
+
+export interface BrandLogoSettings {
+  name: string;
+  tagline: string;
+  wordmarkSrc: string;
+  wordmarkLightSrc: string;
+  markSrc: string;
+  fallbackSvg: string;
+  sizes: {
+    nav: number;
+    auth: number;
+    sidebar: number;
+    sidebarCollapsed: number;
+    footer: number;
+  };
+}
+
+export const BRAND_STORAGE_KEY = "studyai:brand-kit";
+export const BRAND_UPDATED_EVENT = "studyai-brand-updated";
+
+export const defaultBrandSettings: BrandLogoSettings = {
+  name: "Study.AI",
+  tagline: "Inteligência pedagógica adaptativa",
+  wordmarkSrc: "/brand/studyai-wordmark.webp",
+  wordmarkLightSrc: "/brand/studyai-wordmark-light.webp",
+  markSrc: "/brand/studyai-mark.webp",
+  fallbackSvg: "/brand/studyai-mark.svg",
+  sizes: {
+    nav: 36,
+    auth: 48,
+    sidebar: 40,
+    sidebarCollapsed: 38,
+    footer: 28,
+  },
+};
+
+export const getBrandSettings = (): BrandLogoSettings => {
+  if (typeof window === "undefined") return defaultBrandSettings;
+
+  try {
+    const stored = window.localStorage.getItem(BRAND_STORAGE_KEY);
+    if (!stored) return defaultBrandSettings;
+    const parsed = JSON.parse(stored) as Partial<BrandLogoSettings>;
+    return {
+      ...defaultBrandSettings,
+      ...parsed,
+      sizes: { ...defaultBrandSettings.sizes, ...parsed.sizes },
+    };
+  } catch {
+    return defaultBrandSettings;
+  }
+};
+
+export const saveBrandSettings = (settings: BrandLogoSettings) => {
+  window.localStorage.setItem(BRAND_STORAGE_KEY, JSON.stringify(settings));
+  window.dispatchEvent(new Event(BRAND_UPDATED_EVENT));
+};
+
+export const resetBrandSettings = () => {
+  window.localStorage.removeItem(BRAND_STORAGE_KEY);
+  window.dispatchEvent(new Event(BRAND_UPDATED_EVENT));
+};
