@@ -45,6 +45,18 @@ function getRetryAfterSeconds(error: unknown): number {
   return 60
 }
 
+function hasRequiredEmailFields(payload: EmailQueueMessage['message']): payload is EmailQueueMessage['message'] & {
+  to: string
+  from: string
+  subject: string
+  html: string
+  text: string
+} {
+  return ['to', 'from', 'subject', 'html', 'text'].every(
+    (field) => typeof payload[field] === 'string' && (payload[field] as string).length > 0
+  )
+}
+
 function parseJwtClaims(token: string): Record<string, unknown> | null {
   const parts = token.split('.')
   if (parts.length < 2) {
@@ -263,6 +275,10 @@ Deno.serve(async (req) => {
       }
 
       try {
+        if (!hasRequiredEmailFields(payload)) {
+          throw new Error('Invalid email payload: missing required fields')
+        }
+
         await sendLovableEmail(
           {
             run_id: payload.run_id,
