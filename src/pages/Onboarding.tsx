@@ -191,10 +191,7 @@ const Onboarding = () => {
       <header className="border-b border-border glass sticky top-0 z-40">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-3">
-            <img src="/icon-dark.png" alt="Study.AI" className="h-8 rounded-xl" />
-            <span className="font-display text-lg font-bold hidden sm:block">
-              Study<span className="text-primary">.AI</span>
-            </span>
+            <img src="/logo-studyai.png" alt="Study.AI" className="h-9 w-auto max-w-[150px] object-contain" />
           </div>
           <div className="text-sm text-muted-foreground">
             Passo {step + 1} de {STEPS.length}
