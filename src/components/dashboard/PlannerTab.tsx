@@ -423,7 +423,8 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
       )}
 
       {/* Heatmap - 90 days with scroll buttons */}
-      {plannerView === "calendar" && <Card className="glass">
+      {plannerView === "calendar" && <>
+      <Card className="glass">
         <CardHeader className="py-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-bold">Histórico de Intensidade</CardTitle>
@@ -645,6 +646,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
           </Card>
         </div>
       </div>
+      </>}
 
       {/* Recent sessions */}
       <Card className="glass">
