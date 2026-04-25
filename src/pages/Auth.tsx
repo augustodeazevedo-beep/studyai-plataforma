@@ -120,7 +120,7 @@ const Auth = () => {
           <div className="flex items-center justify-center mb-3 px-4">
             <BrandLogo
               size="auth"
-              tone="auto"
+              tone="light"
               responsiveHeight="clamp(44px, 8vw, 62px)"
               className="w-full justify-center"
               imgClassName="w-auto max-w-[min(78vw,260px)]"
