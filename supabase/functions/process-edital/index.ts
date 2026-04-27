@@ -291,7 +291,7 @@ ${edital}`;
       const incidence = clampScore(extracted.incidence);
       const subjectKey = normalizeName(name);
       let subjectData = existingSubjects.get(subjectKey) as any;
-      const sources = extracted.sources?.length ? extracted.sources : research.citations.slice(0, 3).map((url) => ({ title: "Fonte pública consultada", url, note: "Referência usada para estimar incidência/relevância" }));
+      const sources = extracted.sources?.length ? extracted.sources : research.citations.slice(0, 3).map((url: string) => ({ title: "Fonte pública consultada", url, note: "Referência usada para estimar incidência/relevância" }));
 
       if (subjectData && forceReprocess) {
         const previous = { relevance: Number(subjectData.weight ?? 0), incidence: Number(subjectData.incidence ?? 0) };
