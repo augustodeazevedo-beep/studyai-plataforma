@@ -220,6 +220,7 @@ Deno.serve(async (req) => {
     }
 
     const { editalText, targetExam, targetPosition, banca, forceReprocess } = requestBody.data;
+    const submissionId = requestBody.data.submissionId || crypto.randomUUID();
     const edital = cleanText(editalText);
     const research = await getPublicResearchContext(targetExam, targetPosition, banca);
 
@@ -233,7 +234,8 @@ Incidência = recorrência histórica em provas anteriores ou semelhantes do mes
 Nunca retorne valores menores que 1 ou maiores que 5 para Relevância ou Incidência.
 Não estime Compreensão, Psique ou Intensidade: esses vetores vêm de registros do usuário no Arsenal, Planner e Bem Estar.
 Use o contexto de pesquisa pública quando disponível; se as fontes forem insuficientes, informe justificativa conservadora.
-Retorne fontes públicas resumidas quando houver URLs/citações no contexto.`;
+Retorne fontes públicas resumidas quando houver URLs/citações no contexto.
+Formato obrigatório: os campos relevance e incidence devem ser números inteiros de 1 a 5 ou strings numéricas simples entre "1" e "5"; não use porcentagens, escala 0-10, decimais, texto ou valores nulos.`;
 
     const userContent = `Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.
 
@@ -300,7 +302,15 @@ ${edital}`;
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("A IA não retornou dados estruturados.");
 
-    const parsed = extractedSubjectsSchema.safeParse(JSON.parse(toolCall.function.arguments));
+    const aiArguments = JSON.parse(toolCall.function.arguments);
+    if (Array.isArray(aiArguments?.subjects)) {
+      for (const subject of aiArguments.subjects) {
+        logScoreNormalization(submissionId, user.id, subject?.name, "relevance", subject?.relevance, clampScore(subject?.relevance));
+        logScoreNormalization(submissionId, user.id, subject?.name, "incidence", subject?.incidence, clampScore(subject?.incidence));
+      }
+    }
+
+    const parsed = extractedSubjectsSchema.safeParse(aiArguments);
     if (!parsed.success) {
       return jsonResponse({ error: "A IA retornou disciplinas em formato inválido", details: parsed.error.flatten().fieldErrors }, 422);
     }
