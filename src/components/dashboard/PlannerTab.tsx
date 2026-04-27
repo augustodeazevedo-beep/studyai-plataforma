@@ -561,6 +561,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                     <Badge className="text-xs">{format(new Date(`${review.review_date}T00:00:00`), "dd/MM")}</Badge>
                     <Badge variant={review.priority_rank === 1 ? "destructive" : review.priority_rank === 2 ? "default" : "secondary"} className="text-xs">{review.priority_label}</Badge>
                     <Badge variant={Number(review.forgetting_risk || 0) >= 70 ? "destructive" : "secondary"} className="text-xs">Risco {Math.round(Number(review.forgetting_risk || 0))}%</Badge>
+                    <Badge variant="secondary" className="text-xs">{review.review_type === "questoes" ? "Questões" : review.review_type === "flashcards" ? "Flashcards" : "Leitura"}</Badge>
                     <Badge variant="outline" className="text-xs">~{review.estimated_minutes} min</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{review.recommendation}</p>
