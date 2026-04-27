@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
       return jsonResponse(validationError, 400);
     }
 
+    const pdfjsLib = await import("npm:pdfjs-dist@5.6.205/legacy/build/pdf.mjs");
     const loadingTask = pdfjsLib.getDocument({ data: bytes, useWorkerFetch: false, isEvalSupported: false, disableFontFace: true });
     const pdf = await loadingTask.promise;
     const pageTexts = [];
