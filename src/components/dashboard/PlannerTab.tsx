@@ -634,8 +634,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
               </div>
               <div>
                 <Label className="text-xs">Material</Label>
-                  <Input className="h-8 text-xs" value={sessionForm.material_name} onChange={e => setSessionForm(p => ({ ...p, material_name: e.target.value }))} placeholder="PDF, Videoaula, etc." />
-                </div>
+                <Input className="h-8 text-xs" value={sessionForm.material_name} onChange={e => setSessionForm(p => ({ ...p, material_name: e.target.value }))} placeholder="PDF, Videoaula, etc." />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div><Label className="text-xs">Pág. Início</Label><Input className="h-8 text-xs" type="number" value={sessionForm.pages_start} onChange={e => setSessionForm(p => ({ ...p, pages_start: e.target.value }))} /></div>
