@@ -1,0 +1,15 @@
+---
+name: Study Engine (G-Force)
+description: 5 vectors: Relevance, Incidence, Comprehension, Intensity, Psyche
+type: feature
+---
+O cérebro da plataforma utiliza o algoritmo adaptativo G-Force para calcular prioridades de estudo com cinco vetores ponderados: Relevância (peso x3), Incidência (frequência histórica x2), Compreensão (conhecimento x2), Intensidade (dedicação x1) e Psique (estado anímico x2).
+
+Origem obrigatória dos vetores:
+- Relevância: deve ser sugerida/identificada por IA com base no peso/importância da matéria no edital específico e, quando possível, consulta pública a editais, provas e informações oficiais da banca.
+- Incidência: deve ser sugerida/identificada por IA com base na recorrência histórica da matéria em provas anteriores ou similares para o mesmo cargo, priorizando repositórios públicos e sites das bancas organizadoras.
+- Compreensão: deve ser registrada pelo usuário diretamente no Arsenal e refinada pelos registros diários de sessões na aba Planner.
+- Psique: deve ser processada a partir das respostas e check-ins na aba Bem Estar.
+- Intensidade: deve ser avaliada/analisada a partir do registro real dos estudos diários.
+
+Esses cinco registros devem ser ponderados para maximizar eficiência (enfrentar/estudar o máximo de temas do edital) e efetividade (buscar maior nota e aprovação no certame). Não substituir Compreensão, Psique ou Intensidade por inferência genérica da IA no processamento do edital.
