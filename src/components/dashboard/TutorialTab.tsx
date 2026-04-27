@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RotateCcw, Brain, Target, BarChart3, Zap, Heart, BookOpen, Calendar, Swords, LineChart, NotebookPen, Sparkles, GraduationCap, MessageSquare, Trophy, Settings, ArrowRight, ShieldCheck, Lightbulb } from "lucide-react";
+import { AlertTriangle, RotateCcw, Brain, Target, BarChart3, Zap, Heart, BookOpen, Calendar, Swords, LineChart, NotebookPen, Sparkles, GraduationCap, MessageSquare, Trophy, Settings, ArrowRight, ShieldCheck, Lightbulb, CheckSquare, Clock, FileSearch, Gauge, History, Layers3, LockKeyhole, TimerReset } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -15,9 +15,10 @@ const TOOLS: { key: string; label: string; tables: string[] }[] = [
   { key: "arsenal", label: "Arsenal (Disciplinas + Tópicos + Materiais)", tables: ["user_subjects", "topics", "study_materials"] },
   { key: "analysis", label: "Análise (Questões + Tentativas)", tables: ["questions", "question_attempts"] },
   { key: "study_plan", label: "Plano de Estudo / G-Force", tables: ["study_plan"] },
+  { key: "performance", label: "Desempenho por Tema", tables: ["study_sessions", "question_attempts", "spaced_reviews"] },
   { key: "notebooks", label: "Cadernos (Notas)", tables: ["user_notes"] },
   { key: "flashcards", label: "Flashcards", tables: ["flashcards"] },
-  { key: "reviews", label: "Revisões Espaçadas", tables: ["spaced_reviews"] },
+  { key: "reviews", label: "Revisões Espaçadas + Lotes", tables: ["spaced_reviews", "planner_audit_logs"] },
   { key: "reminders", label: "Lembretes", tables: ["reminders"] },
   { key: "achievements", label: "Conquistas", tables: ["user_achievements"] },
   { key: "coaching", label: "Coach.IA (Histórico)", tables: ["ai_coaching_history"] },
@@ -26,13 +27,22 @@ const TOOLS: { key: string; label: string; tables: string[] }[] = [
 ];
 
 const FLOW_STEPS = [
-  { icon: Heart, label: "Anamnese", desc: "Preencha seu perfil neurocognitivo na aba Bem-Estar. A IA precisa conhecer você antes de recomendar." },
-  { icon: Swords, label: "Upload do Edital", desc: "Envie o PDF do edital no Arsenal. A IA monta o grafo de conhecimento com disciplinas, tópicos, relevância e incidência." },
-  { icon: Settings, label: "Configurações", desc: "Defina horas diárias, dias de estudo e meta de questões. Esses dados alimentam o vetor de Intensidade." },
-  { icon: Calendar, label: "Estudar", desc: "Use o Planner com Pomodoro editável. Ao final, avalie sua compreensão — é o dado mais valioso para a IA." },
-  { icon: BarChart3, label: "Questões", desc: "Resolva questões na Análise. A taxa de acertos alimenta o vetor de Compreensão e o Desempenho dinâmico." },
-  { icon: GraduationCap, label: "Revisões SRS", desc: "Complete revisões espaçadas no Coach.IA. Os intervalos se adaptam ao seu desempenho e estado emocional." },
-  { icon: Sparkles, label: "Previsão", desc: "Gere sua previsão de aprovação no Previsor.IA. A projeção considera seu ritmo real, não cenários ideais." },
+  { icon: Heart, label: "Conheça-se", desc: "Preencha a anamnese e faça check-ins no Bem-Estar. A IA usa Psique para ajustar volume, linguagem e tipo de tarefa." },
+  { icon: Swords, label: "Mapeie o edital", desc: "Envie o PDF no Arsenal ou cadastre manualmente disciplinas e tópicos. O sistema calcula relevância, incidência e lacunas." },
+  { icon: Settings, label: "Defina sua realidade", desc: "Configure concurso, cargo, banca, data da prova, dias e horas disponíveis. O plano nasce do seu tempo real." },
+  { icon: Calendar, label: "Execute no Planner", desc: "Registre sessões, Pomodoros, compreensão e páginas. Esses dados recalibram intensidade, desempenho e revisões." },
+  { icon: BarChart3, label: "Meça por questões", desc: "Use a Análise para registrar tentativas e acertos. A taxa de acerto corrige o vetor Compreensão." },
+  { icon: GraduationCap, label: "Revise no tempo certo", desc: "Na aba Revisões do Planner, veja hoje e próximos 7 dias, filtre por concurso/cargo, priorize por risco e conclua em lote." },
+  { icon: Gauge, label: "Compare desempenho", desc: "Acompanhe a aba Desempenho para ver compreensão, intensidade, risco de esquecimento e evolução das últimas sessões." },
+  { icon: Sparkles, label: "Projete e ajuste", desc: "Use Coach.IA e Previsor.IA para receber diagnóstico, próxima ação e previsão realista com margem de segurança." },
+];
+
+const SCIENCE_REFERENCES = [
+  "Prática de recuperação ativa: testes, questões e explicação sem consulta fortalecem memória mais do que releitura passiva.",
+  "Repetição espaçada: revisões distribuídas ao longo do tempo combatem a curva do esquecimento e aumentam retenção de longo prazo.",
+  "Intercalação e variação: alternar disciplinas, formatos e níveis de dificuldade melhora transferência e flexibilidade cognitiva.",
+  "Feedback rápido e metacognição: saber onde errou e estimar o próprio domínio reduz ilusões de competência.",
+  "Carga cognitiva gerenciável: dividir tarefas, reduzir excesso em dias de estresse e respeitar sono/foco preserva aprendizagem sustentável.",
 ];
 
 const TutorialTab = ({ userId }: TutorialTabProps) => {
@@ -93,6 +103,24 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
             <li><strong>Aprendizado Adaptativo:</strong> Cada interação com a plataforma atualiza o seu "modelo de aluno" — um perfil dinâmico que a IA consulta antes de tomar qualquer decisão.</li>
           </ul>
           <p className="text-muted-foreground italic">A plataforma adota uma abordagem empática e não punitiva. Especialmente para estudantes neurodivergentes ou sob estresse, cada estímulo foi pensado para incentivar persistência sem gerar culpa. "Vamos ajustar a rota" — nunca "você deveria ter feito mais".</p>
+        </CardContent>
+      </Card>
+
+      <Card className="glass border-primary/20">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Gauge className="h-4 w-4 text-primary" /> Eficiência + Efetividade: a lógica do cálculo</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm text-foreground/90">
+          <p><strong>Eficiência</strong> é estudar o máximo de conteúdo relevante com o menor desperdício de energia. <strong>Efetividade</strong> é converter esse esforço em nota: compreender, lembrar e acertar questões no dia da prova.</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> Busca da eficiência</p>
+              <p className="text-muted-foreground mt-1">O sistema evita alocar tempo demais no que você já domina e pouco no que mais pesa no edital. Ele cruza tempo disponível, intensidade recente, relevância, incidência e estado Psique para sugerir a próxima ação possível — não a rotina idealizada.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary flex items-center gap-2"><Target className="h-3.5 w-3.5" /> Busca da efetividade</p>
+              <p className="text-muted-foreground mt-1">O sistema prioriza temas com maior chance de gerar ganho de nota: alto peso, alta incidência, baixa compreensão, baixa taxa de acerto ou alto risco de esquecimento. A meta é acertar mais, não apenas cumprir horas.</p>
+            </div>
+          </div>
+          <p className="text-muted-foreground italic">Em termos simples: a plataforma calcula onde cada minuto de estudo tende a produzir o maior retorno pedagógico, respeitando sua capacidade cognitiva do dia.</p>
         </CardContent>
       </Card>
 
@@ -202,6 +230,49 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
         </CardContent>
       </Card>
 
+      <Card className="glass border-primary/20">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><TimerReset className="h-4 w-4 text-primary" /> Revisões inteligentes e risco de lacuna</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm text-foreground/90">
+          <p>A aba <strong>Revisões</strong>, dentro do Planner, transforma sessões, respostas e check-ins em uma agenda de revisão dos próximos 7 dias. Cada item recebe prioridade, tempo estimado e tipo sugerido de revisão.</p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary">Risco de esquecimento</p>
+              <p className="text-muted-foreground mt-1">Aumenta com o tempo desde o último contato e diminui quando você conclui revisões, acerta questões ou registra boa compreensão.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary">Prioridade automática</p>
+              <p className="text-muted-foreground mt-1">Ordena o que fazer primeiro combinando risco de lacuna, proximidade da data, relevância no edital e dificuldade percebida.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary">Tempo realista</p>
+              <p className="text-muted-foreground mt-1">A previsão considera rank de prioridade e tipo de revisão: leitura guiada, flashcards ou questões.</p>
+            </div>
+          </div>
+          <ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">
+            <li><strong>Concluir selecionadas:</strong> permite finalizar várias revisões com checkbox e recalcular apenas os temas efetivamente impactados.</li>
+            <li><strong>Pausa rápida:</strong> mantém filtros e seleções para você retomar depois sem perder o contexto.</li>
+            <li><strong>Histórico de lotes:</strong> registra data, quantidade, tempo estimado e temas concluídos para auditoria pessoal.</li>
+            <li><strong>Filtros por concurso/cargo:</strong> focam a lista nos temas relevantes para o edital ativo.</li>
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card className="glass">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileSearch className="h-4 w-4 text-primary" /> Base científica e boas práticas educacionais</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm text-foreground/90">
+          <p>O Study.AI se inspira em achados consolidados da neurociência cognitiva, psicologia da aprendizagem e políticas educacionais observadas em sistemas de alto desempenho acadêmico, como Singapura, Finlândia, Japão, Dinamarca, Noruega, Holanda, Suíça, China e outros países com forte cultura de avaliação, formação docente e aprendizagem estruturada.</p>
+          <div className="grid gap-2">
+            {SCIENCE_REFERENCES.map((item, index) => (
+              <div key={index} className="flex items-start gap-2 p-3 rounded-lg bg-muted/20 border border-border/40">
+                <CheckSquare className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-muted-foreground">{item}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-muted-foreground italic">Essas referências não significam copiar um país específico, mas aplicar princípios recorrentes em ambientes educacionais fortes: rotina, diagnóstico, feedback, revisão espaçada, prática deliberada, autonomia e cuidado com carga mental.</p>
+        </CardContent>
+      </Card>
+
       {/* Neurodivergence */}
       <Card className="glass">
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Heart className="h-4 w-4 text-primary" /> Suporte a Neurodivergência</CardTitle></CardHeader>
@@ -225,7 +296,7 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
           <div className="space-y-3">
             <div className="p-3 rounded-lg bg-muted/20">
               <p className="font-semibold text-primary flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Planner</p>
-              <p className="text-muted-foreground mt-1">Calendário visual com drag-and-drop para planejar sessões futuras. Registro Rápido para logar sessões passadas com disciplina, duração, compreensão e páginas estudadas. Timer Pomodoro editável (1–120 min, adaptável ao seu span de atenção). Heatmap de atividade mostrando sua consistência ao longo do tempo.</p>
+              <p className="text-muted-foreground mt-1">Calendário visual com drag-and-drop para planejar sessões futuras. Registro Rápido para logar sessões passadas com disciplina, duração, compreensão e páginas estudadas. Timer Pomodoro editável (1–120 min). Heatmap de atividade. Aba Revisões com lista de hoje e próximos 7 dias, filtros por concurso/cargo, painel resumido, prioridade automática, tempo estimado, pausa rápida, seleção em lote, confirmação de concluído e histórico auditável de revisões em lote.</p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/20">
@@ -236,6 +307,11 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
             <div className="p-3 rounded-lg bg-muted/20">
               <p className="font-semibold text-primary flex items-center gap-1.5"><LineChart className="h-3.5 w-3.5" /> Análise</p>
               <p className="text-muted-foreground mt-1">Central de inteligência. Metas semanais de questões e horas. Desempenho detalhado por disciplina com taxa de acertos. <strong>Gráfico G-Force:</strong> Radar de 5 vetores comparando Real vs Ideal — a camada de decisão e explicação que guia toda a estratégia da IA.</p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/20">
+              <p className="font-semibold text-primary flex items-center gap-1.5"><Layers3 className="h-3.5 w-3.5" /> Desempenho</p>
+              <p className="text-muted-foreground mt-1">Painel por disciplina e tema com compreensão, intensidade, risco de esquecimento e evolução das últimas sessões. Ajuda a identificar onde há domínio real, onde existe lacuna e onde o esforço recente ainda não gerou resultado proporcional.</p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/20">
@@ -261,6 +337,16 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
             <div className="p-3 rounded-lg bg-muted/20">
               <p className="font-semibold text-primary flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" /> Bem-Estar (Psique)</p>
               <p className="text-muted-foreground mt-1"><strong>Anamnese:</strong> perfil neurocognitivo (TDAH, TEA, dislexia, etc.), nível de ansiedade, qualidade do sono e preferências de estudo. <strong>Check-in diário:</strong> registre humor, estresse, energia e foco. Esses dados alimentam o vetor Psique do G-Force e modulam todas as recomendações da IA — desde o volume até a linguagem utilizada.</p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/20">
+              <p className="font-semibold text-primary flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5" /> Auditoria e Proteção</p>
+              <p className="text-muted-foreground mt-1">Auditoria contínua de segurança e direitos autorais, com registro das fontes públicas usadas, forma de armazenamento, proteção dos conteúdos e eventos relevantes do Planner. A proposta é dar transparência sobre origem, tratamento e segurança dos dados.</p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/20">
+              <p className="font-semibold text-primary flex items-center gap-1.5"><History className="h-3.5 w-3.5" /> Histórico</p>
+              <p className="text-muted-foreground mt-1">Linha do tempo de atividades e registros relevantes, útil para acompanhar evolução, revisar decisões de estudo e auditar rapidamente o que foi feito em cada período.</p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/20">
