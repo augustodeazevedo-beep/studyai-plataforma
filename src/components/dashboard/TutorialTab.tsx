@@ -230,6 +230,49 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
         </CardContent>
       </Card>
 
+      <Card className="glass border-primary/20">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><TimerReset className="h-4 w-4 text-primary" /> Revisões inteligentes e risco de lacuna</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm text-foreground/90">
+          <p>A aba <strong>Revisões</strong>, dentro do Planner, transforma sessões, respostas e check-ins em uma agenda de revisão dos próximos 7 dias. Cada item recebe prioridade, tempo estimado e tipo sugerido de revisão.</p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary">Risco de esquecimento</p>
+              <p className="text-muted-foreground mt-1">Aumenta com o tempo desde o último contato e diminui quando você conclui revisões, acerta questões ou registra boa compreensão.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary">Prioridade automática</p>
+              <p className="text-muted-foreground mt-1">Ordena o que fazer primeiro combinando risco de lacuna, proximidade da data, relevância no edital e dificuldade percebida.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary">Tempo realista</p>
+              <p className="text-muted-foreground mt-1">A previsão considera rank de prioridade e tipo de revisão: leitura guiada, flashcards ou questões.</p>
+            </div>
+          </div>
+          <ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">
+            <li><strong>Concluir selecionadas:</strong> permite finalizar várias revisões com checkbox e recalcular apenas os temas efetivamente impactados.</li>
+            <li><strong>Pausa rápida:</strong> mantém filtros e seleções para você retomar depois sem perder o contexto.</li>
+            <li><strong>Histórico de lotes:</strong> registra data, quantidade, tempo estimado e temas concluídos para auditoria pessoal.</li>
+            <li><strong>Filtros por concurso/cargo:</strong> focam a lista nos temas relevantes para o edital ativo.</li>
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card className="glass">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><FileSearch className="h-4 w-4 text-primary" /> Base científica e boas práticas educacionais</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm text-foreground/90">
+          <p>O Study.AI se inspira em achados consolidados da neurociência cognitiva, psicologia da aprendizagem e políticas educacionais observadas em sistemas de alto desempenho acadêmico, como Singapura, Finlândia, Japão, Dinamarca, Noruega, Holanda, Suíça, China e outros países com forte cultura de avaliação, formação docente e aprendizagem estruturada.</p>
+          <div className="grid gap-2">
+            {SCIENCE_REFERENCES.map((item, index) => (
+              <div key={index} className="flex items-start gap-2 p-3 rounded-lg bg-muted/20 border border-border/40">
+                <CheckSquare className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-muted-foreground">{item}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-muted-foreground italic">Essas referências não significam copiar um país específico, mas aplicar princípios recorrentes em ambientes educacionais fortes: rotina, diagnóstico, feedback, revisão espaçada, prática deliberada, autonomia e cuidado com carga mental.</p>
+        </CardContent>
+      </Card>
+
       {/* Neurodivergence */}
       <Card className="glass">
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><Heart className="h-4 w-4 text-primary" /> Suporte a Neurodivergência</CardTitle></CardHeader>
