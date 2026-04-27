@@ -329,6 +329,12 @@ ${edital}`;
       for (const subject of aiArguments.subjects) {
         logScoreNormalization(submissionId, user.id, subject?.name, "relevance", subject?.relevance, clampScore(subject?.relevance));
         logScoreNormalization(submissionId, user.id, subject?.name, "incidence", subject?.incidence, clampScore(subject?.incidence));
+        logTextNormalization(submissionId, user.id, subject?.name, "name", subject?.name, 180);
+        logTextNormalization(submissionId, user.id, subject?.name, "relevanceReason", subject?.relevanceReason, 360);
+        logTextNormalization(submissionId, user.id, subject?.name, "incidenceReason", subject?.incidenceReason, 360);
+        if (Array.isArray(subject?.topics)) {
+          subject.topics.forEach((topic: unknown, index: number) => logTextNormalization(submissionId, user.id, subject?.name, `topics.${index}`, typeof topic === "string" ? topic : (topic as any)?.name, 240));
+        }
       }
     }
 
