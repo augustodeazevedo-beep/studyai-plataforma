@@ -153,18 +153,21 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     const reviews = (reviewRes.data || []).map((review: any) => {
       const schedule = schedules.find((item: any) => item.topic_id ? item.topic_id === review.topic_id : item.subject_id === review.subject_id && !item.topic_id);
       const risk = Number(schedule?.forgetting_risk || 0);
+      const recommendation = schedule?.recommendation || "Revisão espaçada recomendada para reduzir lacuna de memória.";
       const daysUntilDue = Math.max(0, Math.ceil((new Date(`${review.review_date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000));
       const priorityRank = risk >= 75 || daysUntilDue === 0 ? 1 : risk >= 55 || daysUntilDue <= 2 ? 2 : 3;
-      const estimatedMinutes = Math.max(8, Math.min(30, Math.round((8 + risk * 0.18 + (review.topic_id ? 2 : 6)) / 5) * 5));
+      const reviewType = inferReviewType(recommendation, risk, priorityRank);
+      const estimatedMinutes = estimateReviewMinutes({ risk, priorityRank, hasTopic: Boolean(review.topic_id), daysUntilDue, reviewType });
       return {
         ...review,
         subject_name: review.user_subjects?.name,
         topic_name: review.topics?.name,
         forgetting_risk: risk,
-        recommendation: schedule?.recommendation || "Revisão espaçada recomendada para reduzir lacuna de memória.",
+        recommendation,
         priority_label: priorityRank === 1 ? "Fazer primeiro" : priorityRank === 2 ? "Alta" : "Manutenção",
         priority_rank: priorityRank,
         estimated_minutes: estimatedMinutes,
+        review_type: reviewType,
         edital_relevant: planSubjectIds.size === 0 || planSubjectIds.has(review.subject_id),
       };
     }).sort((a: DueReview, b: DueReview) => (Number(a.priority_rank || 9) - Number(b.priority_rank || 9)) || (Number(b.forgetting_risk || 0) - Number(a.forgetting_risk || 0)) || a.review_date.localeCompare(b.review_date));
@@ -397,7 +400,13 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const visibleDueReviews = dueReviews.filter(review => reviewScope === "all" || review.edital_relevant);
   const selectedVisibleIds = selectedReviewIds.filter(id => visibleDueReviews.some(review => review.id === id));
   const selectedVisibleReviews = visibleDueReviews.filter(review => selectedVisibleIds.includes(review.id));
-  const selectedEstimatedMinutes = selectedVisibleReviews.reduce((sum, review) => sum + Number(review.estimated_minutes || 0), 0);
+  const selectedEstimatedMinutes = selectedVisibleReviews.reduce((sum, review) => sum + estimateReviewMinutes({
+    risk: Number(review.forgetting_risk || 0),
+    priorityRank: Number(review.priority_rank || 3),
+    hasTopic: Boolean(review.topic_id),
+    daysUntilDue: Math.max(0, Math.ceil((new Date(`${review.review_date}T00:00:00`).getTime() - new Date(`${format(new Date(), "yyyy-MM-dd")}T00:00:00`).getTime()) / 86400000)),
+    reviewType: review.review_type || "leitura",
+  }), 0);
   const reviewSummary = visibleDueReviews.reduce((acc, review) => {
     acc.total += 1;
     acc.minutes += Number(review.estimated_minutes || 0);
