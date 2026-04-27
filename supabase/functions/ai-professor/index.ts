@@ -105,7 +105,7 @@ INSTRUÇÕES ESPECÍFICAS:
     });
   } catch (e) {
     console.error("ai-professor error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Erro interno ao consultar o Professor.IA. Tente novamente." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

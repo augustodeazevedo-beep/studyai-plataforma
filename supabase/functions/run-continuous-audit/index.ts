@@ -71,6 +71,6 @@ Deno.serve(async (req) => {
     return json({ success: true, auditedUsers: results.length, results });
   } catch (error) {
     console.error("run-continuous-audit error:", error);
-    return json({ error: error instanceof Error ? error.message : "Erro ao executar auditoria" }, 500);
+    return json({ error: "Erro interno ao executar auditoria. Tente novamente." }, 500);
   }
 });

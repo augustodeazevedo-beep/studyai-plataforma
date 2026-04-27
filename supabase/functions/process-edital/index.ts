@@ -436,6 +436,6 @@ ${edital}`;
     return jsonResponse({ success: true, subjects: processedSubjects, summary, message });
   } catch (e) {
     console.error("process-edital error:", e);
-    return jsonResponse({ error: e instanceof Error ? e.message : "Erro desconhecido ao processar edital" }, 500);
+    return jsonResponse({ error: "Erro interno ao processar edital. Tente novamente." }, 500);
   }
 });

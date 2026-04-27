@@ -95,7 +95,7 @@ Formato: markdown estruturado. Seja direto, motivador e específico. Justifique 
     });
   } catch (e) {
     console.error("ai-coach error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Erro interno ao gerar orientação. Tente novamente." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
