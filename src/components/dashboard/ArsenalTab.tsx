@@ -63,6 +63,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const [newTopicInputs, setNewTopicInputs] = useState<Record<string, string>>({});
   const [uploadMode, setUploadMode] = useState<"text" | "pdf">("pdf");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [pdfSubmissionId, setPdfSubmissionId] = useState<string | null>(null);
   const [forceReprocess, setForceReprocess] = useState(false);
   const [processingSummary, setProcessingSummary] = useState<ProcessingSummary | null>(null);
   const [pdfFailure, setPdfFailure] = useState<{ submissionId: string; stage: string; message: string; code: string; canRetry: boolean } | null>(null);
@@ -88,6 +89,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
   const resetSelectedFile = () => {
     setSelectedFile(null);
+    setPdfSubmissionId(null);
     setPdfFailure(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -163,7 +165,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const processEdital = async () => {
     setProcessing(true);
     setPdfFailure(null);
-    const submissionId = crypto.randomUUID();
+    const submissionId = pdfSubmissionId || crypto.randomUUID();
     try {
       const profile = await getProfileData();
 
@@ -282,6 +284,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       const validation = await validatePdfFile(file);
       const fileHash = await getPdfHash(file);
       await logPdfFlow(submissionId, "selected", "success", { ...validation, fileHash, fileName: file.name.slice(0, 120) });
+      setPdfSubmissionId(submissionId);
       setSelectedFile(file);
     } catch (error: any) {
       resetSelectedFile();
