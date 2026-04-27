@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     if (!authHeader) return jsonResponse(safeError("unauthenticated", "Sessão não autenticada.", "auth"), 401);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+    const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } });
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
