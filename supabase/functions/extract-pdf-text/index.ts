@@ -58,6 +58,11 @@ const validatePdfBytes = (bytes: Uint8Array) => {
   return null;
 };
 
+const sha256Hex = async (bytes: Uint8Array) => {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -82,10 +87,18 @@ Deno.serve(async (req) => {
     const { storagePath, fileHash } = parsed.data;
     submissionId = parsed.data.submissionId;
     const expectedPath = `${user.id}/edital-submissions/${submissionId}.pdf`;
+    const pathParts = storagePath.split("/");
 
-    if (storagePath !== expectedPath) {
-      logFlow(submissionId, user.id, "ownership_check", "blocked", { storagePath }, "owner_mismatch", "Arquivo fora do caminho permitido.");
+    if (storagePath !== expectedPath || pathParts[0] !== user.id || pathParts[1] !== "edital-submissions" || pathParts[2] !== `${submissionId}.pdf`) {
+      logFlow(submissionId, user.id, "ownership_check", "blocked", { storagePath, expectedPath }, "owner_mismatch", "Arquivo fora do caminho permitido.");
       return jsonResponse(safeError("owner_mismatch", "Este arquivo não pertence à sua submissão.", "ownership_check"), 403);
+    }
+
+    const { data: listedFiles, error: listError } = await supabase.storage.from(BUCKET).list(`${user.id}/edital-submissions`, { search: `${submissionId}.pdf`, limit: 2 });
+    const matchingFile = listedFiles?.find((file) => file.name === `${submissionId}.pdf`);
+    if (listError || !matchingFile) {
+      logFlow(submissionId, user.id, "ownership_check", "blocked", { storagePath }, "file_not_owned_or_missing", "Arquivo não localizado no caminho do usuário.");
+      return jsonResponse(safeError("file_not_found", "Não foi possível confirmar o arquivo da sua submissão.", "ownership_check"), 404);
     }
 
     logFlow(submissionId, user.id, "backend_extraction_started", "started", { storagePath, fileHash });
@@ -97,6 +110,12 @@ Deno.serve(async (req) => {
     }
 
     const bytes = new Uint8Array(await fileData.arrayBuffer());
+    const computedHash = await sha256Hex(bytes);
+    if (fileHash && computedHash.toLowerCase() !== fileHash.toLowerCase()) {
+      logFlow(submissionId, user.id, "hash_check", "blocked", { storagePath, expectedHash: fileHash, computedHash }, "hash_mismatch", "Hash do arquivo não confere com a submissão.");
+      return jsonResponse(safeError("hash_mismatch", "O arquivo enviado não corresponde à submissão original.", "hash_check"), 409);
+    }
+    logFlow(submissionId, user.id, "hash_check", "success", { storagePath, fileHash: computedHash });
     const validationError = validatePdfBytes(bytes);
     if (validationError) {
       logFlow(submissionId, user.id, validationError.stage, "failed", { size: bytes.byteLength }, validationError.code, validationError.error);
