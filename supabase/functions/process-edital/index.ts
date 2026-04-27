@@ -28,6 +28,11 @@ const scoreSchema = z.preprocess(
 const cleanText = (value: unknown, maxLength = 15000) =>
   String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 
+const boundedTextSchema = (maxLength: number) => z.preprocess(
+  (value) => cleanText(value, maxLength),
+  z.string().trim().max(maxLength),
+);
+
 const normalizeName = (value: string) =>
   value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
@@ -41,22 +46,22 @@ const requestSchema = z.object({
 });
 
 const sourceSchema = z.object({
-  title: z.string().trim().max(180).optional().default("Fonte pública"),
-  url: z.string().trim().max(600).optional().default(""),
-  note: z.string().trim().max(280).optional().default(""),
+  title: boundedTextSchema(180).optional().default("Fonte pública"),
+  url: boundedTextSchema(600).optional().default(""),
+  note: boundedTextSchema(280).optional().default(""),
 });
 
 const extractedSubjectsSchema = z.object({
   subjects: z.array(z.object({
-    name: z.string().trim().min(1).max(180),
+    name: boundedTextSchema(180).pipe(z.string().min(1)),
     relevance: scoreSchema,
     incidence: scoreSchema,
-    relevanceReason: z.string().trim().max(360).optional().default(""),
-    incidenceReason: z.string().trim().max(360).optional().default(""),
+    relevanceReason: boundedTextSchema(360).optional().default(""),
+    incidenceReason: boundedTextSchema(360).optional().default(""),
     sources: z.array(sourceSchema).optional().default([]),
     topics: z.array(z.union([
-      z.string().trim().min(1).max(240),
-      z.object({ name: z.string().trim().min(1).max(240) }),
+      boundedTextSchema(240).pipe(z.string().min(1)),
+      z.object({ name: boundedTextSchema(240).pipe(z.string().min(1)) }),
     ])).default([]),
   })).min(1),
 });
@@ -193,6 +198,23 @@ const logScoreNormalization = (submissionId: string, userId: string, subjectName
     originalValue: typeof original === "string" || typeof original === "number" ? original : "non_numeric",
     normalized,
     reason: !Number.isFinite(numeric) ? "default_safe_score" : numeric < 1 || numeric > 5 ? "out_of_range_clamped" : typeof original === "string" ? "numeric_string_converted" : "rounded_to_integer",
+  }));
+};
+
+const logTextNormalization = (submissionId: string, userId: string, subjectName: unknown, field: string, original: unknown, maxLength: number) => {
+  const normalized = cleanText(original, maxLength);
+  const originalText = String(original || "").replace(/\s+/g, " ").trim();
+  if (originalText.length <= maxLength && originalText === normalized) return;
+
+  console.warn("process-edital-text-normalization", JSON.stringify({
+    submissionId,
+    userId,
+    subject: cleanText(subjectName, 120) || "sem nome",
+    field,
+    originalType: typeof original,
+    originalLength: originalText.length,
+    normalizedLength: normalized.length,
+    reason: originalText.length > maxLength ? "overlong_text_truncated" : "text_whitespace_normalized",
   }));
 };
 
