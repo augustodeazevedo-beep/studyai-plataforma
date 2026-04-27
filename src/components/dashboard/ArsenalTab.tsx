@@ -422,6 +422,22 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
                   </div>
                 )}
               </div>
+              {pdfFailure && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm space-y-3">
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">Não foi possível processar este PDF</p>
+                    <p className="text-muted-foreground">{pdfFailure.message}</p>
+                  </div>
+                  <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                    <span>Etapa: <strong className="text-foreground">{pdfFailure.stage}</strong></span>
+                    <span>ID da submissão: <strong className="text-foreground break-all">{pdfFailure.submissionId}</strong></span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {pdfFailure.canRetry && selectedFile && <Button size="sm" variant="outline" onClick={processEdital} disabled={processing}><RefreshCw className="h-3 w-3 mr-1" />Tentar novamente</Button>}
+                    <Button size="sm" variant="ghost" onClick={() => setUploadMode("text")} disabled={processing}><FileText className="h-3 w-3 mr-1" />Usar Colar Texto</Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="text" className="mt-3">
