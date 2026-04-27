@@ -149,6 +149,7 @@ const PsycheTab = ({ userId }: PsycheTabProps) => {
       // 1) Recompute study_plan with new psyche state
       await recalculateAndPersistPlan(userId, { eventType: "psyche_checkin_recalculation", eventSource: "psyche_checkin", explanation: "Check-in de Bem-Estar alterou o vetor Psique e recalibrou o plano." });
       await enforceForgettingCurve(userId);
+      await supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "psyche_checkin" } });
       // 2) Adapt today's calendar blocks (light/intensive mode + TDAH fragmentation)
       const result = await applyDailyAdaptation(userId);
       if (result.blocksAffected > 0) {
