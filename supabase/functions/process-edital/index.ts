@@ -337,6 +337,9 @@ ${edital}`;
       }
 
       processedSubjects.push({ ...extracted, id: subjectData.id, name, relevance, incidence, sources });
+      for (const source of sources.filter((source: any) => source.url).slice(0, 3)) {
+        await supabase.from("public_source_audits").insert({ user_id: user.id, subject_id: subjectData.id, source_url: source.url, source_title: source.title || "Fonte pública", source_note: source.note || "Referência pública usada para Relevância/Incidência", origin: "process-edital", copyright_assessment: "Fonte pública usada como referência de incidência/relevância; sem reprodução integral de conteúdo protegido.", storage_notes: "Armazenados apenas metadados, disciplina, pontuação e referência da fonte." });
+      }
 
       const { data: existingTopicsData, error: existingTopicsError } = await supabase
         .from("topics")
@@ -355,7 +358,7 @@ ${edital}`;
           continue;
         }
 
-        const { error: topicError } = await supabase.from("topics").insert({ user_id: user.id, subject_id: subjectData.id, name: topicName, order_index: nextOrderIndex });
+        const { data: insertedTopic, error: topicError } = await supabase.from("topics").insert({ user_id: user.id, subject_id: subjectData.id, name: topicName, order_index: nextOrderIndex }).select("id").single();
         if (topicError) {
           if ((topicError as any).code !== "23505") throw topicError;
           summary.counts.skippedTopics += 1;
@@ -365,6 +368,9 @@ ${edital}`;
           nextOrderIndex += 1;
           summary.counts.insertedTopics += 1;
           pushDetail(summary, "topics.inserted", { name: topicName, subject: name, reason: "Novo tópico identificado no edital." });
+          for (const source of sources.filter((source: any) => source.url).slice(0, 3)) {
+            await supabase.from("public_source_audits").insert({ user_id: user.id, subject_id: subjectData.id, topic_id: insertedTopic?.id || null, source_url: source.url, source_title: source.title || "Fonte pública", source_note: source.note || "Referência pública usada para Relevância/Incidência", origin: "process-edital", copyright_assessment: "Fonte pública usada como referência de incidência/relevância; sem reprodução integral de conteúdo protegido.", storage_notes: "Armazenados apenas metadados, tema, pontuação e referência da fonte." });
+          }
         }
       }
 

@@ -16,6 +16,7 @@ import AchievementsTab from "@/components/dashboard/AchievementsTab";
 import SettingsTab from "@/components/dashboard/SettingsTab";
 import TutorialTab from "@/components/dashboard/TutorialTab";
 import PsycheTab from "@/components/dashboard/PsycheTab";
+import PerformanceTab from "@/components/dashboard/PerformanceTab";
 import BrandLogo from "@/components/brand/BrandLogo";
 
 const Dashboard = () => {
@@ -93,6 +94,7 @@ const Dashboard = () => {
       case "coach": return <CoachTab userId={user.id} />;
       case "professor": return <ProfessorTab userId={user.id} />;
       case "psyche": return <PsycheTab userId={user.id} />;
+      case "performance": return <PerformanceTab userId={user.id} />;
       case "achievements": return <AchievementsTab userId={user.id} />;
       case "settings": return <SettingsTab userId={user.id} />;
       case "tutorial": return <TutorialTab userId={user.id} />;
