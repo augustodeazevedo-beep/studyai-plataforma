@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.25.76/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,25 @@ const clampScore = (value: unknown, fallback = 3) => {
 
 const cleanText = (value: unknown, maxLength = 15000) =>
   String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+
+const normalizeName = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+const requestSchema = z.object({
+  editalText: z.string().trim().min(20).max(15000),
+  targetExam: z.string().trim().max(180).nullish(),
+  targetPosition: z.string().trim().max(180).nullish(),
+  banca: z.string().trim().max(120).nullish(),
+});
+
+const extractedSubjectsSchema = z.object({
+  subjects: z.array(z.object({
+    name: z.string().trim().min(1).max(180),
+    relevance: z.coerce.number().min(1).max(5),
+    incidence: z.coerce.number().min(1).max(5),
+    topics: z.array(z.string().trim().min(1).max(240)).default([]),
+  })).min(1),
+});
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
