@@ -23,14 +23,20 @@ const DAYS_OF_WEEK = [
   { key: "qui", label: "Qui" }, { key: "sex", label: "Sex" }, { key: "sab", label: "Sáb" }, { key: "dom", label: "Dom" },
 ];
 
+const formatMinutes = (minutes: number) => {
+  const safe = Math.max(0, Math.round(minutes || 0));
+  const hours = Math.floor(safe / 60);
+  const mins = safe % 60;
+  return `${hours}h${mins ? ` ${mins}min` : ""}`;
+};
+
 const SettingsTab = ({ userId }: SettingsTabProps) => {
   const [profile, setProfile] = useState<any>(null);
   const [fullName, setFullName] = useState("");
   const [targetExam, setTargetExam] = useState("");
   const [targetPosition, setTargetPosition] = useState("");
-  const [dailyHours, setDailyHours] = useState("2");
-  const [dailyMinutes, setDailyMinutes] = useState("0");
   const [studyDays, setStudyDays] = useState<string[]>([]);
+  const [studyMinutesByDay, setStudyMinutesByDay] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -45,23 +51,38 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
         setFullName(data.full_name || "");
         setTargetExam(data.target_exam || "");
         setTargetPosition(data.target_position || "");
-        const hours = data.daily_hours || 2;
-        setDailyHours(String(Math.floor(hours)));
-        setDailyMinutes(String(Math.round((hours - Math.floor(hours)) * 60)));
-        setStudyDays(data.study_days || []);
+        const days = data.study_days || [];
+        const legacyMinutes = Math.round((data.daily_hours || 2) * 60);
+        setStudyDays(days);
+        setStudyMinutesByDay((data.study_minutes_by_day && typeof data.study_minutes_by_day === "object" && !Array.isArray(data.study_minutes_by_day) ? data.study_minutes_by_day : Object.fromEntries(days.map((day: string) => [day, legacyMinutes]))) as Record<string, number>);
       }
     });
   }, [userId]);
 
-  const toggleDay = (day: string) => setStudyDays((prev) => prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]);
+  const toggleDay = (day: string) => setStudyDays((prev) => {
+    const next = prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day];
+    setStudyMinutesByDay((current) => ({ ...current, [day]: next.includes(day) && !current[day] ? 60 : current[day] || 0 }));
+    return next;
+  });
+
+  const updateDayMinutes = (day: string, part: "hours" | "minutes", value: string) => {
+    const numeric = Math.max(0, Number(value) || 0);
+    setStudyMinutesByDay((prev) => {
+      const current = Math.max(0, prev[day] || 0);
+      const hours = Math.floor(current / 60);
+      const minutes = current % 60;
+      return { ...prev, [day]: part === "hours" ? Math.round(numeric) * 60 + minutes : hours * 60 + Math.min(59, Math.round(numeric)) };
+    });
+  };
 
   const saveSettings = async () => {
     setSaving(true);
-    const totalHours = Number(dailyHours) + Number(dailyMinutes) / 60;
+    const totalWeeklyMinutes = studyDays.reduce((sum, day) => sum + Math.max(0, studyMinutesByDay[day] || 0), 0);
+    const averageDailyHours = studyDays.length ? totalWeeklyMinutes / studyDays.length / 60 : 0;
     const { error } = await supabase.from("profiles").update({
       full_name: fullName, target_exam: targetExam, target_position: targetPosition,
-      daily_hours: Math.round(totalHours * 100) / 100, study_days: studyDays,
-    }).eq("user_id", userId);
+      daily_hours: Math.round(averageDailyHours * 100) / 100, study_days: studyDays, study_minutes_by_day: studyMinutesByDay,
+    } as any).eq("user_id", userId);
     setSaving(false);
     if (error) { toast({ title: "Erro ao salvar", variant: "destructive" }); return; }
     toast({ title: "Configurações salvas! ✅" });
@@ -151,19 +172,25 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Tempo diário de estudo</Label>
-            <div className="flex gap-3 items-end">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Horas</Label>
-                <Input type="number" min={0} max={16} value={dailyHours} onChange={(e) => setDailyHours(String(Math.max(0, Math.min(16, Number(e.target.value) || 0))))} className="w-20 text-center" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Minutos</Label>
-                <Input type="number" min={0} max={59} step={5} value={dailyMinutes} onChange={(e) => setDailyMinutes(String(Math.max(0, Math.min(59, Number(e.target.value) || 0))))} className="w-20 text-center" />
-              </div>
-              <span className="text-sm text-muted-foreground pb-2">
-                = {Number(dailyHours)}h{Number(dailyMinutes) > 0 ? `${dailyMinutes}min` : ""}
-              </span>
+            <Label>Tempo de estudo por dia</Label>
+            <div className="space-y-3">
+              {DAYS_OF_WEEK.filter((day) => studyDays.includes(day.key)).map((day) => {
+                const total = Number(studyMinutesByDay[day.key] || 0);
+                return (
+                  <div key={day.key} className="grid grid-cols-[3rem_1fr_1fr] gap-2 items-end rounded-lg border border-border/60 p-3">
+                    <span className="text-sm font-medium text-primary pb-2">{day.label}</span>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Horas</Label>
+                      <Input type="number" min={0} value={Math.floor(total / 60)} onChange={(e) => updateDayMinutes(day.key, "hours", e.target.value)} className="text-center" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Minutos</Label>
+                      <Input type="number" min={0} max={59} step={5} value={total % 60} onChange={(e) => updateDayMinutes(day.key, "minutes", e.target.value)} className="text-center" />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground">Total semanal: <strong className="text-primary">{formatMinutes(studyDays.reduce((sum, day) => sum + Number(studyMinutesByDay[day] || 0), 0))}</strong></p>
             </div>
           </div>
         </CardContent>
