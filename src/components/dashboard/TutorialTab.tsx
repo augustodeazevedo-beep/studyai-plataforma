@@ -296,7 +296,7 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
           <div className="space-y-3">
             <div className="p-3 rounded-lg bg-muted/20">
               <p className="font-semibold text-primary flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Planner</p>
-              <p className="text-muted-foreground mt-1">Calendário visual com drag-and-drop para planejar sessões futuras. Registro Rápido para logar sessões passadas com disciplina, duração, compreensão e páginas estudadas. Timer Pomodoro editável (1–120 min, adaptável ao seu span de atenção). Heatmap de atividade mostrando sua consistência ao longo do tempo.</p>
+              <p className="text-muted-foreground mt-1">Calendário visual com drag-and-drop para planejar sessões futuras. Registro Rápido para logar sessões passadas com disciplina, duração, compreensão e páginas estudadas. Timer Pomodoro editável (1–120 min). Heatmap de atividade. Aba Revisões com lista de hoje e próximos 7 dias, filtros por concurso/cargo, painel resumido, prioridade automática, tempo estimado, pausa rápida, seleção em lote, confirmação de concluído e histórico auditável de revisões em lote.</p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/20">
@@ -307,6 +307,11 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
             <div className="p-3 rounded-lg bg-muted/20">
               <p className="font-semibold text-primary flex items-center gap-1.5"><LineChart className="h-3.5 w-3.5" /> Análise</p>
               <p className="text-muted-foreground mt-1">Central de inteligência. Metas semanais de questões e horas. Desempenho detalhado por disciplina com taxa de acertos. <strong>Gráfico G-Force:</strong> Radar de 5 vetores comparando Real vs Ideal — a camada de decisão e explicação que guia toda a estratégia da IA.</p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/20">
+              <p className="font-semibold text-primary flex items-center gap-1.5"><Layers3 className="h-3.5 w-3.5" /> Desempenho</p>
+              <p className="text-muted-foreground mt-1">Painel por disciplina e tema com compreensão, intensidade, risco de esquecimento e evolução das últimas sessões. Ajuda a identificar onde há domínio real, onde existe lacuna e onde o esforço recente ainda não gerou resultado proporcional.</p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/20">
@@ -332,6 +337,16 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
             <div className="p-3 rounded-lg bg-muted/20">
               <p className="font-semibold text-primary flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" /> Bem-Estar (Psique)</p>
               <p className="text-muted-foreground mt-1"><strong>Anamnese:</strong> perfil neurocognitivo (TDAH, TEA, dislexia, etc.), nível de ansiedade, qualidade do sono e preferências de estudo. <strong>Check-in diário:</strong> registre humor, estresse, energia e foco. Esses dados alimentam o vetor Psique do G-Force e modulam todas as recomendações da IA — desde o volume até a linguagem utilizada.</p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/20">
+              <p className="font-semibold text-primary flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5" /> Auditoria e Proteção</p>
+              <p className="text-muted-foreground mt-1">Auditoria contínua de segurança e direitos autorais, com registro das fontes públicas usadas, forma de armazenamento, proteção dos conteúdos e eventos relevantes do Planner. A proposta é dar transparência sobre origem, tratamento e segurança dos dados.</p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/20">
+              <p className="font-semibold text-primary flex items-center gap-1.5"><History className="h-3.5 w-3.5" /> Histórico</p>
+              <p className="text-muted-foreground mt-1">Linha do tempo de atividades e registros relevantes, útil para acompanhar evolução, revisar decisões de estudo e auditar rapidamente o que foi feito em cada período.</p>
             </div>
 
             <div className="p-3 rounded-lg bg-muted/20">
