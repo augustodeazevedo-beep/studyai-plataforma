@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RotateCcw, Brain, Target, BarChart3, Zap, Heart, BookOpen, Calendar, Swords, LineChart, NotebookPen, Sparkles, GraduationCap, MessageSquare, Trophy, Settings, ArrowRight, ShieldCheck, Lightbulb } from "lucide-react";
+import { AlertTriangle, RotateCcw, Brain, Target, BarChart3, Zap, Heart, BookOpen, Calendar, Swords, LineChart, NotebookPen, Sparkles, GraduationCap, MessageSquare, Trophy, Settings, ArrowRight, ShieldCheck, Lightbulb, CheckSquare, Clock, FileSearch, Gauge, History, Layers3, LockKeyhole, TimerReset } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -15,9 +15,10 @@ const TOOLS: { key: string; label: string; tables: string[] }[] = [
   { key: "arsenal", label: "Arsenal (Disciplinas + Tópicos + Materiais)", tables: ["user_subjects", "topics", "study_materials"] },
   { key: "analysis", label: "Análise (Questões + Tentativas)", tables: ["questions", "question_attempts"] },
   { key: "study_plan", label: "Plano de Estudo / G-Force", tables: ["study_plan"] },
+  { key: "performance", label: "Desempenho por Tema", tables: ["study_sessions", "question_attempts", "spaced_reviews"] },
   { key: "notebooks", label: "Cadernos (Notas)", tables: ["user_notes"] },
   { key: "flashcards", label: "Flashcards", tables: ["flashcards"] },
-  { key: "reviews", label: "Revisões Espaçadas", tables: ["spaced_reviews"] },
+  { key: "reviews", label: "Revisões Espaçadas + Lotes", tables: ["spaced_reviews", "planner_audit_logs"] },
   { key: "reminders", label: "Lembretes", tables: ["reminders"] },
   { key: "achievements", label: "Conquistas", tables: ["user_achievements"] },
   { key: "coaching", label: "Coach.IA (Histórico)", tables: ["ai_coaching_history"] },
@@ -26,13 +27,22 @@ const TOOLS: { key: string; label: string; tables: string[] }[] = [
 ];
 
 const FLOW_STEPS = [
-  { icon: Heart, label: "Anamnese", desc: "Preencha seu perfil neurocognitivo na aba Bem-Estar. A IA precisa conhecer você antes de recomendar." },
-  { icon: Swords, label: "Upload do Edital", desc: "Envie o PDF do edital no Arsenal. A IA monta o grafo de conhecimento com disciplinas, tópicos, relevância e incidência." },
-  { icon: Settings, label: "Configurações", desc: "Defina horas diárias, dias de estudo e meta de questões. Esses dados alimentam o vetor de Intensidade." },
-  { icon: Calendar, label: "Estudar", desc: "Use o Planner com Pomodoro editável. Ao final, avalie sua compreensão — é o dado mais valioso para a IA." },
-  { icon: BarChart3, label: "Questões", desc: "Resolva questões na Análise. A taxa de acertos alimenta o vetor de Compreensão e o Desempenho dinâmico." },
-  { icon: GraduationCap, label: "Revisões SRS", desc: "Complete revisões espaçadas no Coach.IA. Os intervalos se adaptam ao seu desempenho e estado emocional." },
-  { icon: Sparkles, label: "Previsão", desc: "Gere sua previsão de aprovação no Previsor.IA. A projeção considera seu ritmo real, não cenários ideais." },
+  { icon: Heart, label: "Conheça-se", desc: "Preencha a anamnese e faça check-ins no Bem-Estar. A IA usa Psique para ajustar volume, linguagem e tipo de tarefa." },
+  { icon: Swords, label: "Mapeie o edital", desc: "Envie o PDF no Arsenal ou cadastre manualmente disciplinas e tópicos. O sistema calcula relevância, incidência e lacunas." },
+  { icon: Settings, label: "Defina sua realidade", desc: "Configure concurso, cargo, banca, data da prova, dias e horas disponíveis. O plano nasce do seu tempo real." },
+  { icon: Calendar, label: "Execute no Planner", desc: "Registre sessões, Pomodoros, compreensão e páginas. Esses dados recalibram intensidade, desempenho e revisões." },
+  { icon: BarChart3, label: "Meça por questões", desc: "Use a Análise para registrar tentativas e acertos. A taxa de acerto corrige o vetor Compreensão." },
+  { icon: GraduationCap, label: "Revise no tempo certo", desc: "Na aba Revisões do Planner, veja hoje e próximos 7 dias, filtre por concurso/cargo, priorize por risco e conclua em lote." },
+  { icon: Gauge, label: "Compare desempenho", desc: "Acompanhe a aba Desempenho para ver compreensão, intensidade, risco de esquecimento e evolução das últimas sessões." },
+  { icon: Sparkles, label: "Projete e ajuste", desc: "Use Coach.IA e Previsor.IA para receber diagnóstico, próxima ação e previsão realista com margem de segurança." },
+];
+
+const SCIENCE_REFERENCES = [
+  "Prática de recuperação ativa: testes, questões e explicação sem consulta fortalecem memória mais do que releitura passiva.",
+  "Repetição espaçada: revisões distribuídas ao longo do tempo combatem a curva do esquecimento e aumentam retenção de longo prazo.",
+  "Intercalação e variação: alternar disciplinas, formatos e níveis de dificuldade melhora transferência e flexibilidade cognitiva.",
+  "Feedback rápido e metacognição: saber onde errou e estimar o próprio domínio reduz ilusões de competência.",
+  "Carga cognitiva gerenciável: dividir tarefas, reduzir excesso em dias de estresse e respeitar sono/foco preserva aprendizagem sustentável.",
 ];
 
 const TutorialTab = ({ userId }: TutorialTabProps) => {
