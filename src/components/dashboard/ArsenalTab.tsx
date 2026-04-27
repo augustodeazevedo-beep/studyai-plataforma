@@ -63,8 +63,10 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const [newTopicInputs, setNewTopicInputs] = useState<Record<string, string>>({});
   const [uploadMode, setUploadMode] = useState<"text" | "pdf">("pdf");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [pdfSubmissionId, setPdfSubmissionId] = useState<string | null>(null);
   const [forceReprocess, setForceReprocess] = useState(false);
   const [processingSummary, setProcessingSummary] = useState<ProcessingSummary | null>(null);
+  const [pdfFailure, setPdfFailure] = useState<{ submissionId: string; stage: string; message: string; code: string; canRetry: boolean } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -87,7 +89,20 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
   const resetSelectedFile = () => {
     setSelectedFile(null);
+    setPdfSubmissionId(null);
+    setPdfFailure(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const getPdfHash = async (file: File) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))).map(byte => byte.toString(16).padStart(2, "0")).join("");
+
+  const logPdfFlow = async (submissionId: string, stage: string, status: string, metadata: Record<string, unknown> = {}, errorCode?: string, safeMessage?: string) => {
+    await (supabase as any).from("pdf_processing_logs").insert({ user_id: userId, submission_id: submissionId, stage, status, error_code: errorCode || null, safe_message: safeMessage || null, metadata });
+  };
+
+  const createPdfFailure = (submissionId: string, stage: string, code: string, message: string, canRetry = true) => {
+    setPdfFailure({ submissionId, stage, code, message, canRetry });
+    toast.error(message);
   };
 
   const validatePdfFile = async (file: File) => {
@@ -101,6 +116,9 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
     const signature = String.fromCharCode(...header);
     if (signature !== "%PDF-") throw new Error("O arquivo não possui assinatura de PDF válida. Tente outro arquivo ou use Colar Texto.");
+    const tail = await file.slice(Math.max(0, file.size - 4096)).text();
+    if (!tail.includes("%%EOF")) throw new Error("O PDF parece corrompido ou incompleto. Baixe novamente o edital e tente outra vez.");
+    return { declaredMime: file.type || "não informado", detectedMime: "application/pdf", signature, size: file.size };
   };
 
   const extractPdfText = async (file: File) => {
@@ -122,8 +140,32 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     return pageTexts.join("\n").replace(/\s+/g, " ").trim();
   };
 
+  const extractPdfTextWithBackend = async (file: File, submissionId: string, fileHash: string) => {
+    const storagePath = `${userId}/edital-submissions/${submissionId}.pdf`;
+    await logPdfFlow(submissionId, "storage_upload_started", "started", { storagePath, fileHash, size: file.size, mime: file.type || null });
+    const { error: uploadError } = await supabase.storage.from("study-materials").upload(storagePath, file, { contentType: "application/pdf", upsert: false });
+    if (uploadError) {
+      await logPdfFlow(submissionId, "storage_upload_failed", "failed", { storagePath }, uploadError.message.includes("already exists") ? "overwrite_blocked" : "upload_failed", "Não foi possível enviar o PDF para fallback seguro.");
+      throw new Error(uploadError.message.includes("already exists") ? "Submissão duplicada bloqueada para impedir sobrescrita. Tente novamente." : "Não foi possível enviar o PDF para processamento seguro.");
+    }
+
+    await logPdfFlow(submissionId, "storage_upload_completed", "success", { storagePath });
+    await logPdfFlow(submissionId, "backend_extraction_started", "started", { storagePath, worker: "backend fallback" });
+    const { data, error } = await supabase.functions.invoke("extract-pdf-text", { body: { submissionId, storagePath, fileHash } });
+    if (error || !data?.success) {
+      const message = data?.error || "Não foi possível extrair texto do PDF no backend.";
+      await logPdfFlow(submissionId, data?.stage || "backend_extraction_failed", "failed", { storagePath }, data?.code || "backend_failed", message);
+      throw new Error(message);
+    }
+
+    await logPdfFlow(submissionId, "backend_extraction_completed", "success", { pages: data.pages, textLength: data.textLength, worker: "backend fallback" });
+    return String(data.editalText || "");
+  };
+
   const processEdital = async () => {
     setProcessing(true);
+    setPdfFailure(null);
+    const submissionId = pdfSubmissionId || crypto.randomUUID();
     try {
       const profile = await getProfileData();
 
@@ -135,9 +177,30 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       };
 
       if (uploadMode === "pdf" && selectedFile) {
-        const extractedText = await extractPdfText(selectedFile);
+        let extractedText = "";
+        let fileHash = "";
+        try {
+          const validation = await validatePdfFile(selectedFile);
+          fileHash = await getPdfHash(selectedFile);
+          await logPdfFlow(submissionId, "validation_completed", "success", { ...validation, fileHash, fileName: selectedFile.name.slice(0, 120) });
+          await logPdfFlow(submissionId, "browser_extraction_started", "started", { worker: "pdfjs legacy browser" });
+          extractedText = await extractPdfText(selectedFile);
+          await logPdfFlow(submissionId, "browser_extraction_completed", "success", { textLength: extractedText.length, worker: "pdfjs legacy browser" });
+        } catch (browserError: any) {
+          const safeMessage = browserError?.message || "Falha ao ler o PDF no navegador.";
+          const isValidationError = safeMessage.includes("extensão") || safeMessage.includes("assinatura") || safeMessage.includes("corrompido") || safeMessage.includes("vazio") || safeMessage.includes("grande") || safeMessage.includes("válido");
+          await logPdfFlow(submissionId, isValidationError ? "validation_failed" : "browser_extraction_failed", "failed", { fileName: selectedFile.name.slice(0, 120), size: selectedFile.size, mime: selectedFile.type || null }, isValidationError ? "invalid_pdf" : "browser_pdf_failed", safeMessage);
+          if (isValidationError) {
+            createPdfFailure(submissionId, "Validação do arquivo", "invalid_pdf", safeMessage, true);
+            setProcessing(false);
+            return;
+          }
+          fileHash = fileHash || await getPdfHash(selectedFile);
+          extractedText = await extractPdfTextWithBackend(selectedFile, submissionId, fileHash);
+        }
         if (extractedText.length < 20) {
-          toast.error("Não consegui ler texto suficiente desse PDF. Se ele for escaneado, use Colar Texto.");
+          await logPdfFlow(submissionId, "text_quality_failed", "failed", { textLength: extractedText.length }, "no_text", "PDF sem texto suficiente para processamento.");
+          createPdfFailure(submissionId, "Extração de texto", "no_text", "Não consegui ler texto suficiente desse PDF. Se ele for escaneado, use Colar Texto.", true);
           setProcessing(false);
           return;
         }
@@ -154,9 +217,11 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       const payload = processEditalPayloadSchema.safeParse(body);
       if (!payload.success) throw new Error(payload.error.issues[0]?.message || "Dados inválidos para processar o edital");
 
+      if (uploadMode === "pdf") await logPdfFlow(submissionId, "ai_processing_started", "started", { textLength: payload.data.editalText.length });
       const { data, error } = await supabase.functions.invoke("process-edital", { body: payload.data });
       if (error) throw new Error(error.message || "Erro ao processar edital");
       if (!data?.success) throw new Error(data?.error || "A IA não retornou disciplinas válidas");
+      if (uploadMode === "pdf") await logPdfFlow(submissionId, "completed", "success", { insertedSubjects: data.summary?.counts?.insertedSubjects || 0, updatedSubjects: data.summary?.counts?.updatedSubjects || 0 });
 
       const summary = data.summary as ProcessingSummary | undefined;
       if (summary) setProcessingSummary(summary);
@@ -168,7 +233,15 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       setEditalText("");
       resetSelectedFile();
       loadData();
-    } catch (e: any) { toast.error(e.message || "Erro ao processar edital"); }
+    } catch (e: any) {
+      const message = e.message || "Erro ao processar edital";
+      if (uploadMode === "pdf") {
+        await logPdfFlow(submissionId, "processing_failed", "failed", { mode: uploadMode }, "processing_failed", message);
+        createPdfFailure(submissionId, "Processamento", "processing_failed", message, true);
+      } else {
+        toast.error(message);
+      }
+    }
     setProcessing(false);
   };
 
@@ -206,7 +279,12 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      await validatePdfFile(file);
+      setPdfFailure(null);
+      const submissionId = crypto.randomUUID();
+      const validation = await validatePdfFile(file);
+      const fileHash = await getPdfHash(file);
+      await logPdfFlow(submissionId, "selected", "success", { ...validation, fileHash, fileName: file.name.slice(0, 120) });
+      setPdfSubmissionId(submissionId);
       setSelectedFile(file);
     } catch (error: any) {
       resetSelectedFile();
@@ -344,6 +422,22 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
                   </div>
                 )}
               </div>
+              {pdfFailure && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm space-y-3">
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">Não foi possível processar este PDF</p>
+                    <p className="text-muted-foreground">{pdfFailure.message}</p>
+                  </div>
+                  <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                    <span>Etapa: <strong className="text-foreground">{pdfFailure.stage}</strong></span>
+                    <span>ID da submissão: <strong className="text-foreground break-all">{pdfFailure.submissionId}</strong></span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {pdfFailure.canRetry && selectedFile && <Button size="sm" variant="outline" onClick={processEdital} disabled={processing}><RefreshCw className="h-3 w-3 mr-1" />Tentar novamente</Button>}
+                    <Button size="sm" variant="ghost" onClick={() => setUploadMode("text")} disabled={processing}><FileText className="h-3 w-3 mr-1" />Usar Colar Texto</Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="text" className="mt-3">
