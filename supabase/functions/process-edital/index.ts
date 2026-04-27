@@ -5,6 +5,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const clampScore = (value: unknown, fallback = 3) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(5, Math.max(1, Math.round(numeric)));
+};
+
+const cleanText = (value: unknown, maxLength = 15000) =>
+  String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -21,24 +30,16 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    const { editalText, pdfBase64, targetExam, targetPosition, banca } = await req.json();
+    const { editalText, targetExam, targetPosition, banca } = await req.json();
+    const edital = cleanText(editalText);
 
-    // Build the user content - either text or PDF
-    let userContent: any[];
-    if (pdfBase64) {
-      userContent = [
-        { type: "text", text: `Analise este edital de concurso e extraia todas as disciplinas e tópicos do conteúdo programático. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.` },
-        { type: "image_url", image_url: { url: `data:application/pdf;base64,${pdfBase64}` } },
-      ];
-    } else if (editalText && editalText.trim().length >= 20) {
-      userContent = [
-        { type: "text", text: `Analise o seguinte conteúdo programático de edital. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.\n\n${editalText.substring(0, 15000)}` },
-      ];
-    } else {
+    if (edital.length < 20) {
       return new Response(JSON.stringify({ error: "Envie o texto do edital ou um PDF" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const userContent = `Analise o seguinte conteúdo programático de edital. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.\n\n${edital}`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -117,44 +118,63 @@ Critérios para RELEVÂNCIA:
     if (!toolCall) throw new Error("No tool call in AI response");
 
     const parsed = JSON.parse(toolCall.function.arguments);
-    const subjects = parsed.subjects;
+    const subjects = Array.isArray(parsed.subjects) ? parsed.subjects : [];
+    if (subjects.length === 0) {
+      return new Response(JSON.stringify({ error: "Não encontrei disciplinas no conteúdo informado." }), {
+        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Insert subjects and topics
     const insertedSubjects = [];
     for (const s of subjects) {
+      const name = cleanText(s.name, 180);
+      if (!name) continue;
+      const relevance = clampScore(s.relevance);
+      const incidence = clampScore(s.incidence);
       const { data: subjectData, error: subjectError } = await supabase
         .from("user_subjects")
         .insert({
           user_id: user.id,
-          name: s.name,
-          weight: s.relevance || 3,
+          name,
+          weight: relevance,
+          incidence,
           knowledge_level: 1,
         })
         .select("id")
         .single();
 
-      if (subjectError) { console.error("Subject insert error:", subjectError); continue; }
+      if (subjectError) throw subjectError;
 
-      insertedSubjects.push({ ...s, id: subjectData.id });
+      insertedSubjects.push({ ...s, name, relevance, incidence, id: subjectData.id });
 
-      if (s.topics && s.topics.length > 0) {
-        const topicRows = s.topics.map((t: string, i: number) => ({
+      const topics = Array.isArray(s.topics) ? s.topics.map((t: unknown) => cleanText(t, 240)).filter(Boolean) : [];
+      if (topics.length > 0) {
+        const topicRows = topics.map((t: string, i: number) => ({
           user_id: user.id, subject_id: subjectData.id, name: t, order_index: i,
         }));
-        await supabase.from("topics").insert(topicRows);
+        const { error: topicsError } = await supabase.from("topics").insert(topicRows);
+        if (topicsError) throw topicsError;
       }
 
       // Also create study_plan entry with incidence data
-      await supabase.from("study_plan").insert({
+      const { error: planError } = await supabase.from("study_plan").insert({
         user_id: user.id,
         subject_id: subjectData.id,
-        relevance: s.relevance || 3,
-        incidence: s.incidence || 3,
+        relevance,
+        incidence,
         accuracy: 0,
         performance: 0,
         gap_score: 5,
-        priority_score: ((s.relevance || 3) + (s.incidence || 3)) / 2,
-        recommended_hours_weekly: Math.ceil(((s.relevance || 3) + (s.incidence || 3)) / 2),
+        priority_score: (relevance + incidence) / 2,
+        recommended_hours_weekly: Math.ceil((relevance + incidence) / 2),
+      });
+      if (planError) throw planError;
+    }
+
+    if (insertedSubjects.length === 0) {
+      return new Response(JSON.stringify({ error: "Nenhuma disciplina válida foi gerada pela IA." }), {
+        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
