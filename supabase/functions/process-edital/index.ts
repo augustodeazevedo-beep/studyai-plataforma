@@ -38,8 +38,8 @@ const sourceSchema = z.object({
 const extractedSubjectsSchema = z.object({
   subjects: z.array(z.object({
     name: z.string().trim().min(1).max(180),
-    relevance: z.coerce.number().min(1).max(5),
-    incidence: z.coerce.number().min(1).max(5),
+    relevance: z.coerce.number().finite(),
+    incidence: z.coerce.number().finite(),
     relevanceReason: z.string().trim().max(360).optional().default(""),
     incidenceReason: z.string().trim().max(360).optional().default(""),
     sources: z.array(sourceSchema).optional().default([]),
@@ -200,8 +200,9 @@ Deno.serve(async (req) => {
 
     const systemPrompt = `Você é especialista em concursos públicos brasileiros e no algoritmo G-Force da Study.AI.
 Extraia disciplinas e tópicos do edital, sugerindo apenas os vetores Relevância e Incidência.
-Relevância = peso/importância da matéria no edital atual.
-Incidência = recorrência histórica em provas anteriores ou semelhantes do mesmo cargo/banca.
+Relevância = peso/importância da matéria no edital atual, sempre em escala inteira de 1 a 5.
+Incidência = recorrência histórica em provas anteriores ou semelhantes do mesmo cargo/banca, sempre em escala inteira de 1 a 5.
+Nunca retorne valores menores que 1 ou maiores que 5 para Relevância ou Incidência.
 Não estime Compreensão, Psique ou Intensidade: esses vetores vêm de registros do usuário no Arsenal, Planner e Bem Estar.
 Use o contexto de pesquisa pública quando disponível; se as fontes forem insuficientes, informe justificativa conservadora.
 Retorne fontes públicas resumidas quando houver URLs/citações no contexto.`;
@@ -240,8 +241,8 @@ ${edital}`;
                     type: "object",
                     properties: {
                       name: { type: "string" },
-                      relevance: { type: "number" },
-                      incidence: { type: "number" },
+                      relevance: { type: "number", minimum: 1, maximum: 5 },
+                      incidence: { type: "number", minimum: 1, maximum: 5 },
                       relevanceReason: { type: "string" },
                       incidenceReason: { type: "string" },
                       sources: { type: "array", items: { type: "object", properties: { title: { type: "string" }, url: { type: "string" }, note: { type: "string" } } } },
