@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { z } from "https://deno.land/x/zod@v3.25.76/mod.ts";
+import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -192,6 +192,7 @@ Critérios para RELEVÂNCIA:
         if (existingTopicsError) throw existingTopicsError;
 
         const existingTopicNames = new Set((existingTopicsData || []).map((topic: any) => normalizeName(topic.name)));
+        const nextOrderIndex = existingTopicNames.size;
         const topicRows = topics
           .filter((t: string) => {
             const key = normalizeName(t);
@@ -199,7 +200,7 @@ Critérios para RELEVÂNCIA:
             existingTopicNames.add(key);
             return true;
           })
-          .map((t: string, i: number) => ({ user_id: user.id, subject_id: subjectData.id, name: t, order_index: existingTopicNames.size + i }));
+          .map((t: string, i: number) => ({ user_id: user.id, subject_id: subjectData.id, name: t, order_index: nextOrderIndex + i }));
 
         if (topicRows.length > 0) {
           const { error: topicsError } = await supabase.from("topics").insert(topicRows);
