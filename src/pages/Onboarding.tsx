@@ -55,6 +55,15 @@ const DAYS_OF_WEEK = [
   { key: "dom", label: "Dom" },
 ];
 
+const DEFAULT_STUDY_MINUTES_BY_DAY = { seg: 120, ter: 120, qua: 120, qui: 120, sex: 120, sab: 0, dom: 0 } as Record<string, number>;
+
+const formatMinutes = (minutes: number) => {
+  const safe = Math.max(0, Math.round(minutes || 0));
+  const hours = Math.floor(safe / 60);
+  const mins = safe % 60;
+  return `${hours}h${mins ? ` ${mins}min` : ""}`;
+};
+
 const STEPS = [
   { icon: Target, title: "Seu Objetivo", description: "Concurso e banca" },
   { icon: BookOpen, title: "Disciplinas", description: "Matérias do edital" },
@@ -87,7 +96,7 @@ const Onboarding = () => {
 
   // Step 3: Schedule
   const [studyDays, setStudyDays] = useState<string[]>(["seg", "ter", "qua", "qui", "sex"]);
-  const [dailyHours, setDailyHours] = useState("2");
+  const [studyMinutesByDay, setStudyMinutesByDay] = useState<Record<string, number>>(DEFAULT_STUDY_MINUTES_BY_DAY);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -118,16 +127,29 @@ const Onboarding = () => {
   };
 
   const toggleDay = (day: string) => {
-    setStudyDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
+    setStudyDays((prev) => {
+      const next = prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day];
+      setStudyMinutesByDay((current) => ({ ...current, [day]: next.includes(day) && !current[day] ? 60 : current[day] || 0 }));
+      return next;
+    });
+  };
+
+  const updateDayMinutes = (day: string, part: "hours" | "minutes", value: string) => {
+    const numeric = Math.max(0, Number(value) || 0);
+    setStudyMinutesByDay((prev) => {
+      const current = Math.max(0, prev[day] || 0);
+      const hours = Math.floor(current / 60);
+      const minutes = current % 60;
+      const next = part === "hours" ? Math.round(numeric) * 60 + minutes : hours * 60 + Math.min(59, Math.round(numeric));
+      return { ...prev, [day]: next };
+    });
   };
 
   const canProceed = () => {
     switch (step) {
       case 0: return targetExam && targetPosition.trim();
       case 1: return subjects.length >= 1;
-      case 2: return studyDays.length >= 1 && Number(dailyHours) > 0;
+      case 2: return studyDays.length >= 1 && studyDays.some((day) => (studyMinutesByDay[day] || 0) > 0);
       case 3: return true;
       default: return false;
     }
@@ -138,6 +160,9 @@ const Onboarding = () => {
     setSaving(true);
 
     try {
+      const totalWeeklyMinutes = studyDays.reduce((sum, day) => sum + Math.max(0, studyMinutesByDay[day] || 0), 0);
+      const averageDailyHours = studyDays.length ? totalWeeklyMinutes / studyDays.length / 60 : 0;
+
       // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
@@ -146,10 +171,11 @@ const Onboarding = () => {
           target_position: targetPosition.trim(),
           exam_date: examDate ? format(examDate, "yyyy-MM-dd") : null,
           study_days: studyDays,
-          daily_hours: Number(dailyHours),
+          daily_hours: Math.round(averageDailyHours * 100) / 100,
+          study_minutes_by_day: studyMinutesByDay,
           banca: banca || null,
           onboarding_completed: true,
-        })
+        } as any)
         .eq("user_id", user.id);
 
       if (profileError) throw profileError;
