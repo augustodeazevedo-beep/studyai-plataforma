@@ -50,14 +50,15 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    const { editalText, targetExam, targetPosition, banca } = await req.json();
-    const edital = cleanText(editalText);
-
-    if (edital.length < 20) {
-      return new Response(JSON.stringify({ error: "Envie o texto do edital ou um PDF" }), {
+    const requestBody = requestSchema.safeParse(await req.json());
+    if (!requestBody.success) {
+      return new Response(JSON.stringify({ error: "Payload inválido para processar edital", details: requestBody.error.flatten().fieldErrors }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const { editalText, targetExam, targetPosition, banca } = requestBody.data;
+    const edital = cleanText(editalText);
 
     const userContent = `Analise o seguinte conteúdo programático de edital. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.\n\n${edital}`;
 
@@ -137,13 +138,23 @@ Critérios para RELEVÂNCIA:
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("No tool call in AI response");
 
-    const parsed = JSON.parse(toolCall.function.arguments);
-    const subjects = Array.isArray(parsed.subjects) ? parsed.subjects : [];
-    if (subjects.length === 0) {
-      return new Response(JSON.stringify({ error: "Não encontrei disciplinas no conteúdo informado." }), {
+    const parsed = extractedSubjectsSchema.safeParse(JSON.parse(toolCall.function.arguments));
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: "A IA retornou disciplinas em formato inválido", details: parsed.error.flatten().fieldErrors }), {
         status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const subjects = parsed.data.subjects;
+
+    const { data: existingSubjectsData, error: existingSubjectsError } = await supabase
+      .from("user_subjects")
+      .select("id, name")
+      .eq("user_id", user.id);
+    if (existingSubjectsError) throw existingSubjectsError;
+
+    const existingSubjects = new Map((existingSubjectsData || []).map((subject: any) => [normalizeName(subject.name), subject]));
+    const summary = { insertedSubjects: 0, skippedSubjects: 0, insertedTopics: 0, skippedTopics: 0, insertedPlans: 0, skippedPlans: 0 };
 
     // Insert subjects and topics
     const insertedSubjects = [];
