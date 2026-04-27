@@ -271,8 +271,8 @@ ${edital}`;
                     type: "object",
                     properties: {
                       name: { type: "string" },
-                      relevance: { type: "number", minimum: 1, maximum: 5 },
-                      incidence: { type: "number", minimum: 1, maximum: 5 },
+                      relevance: { oneOf: [{ type: "number", minimum: 1, maximum: 5 }, { type: "string", pattern: "^[1-5]$" }] },
+                      incidence: { oneOf: [{ type: "number", minimum: 1, maximum: 5 }, { type: "string", pattern: "^[1-5]$" }] },
                       relevanceReason: { type: "string" },
                       incidenceReason: { type: "string" },
                       sources: { type: "array", items: { type: "object", properties: { title: { type: "string" }, url: { type: "string" }, note: { type: "string" } } } },
