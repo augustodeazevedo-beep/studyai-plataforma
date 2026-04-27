@@ -283,9 +283,9 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const submissionId = crypto.randomUUID();
     try {
       setPdfFailure(null);
-      const submissionId = crypto.randomUUID();
       await logPdfFlow(submissionId, "upload_selected", "started", { fileName: file.name.slice(0, 120), size: file.size, mime: file.type || null });
       await logPdfFlow(submissionId, "validation_started", "started", { fileName: file.name.slice(0, 120), size: file.size, mime: file.type || null });
       const validation = await validatePdfFile(file);
@@ -296,7 +296,6 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       setPdfSubmissionId(submissionId);
       setSelectedFile(file);
     } catch (error: any) {
-      const submissionId = crypto.randomUUID();
       const message = error.message || "PDF inválido. Use outro arquivo ou cole o texto do edital.";
       setSelectedFile(null);
       setPdfSubmissionId(submissionId);
