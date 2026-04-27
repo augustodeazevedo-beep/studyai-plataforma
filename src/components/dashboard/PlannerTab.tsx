@@ -465,19 +465,46 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
 
       {plannerView === "reviews" && (
         <Card className="glass">
-          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Revisões: hoje e próximos 7 dias</CardTitle></CardHeader>
+          <CardHeader className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Revisões: hoje e próximos 7 dias</CardTitle>
+              <Button size="sm" onClick={completeSelectedReviews} disabled={selectedVisibleIds.length === 0}>
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir selecionadas
+                {selectedVisibleIds.length > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">{selectedVisibleIds.length}</Badge>}
+              </Button>
+            </div>
+            <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
+              <div className="space-y-1">
+                <Label className="text-xs">Filtro do edital</Label>
+                <Select value={reviewScope} onValueChange={(value: "all" | "current_edital") => { setReviewScope(value); setSelectedReviewIds([]); }}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="current_edital">{studyProfile?.target_exam || "Concurso atual"}{studyProfile?.target_position ? ` — ${studyProfile.target_position}` : ""}</SelectItem>
+                    <SelectItem value="all">Todos os temas dos próximos 7 dias</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 rounded border border-border/50 bg-muted/20 px-3 py-2">
+                <Checkbox checked={visibleDueReviews.length > 0 && selectedVisibleIds.length === visibleDueReviews.length} onCheckedChange={(checked) => toggleAllVisibleReviews(Boolean(checked))} />
+                <span className="text-xs text-muted-foreground">Selecionar visíveis</span>
+              </div>
+            </div>
+          </CardHeader>
           <CardContent className="space-y-3">
-            {dueReviews.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma revisão pendente para os próximos 7 dias.</p> : dueReviews.map(review => (
+            {visibleDueReviews.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma revisão pendente para esse filtro nos próximos 7 dias.</p> : visibleDueReviews.map(review => (
               <div key={review.id} className="flex items-start gap-3 rounded border border-border/50 bg-muted/20 p-3">
+                <Checkbox className="mt-1" checked={selectedReviewIds.includes(review.id)} onCheckedChange={(checked) => toggleReviewSelection(review.id, Boolean(checked))} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold">{review.topic_name || review.subject_name || "Tema de revisão"}</span>
                     {review.topic_name && <Badge variant="outline" className="text-xs">{review.subject_name}</Badge>}
                     <Badge className="text-xs">{format(new Date(`${review.review_date}T00:00:00`), "dd/MM")}</Badge>
+                    <Badge variant={review.priority_rank === 1 ? "destructive" : review.priority_rank === 2 ? "default" : "secondary"} className="text-xs">{review.priority_label}</Badge>
                     <Badge variant={Number(review.forgetting_risk || 0) >= 70 ? "destructive" : "secondary"} className="text-xs">Risco {Math.round(Number(review.forgetting_risk || 0))}%</Badge>
+                    <Badge variant="outline" className="text-xs">~{review.estimated_minutes} min</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{review.recommendation}</p>
-                  <p className="text-xs text-primary/80 mt-0.5">Intervalo atual: {review.interval_days} dia(s)</p>
+                  <p className="text-xs text-primary/80 mt-0.5">Prioridade automática pelo risco de lacuna, proximidade da data e escopo do edital · Intervalo atual: {review.interval_days} dia(s)</p>
                 </div>
                 <Button size="sm" onClick={() => completeReview(review)}>
                   <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir
