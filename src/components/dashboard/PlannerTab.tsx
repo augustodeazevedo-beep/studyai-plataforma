@@ -379,6 +379,17 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
 
   const visibleDueReviews = dueReviews.filter(review => reviewScope === "all" || review.edital_relevant);
   const selectedVisibleIds = selectedReviewIds.filter(id => visibleDueReviews.some(review => review.id === id));
+  const selectedVisibleReviews = visibleDueReviews.filter(review => selectedVisibleIds.includes(review.id));
+  const selectedEstimatedMinutes = selectedVisibleReviews.reduce((sum, review) => sum + Number(review.estimated_minutes || 0), 0);
+  const reviewSummary = visibleDueReviews.reduce((acc, review) => {
+    acc.total += 1;
+    acc.minutes += Number(review.estimated_minutes || 0);
+    if (review.topic_id) acc.topics.add(review.topic_id);
+    if (review.subject_id) acc.subjects.add(review.subject_id);
+    if (review.priority_rank === 1) acc.urgent += 1;
+    return acc;
+  }, { total: 0, minutes: 0, urgent: 0, topics: new Set<string>(), subjects: new Set<string>() });
+  const batchReviewLogs = auditLogs.filter(log => log.event_type === "batch_reviews_completed");
   const toggleReviewSelection = (reviewId: string, checked: boolean) => {
     setSelectedReviewIds(prev => checked ? [...new Set([...prev, reviewId])] : prev.filter(id => id !== reviewId));
   };
@@ -386,14 +397,24 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     setSelectedReviewIds(prev => checked ? [...new Set([...prev, ...visibleDueReviews.map(review => review.id)])] : prev.filter(id => !visibleDueReviews.some(review => review.id === id)));
   };
   const completeSelectedReviews = async () => {
+    if (reviewsPaused) { toast.info("Pausa rápida ativa: suas seleções foram mantidas para concluir depois."); return; }
     if (selectedVisibleIds.length === 0) { toast.error("Selecione ao menos uma revisão"); return; }
-    const selectedReviews = visibleDueReviews.filter(review => selectedVisibleIds.includes(review.id));
+    const selectedReviews = selectedVisibleReviews;
     const { error } = await supabase.from("spaced_reviews").update({ completed: true, performance_rating: 3 }).eq("user_id", userId).in("id", selectedVisibleIds);
     if (error) { toast.error("Não consegui concluir as revisões selecionadas"); return; }
     const uniqueTargets = Array.from(new Map(selectedReviews.map(review => [`${review.subject_id || ""}:${review.topic_id || ""}`, review])).values());
     await Promise.all(uniqueTargets.map(review => supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "manual", subjectId: review.subject_id, topicId: review.topic_id } })));
+    await (supabase as any).from("planner_audit_logs").insert({
+      user_id: userId,
+      subject_id: uniqueTargets[0]?.subject_id || null,
+      event_type: "batch_reviews_completed",
+      event_source: "planner_reviews_bulk_action",
+      explanation: `${selectedReviews.length} revisões concluídas em lote; curvas recalculadas apenas para ${uniqueTargets.length} assunto(s)/tema(s) impactado(s).`,
+      after_state: { completedCount: selectedReviews.length, estimatedMinutes: selectedEstimatedMinutes, impactedTargets: uniqueTargets.length, topics: selectedReviews.map(review => review.topic_name || review.subject_name || "Tema") },
+      metadata: { reviewScope, targetExam: studyProfile?.target_exam || null, targetPosition: studyProfile?.target_position || null, reviewIds: selectedVisibleIds },
+    });
     setSelectedReviewIds(prev => prev.filter(id => !selectedVisibleIds.includes(id)));
-    toast.success(`${selectedVisibleIds.length} revisões concluídas e curva atualizada`);
+    toast.success(`${selectedVisibleIds.length} revisões concluídas; ${uniqueTargets.length} curva(s) impactada(s) atualizada(s)`);
     loadData();
   };
 
