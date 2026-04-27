@@ -291,6 +291,7 @@ export type Database = {
           id: string
           onboarding_completed: boolean
           study_days: string[] | null
+          study_minutes_by_day: Json
           target_exam: string | null
           target_position: string | null
           updated_at: string
@@ -306,6 +307,7 @@ export type Database = {
           id?: string
           onboarding_completed?: boolean
           study_days?: string[] | null
+          study_minutes_by_day?: Json
           target_exam?: string | null
           target_position?: string | null
           updated_at?: string
@@ -321,6 +323,7 @@ export type Database = {
           id?: string
           onboarding_completed?: boolean
           study_days?: string[] | null
+          study_minutes_by_day?: Json
           target_exam?: string | null
           target_position?: string | null
           updated_at?: string
