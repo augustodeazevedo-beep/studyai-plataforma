@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck } from "lucide-react";
+import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -43,6 +43,19 @@ interface CalendarBlock {
   source?: string;
 }
 
+interface DueReview {
+  id: string;
+  subject_id: string | null;
+  topic_id: string | null;
+  review_date: string;
+  interval_days: number;
+  performance_rating: number | null;
+  subject_name?: string;
+  topic_name?: string;
+  forgetting_risk?: number;
+  recommendation?: string;
+}
+
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const PlannerTab = ({ userId }: PlannerTabProps) => {
@@ -60,9 +73,10 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [psycheState, setPsycheStateLocal] = useState<PsycheState | null>(null);
   const [psycheProfile, setPsycheProfile] = useState<any>(null);
   const [nowQueue, setNowQueue] = useState<NowQueueItem[]>([]);
+  const [dueReviews, setDueReviews] = useState<DueReview[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
-  const [plannerView, setPlannerView] = useState<"calendar" | "queue" | "audit">("calendar");
+  const [plannerView, setPlannerView] = useState<"calendar" | "reviews" | "queue" | "audit">("calendar");
 
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -83,8 +97,10 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const heatmapStart = format(ninetyDaysAgo, "yyyy-MM-dd");
+    const today = format(new Date(), "yyyy-MM-dd");
+    const sevenDaysAhead = format(addDays(new Date(), 7), "yyyy-MM-dd");
 
-    const [subRes, topicRes, sesRes, blockRes, psyRes, checkRes, queueData, auditRes] = await Promise.all([
+    const [subRes, topicRes, sesRes, blockRes, psyRes, checkRes, queueData, reviewRes, scheduleRes, auditRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("topics").select("*").eq("user_id", userId).order("order_index"),
       supabase.from("study_sessions").select("*, user_subjects(name), topics(name)").eq("user_id", userId).gte("started_at", heatmapStart).order("started_at", { ascending: false }),
@@ -92,6 +108,8 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
       supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("psyche_checkins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
       buildNowQueue(userId),
+      (supabase as any).from("spaced_reviews").select("*, user_subjects(name), topics(name)").eq("user_id", userId).eq("completed", false).gte("review_date", today).lte("review_date", sevenDaysAhead),
+      (supabase as any).from("topic_review_schedules").select("subject_id, topic_id, forgetting_risk, recommendation").eq("user_id", userId),
       (supabase as any).from("planner_audit_logs").select("*, user_subjects(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(30),
     ]);
     setSubjects(subRes.data || []);
@@ -100,6 +118,18 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     setBlocks((blockRes.data || []).map((b: any) => ({ ...b, subject_name: b.user_subjects?.name })));
     setPsycheProfile(psyRes.data);
     setNowQueue(queueData || []);
+    const schedules = scheduleRes.data || [];
+    const reviews = (reviewRes.data || []).map((review: any) => {
+      const schedule = schedules.find((item: any) => item.topic_id ? item.topic_id === review.topic_id : item.subject_id === review.subject_id && !item.topic_id);
+      return {
+        ...review,
+        subject_name: review.user_subjects?.name,
+        topic_name: review.topics?.name,
+        forgetting_risk: Number(schedule?.forgetting_risk || 0),
+        recommendation: schedule?.recommendation || "Revisão espaçada recomendada para reduzir lacuna de memória.",
+      };
+    }).sort((a: DueReview, b: DueReview) => (Number(b.forgetting_risk || 0) - Number(a.forgetting_risk || 0)) || a.review_date.localeCompare(b.review_date));
+    setDueReviews(reviews);
     setAuditLogs(auditRes.data || []);
     const ps = buildPsycheState(psyRes.data, checkRes.data || []);
     setPsycheStateLocal(ps);
@@ -318,6 +348,14 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     window.setTimeout(() => setHighlightedBlockId(null), 6000);
   };
 
+  const completeReview = async (review: DueReview) => {
+    const { error } = await supabase.from("spaced_reviews").update({ completed: true, performance_rating: review.performance_rating || 3 }).eq("id", review.id).eq("user_id", userId);
+    if (error) { toast.error("Não consegui concluir a revisão"); return; }
+    await supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "manual", subjectId: review.subject_id, topicId: review.topic_id } });
+    toast.success("Revisão concluída e curva atualizada");
+    loadData();
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold font-display">🗓️ Planner de Estudos</h1>
@@ -373,6 +411,10 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
         <Button size="sm" variant={plannerView === "calendar" ? "default" : "outline"} onClick={() => setPlannerView("calendar")}>
           <ClipboardList className="h-4 w-4 mr-1" /> Calendário
         </Button>
+        <Button size="sm" variant={plannerView === "reviews" ? "default" : "outline"} onClick={() => setPlannerView("reviews")}>
+          <CheckCircle2 className="h-4 w-4 mr-1" /> Revisões
+          {dueReviews.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{dueReviews.length}</Badge>}
+        </Button>
         <Button size="sm" variant={plannerView === "queue" ? "default" : "outline"} onClick={() => setPlannerView("queue")}>
           <ListChecks className="h-4 w-4 mr-1" /> Fila Agora
         </Button>
@@ -380,6 +422,31 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
           <SearchCheck className="h-4 w-4 mr-1" /> Auditoria
         </Button>
       </div>
+
+      {plannerView === "reviews" && (
+        <Card className="glass">
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Revisões: hoje e próximos 7 dias</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {dueReviews.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma revisão pendente para os próximos 7 dias.</p> : dueReviews.map(review => (
+              <div key={review.id} className="flex items-start gap-3 rounded border border-border/50 bg-muted/20 p-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold">{review.topic_name || review.subject_name || "Tema de revisão"}</span>
+                    {review.topic_name && <Badge variant="outline" className="text-xs">{review.subject_name}</Badge>}
+                    <Badge className="text-xs">{format(new Date(`${review.review_date}T00:00:00`), "dd/MM")}</Badge>
+                    <Badge variant={Number(review.forgetting_risk || 0) >= 70 ? "destructive" : "secondary"} className="text-xs">Risco {Math.round(Number(review.forgetting_risk || 0))}%</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{review.recommendation}</p>
+                  <p className="text-xs text-primary/80 mt-0.5">Intervalo atual: {review.interval_days} dia(s)</p>
+                </div>
+                <Button size="sm" onClick={() => completeReview(review)}>
+                  <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {plannerView === "queue" && (
         <Card className="glass">
