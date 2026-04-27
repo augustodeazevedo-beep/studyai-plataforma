@@ -161,34 +161,67 @@ Critérios para RELEVÂNCIA:
     for (const s of subjects) {
       const name = cleanText(s.name, 180);
       if (!name) continue;
+      const subjectKey = normalizeName(name);
       const relevance = clampScore(s.relevance);
       const incidence = clampScore(s.incidence);
-      const { data: subjectData, error: subjectError } = await supabase
-        .from("user_subjects")
-        .insert({
-          user_id: user.id,
-          name,
-          weight: relevance,
-          incidence,
-          knowledge_level: 1,
-        })
-        .select("id")
-        .single();
+      let subjectData = existingSubjects.get(subjectKey) as any;
 
-      if (subjectError) throw subjectError;
+      if (subjectData) {
+        summary.skippedSubjects += 1;
+      } else {
+        const { data: insertedSubject, error: subjectError } = await supabase
+          .from("user_subjects")
+          .insert({ user_id: user.id, name, weight: relevance, incidence, knowledge_level: 1 })
+          .select("id, name")
+          .single();
 
-      insertedSubjects.push({ ...s, name, relevance, incidence, id: subjectData.id });
+        if (subjectError) throw subjectError;
+        subjectData = insertedSubject;
+        existingSubjects.set(subjectKey, subjectData);
+        insertedSubjects.push({ ...s, name, relevance, incidence, id: subjectData.id });
+        summary.insertedSubjects += 1;
+      }
 
       const topics = Array.isArray(s.topics) ? s.topics.map((t: unknown) => cleanText(t, 240)).filter(Boolean) : [];
       if (topics.length > 0) {
-        const topicRows = topics.map((t: string, i: number) => ({
-          user_id: user.id, subject_id: subjectData.id, name: t, order_index: i,
-        }));
-        const { error: topicsError } = await supabase.from("topics").insert(topicRows);
-        if (topicsError) throw topicsError;
+        const { data: existingTopicsData, error: existingTopicsError } = await supabase
+          .from("topics")
+          .select("name")
+          .eq("user_id", user.id)
+          .eq("subject_id", subjectData.id);
+        if (existingTopicsError) throw existingTopicsError;
+
+        const existingTopicNames = new Set((existingTopicsData || []).map((topic: any) => normalizeName(topic.name)));
+        const topicRows = topics
+          .filter((t: string) => {
+            const key = normalizeName(t);
+            if (existingTopicNames.has(key)) { summary.skippedTopics += 1; return false; }
+            existingTopicNames.add(key);
+            return true;
+          })
+          .map((t: string, i: number) => ({ user_id: user.id, subject_id: subjectData.id, name: t, order_index: existingTopicNames.size + i }));
+
+        if (topicRows.length > 0) {
+          const { error: topicsError } = await supabase.from("topics").insert(topicRows);
+          if (topicsError) throw topicsError;
+          summary.insertedTopics += topicRows.length;
+        }
       }
 
       // Also create study_plan entry with incidence data
+      const { data: existingPlan, error: existingPlanError } = await supabase
+        .from("study_plan")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("subject_id", subjectData.id)
+        .maybeSingle();
+      if (existingPlanError) throw existingPlanError;
+
+      if (existingPlan) {
+        summary.skippedPlans += 1;
+        continue;
+      }
+
       const { error: planError } = await supabase.from("study_plan").insert({
         user_id: user.id,
         subject_id: subjectData.id,
@@ -201,15 +234,22 @@ Critérios para RELEVÂNCIA:
         recommended_hours_weekly: Math.ceil((relevance + incidence) / 2),
       });
       if (planError) throw planError;
+      summary.insertedPlans += 1;
     }
 
-    if (insertedSubjects.length === 0) {
+    if (summary.insertedSubjects === 0 && summary.insertedTopics === 0 && summary.insertedPlans === 0) {
+      return new Response(JSON.stringify({ success: true, subjects: insertedSubjects, summary, message: "Nenhuma disciplina ou tópico novo foi inserido; este edital parece já ter sido processado." }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (insertedSubjects.length === 0 && summary.insertedTopics === 0 && summary.insertedPlans === 0) {
       return new Response(JSON.stringify({ error: "Nenhuma disciplina válida foi gerada pela IA." }), {
         status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ success: true, subjects: insertedSubjects }), {
+    return new Response(JSON.stringify({ success: true, subjects: insertedSubjects, summary }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
