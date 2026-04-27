@@ -60,6 +60,24 @@ async function upsertSchedule(supabase: any, row: any) {
   return "inserted";
 }
 
+async function ensurePendingReview(supabase: any, row: any) {
+  let existingQuery = supabase
+    .from("spaced_reviews")
+    .select("id, completed")
+    .eq("user_id", row.user_id)
+    .eq("subject_id", row.subject_id)
+    .eq("review_date", row.review_date);
+  existingQuery = row.topic_id ? existingQuery.eq("topic_id", row.topic_id) : existingQuery.is("topic_id", null);
+  const { data: existing, error: lookupError } = await existingQuery.maybeSingle();
+  if (lookupError) throw lookupError;
+  if (existing?.id) return existing.completed ? "kept_completed" : "kept_pending";
+
+  const { error } = await supabase.from("spaced_reviews").insert(row);
+  if (!error) return "inserted";
+  if (error.code === "23505") return "kept_pending";
+  throw error;
+}
+
 async function recalculateForUser(supabase: any, userId: string, payload: z.infer<typeof bodySchema>) {
   const [subjectsRes, topicsRes, sessionsRes, reviewsRes, planRes, profileRes, checkinsRes] = await Promise.all([
     supabase.from("user_subjects").select("id, name, knowledge_level, weight, incidence").eq("user_id", userId),
@@ -85,6 +103,8 @@ async function recalculateForUser(supabase: any, userId: string, payload: z.infe
 
   let inserted = 0;
   let updated = 0;
+  let reviewsInserted = 0;
+  let reviewsKept = 0;
   const suggestions = [];
 
   for (const target of targets) {
@@ -133,12 +153,8 @@ async function recalculateForUser(supabase: any, userId: string, payload: z.infe
 
     if (risk >= 65) {
       const reviewDate = isoDatePlus(interval);
-      let existingQuery = supabase.from("spaced_reviews").select("id").eq("user_id", userId).eq("subject_id", target.subject.id).eq("review_date", reviewDate);
-      existingQuery = target.topic?.id ? existingQuery.eq("topic_id", target.topic.id) : existingQuery.is("topic_id", null);
-      const { data: existingReview } = await existingQuery.maybeSingle();
-      if (!existingReview) {
-        await supabase.from("spaced_reviews").insert({ user_id: userId, subject_id: target.subject.id, topic_id: target.topic?.id || null, review_date: reviewDate, interval_days: interval, completed: false, performance_rating: 0 });
-      }
+      const reviewResult = await ensurePendingReview(supabase, { user_id: userId, subject_id: target.subject.id, topic_id: target.topic?.id || null, review_date: reviewDate, interval_days: interval, completed: false, performance_rating: 0, next_review_date: reviewDate });
+      if (reviewResult === "inserted") reviewsInserted += 1; else reviewsKept += 1;
     }
   }
 
@@ -148,11 +164,11 @@ async function recalculateForUser(supabase: any, userId: string, payload: z.infe
     event_type: "review_schedule_recalculated",
     event_source: payload.trigger,
     explanation: "Agenda de revisão recalculada pela curva do esquecimento, risco de lacuna, compreensão, intensidade e Psique.",
-    after_state: { inserted, updated, suggestions: suggestions.slice(0, 20) },
-    metadata: { trigger: payload.trigger, topicId: payload.topicId || null },
+    after_state: { inserted, updated, reviewsInserted, reviewsKept, suggestions: suggestions.slice(0, 20) },
+    metadata: { trigger: payload.trigger, topicId: payload.topicId || null, idempotent: true },
   });
 
-  return { inserted, updated, suggestions };
+  return { inserted, updated, reviewsInserted, reviewsKept, suggestions };
 }
 
 Deno.serve(async (req) => {
@@ -162,25 +178,27 @@ Deno.serve(async (req) => {
     const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) return json({ error: "Payload inválido", details: parsed.error.flatten().fieldErrors }, 400);
 
+    if (parsed.data.trigger === "scheduled") {
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY not configured");
+      const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
+      const { data: profiles, error } = await admin.from("profiles").select("user_id").not("user_id", "is", null).limit(500);
+      if (error) throw error;
+      const results = [];
+      for (const profile of profiles || []) {
+        if (profile.user_id) results.push({ userId: profile.user_id, ...(await recalculateForUser(admin, profile.user_id, parsed.data)) });
+      }
+
+      return json({ success: true, auditedUsers: results.length, results });
+    }
+
     if (authHeader) {
       const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, { global: { headers: { Authorization: authHeader } } });
       const { data: { user } } = await supabase.auth.getUser();
       if (user) return json({ success: true, ...(await recalculateForUser(supabase, user.id, parsed.data)) });
     }
 
-    if (parsed.data.trigger !== "scheduled") return json({ error: "Sessão inválida." }, 401);
-
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY not configured");
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
-    const { data: profiles, error } = await admin.from("profiles").select("user_id").not("user_id", "is", null).limit(500);
-    if (error) throw error;
-    const results = [];
-    for (const profile of profiles || []) {
-      if (profile.user_id) results.push({ userId: profile.user_id, ...(await recalculateForUser(admin, profile.user_id, parsed.data)) });
-    }
-
-    return json({ success: true, auditedUsers: results.length, results });
+    return json({ error: "Sessão inválida." }, 401);
   } catch (error) {
     console.error("recalculate-review-schedule error:", error);
     return json({ error: error instanceof Error ? error.message : "Erro ao recalcular revisões" }, 500);
