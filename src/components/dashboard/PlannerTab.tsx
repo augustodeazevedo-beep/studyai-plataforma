@@ -77,6 +77,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [nextAction, setNextAction] = useState<NextActionSuggestion | null>(null);
   const [psycheState, setPsycheStateLocal] = useState<PsycheState | null>(null);
   const [psycheProfile, setPsycheProfile] = useState<any>(null);
+  const [studyProfile, setStudyProfile] = useState<any>(null);
   const [nowQueue, setNowQueue] = useState<NowQueueItem[]>([]);
   const [dueReviews, setDueReviews] = useState<DueReview[]>([]);
   const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([]);
@@ -126,6 +127,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     setSessions(sesRes.data || []);
     setBlocks((blockRes.data || []).map((b: any) => ({ ...b, subject_name: b.user_subjects?.name })));
     setPsycheProfile(psyRes.data);
+    setStudyProfile(profileRes.data);
     setNowQueue(queueData || []);
     const schedules = scheduleRes.data || [];
     const planData = planRes.data || [];
@@ -371,6 +373,26 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     if (error) { toast.error("Não consegui concluir a revisão"); return; }
     await supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "manual", subjectId: review.subject_id, topicId: review.topic_id } });
     toast.success("Revisão concluída e curva atualizada");
+    loadData();
+  };
+
+  const visibleDueReviews = dueReviews.filter(review => reviewScope === "all" || review.edital_relevant);
+  const selectedVisibleIds = selectedReviewIds.filter(id => visibleDueReviews.some(review => review.id === id));
+  const toggleReviewSelection = (reviewId: string, checked: boolean) => {
+    setSelectedReviewIds(prev => checked ? [...new Set([...prev, reviewId])] : prev.filter(id => id !== reviewId));
+  };
+  const toggleAllVisibleReviews = (checked: boolean) => {
+    setSelectedReviewIds(prev => checked ? [...new Set([...prev, ...visibleDueReviews.map(review => review.id)])] : prev.filter(id => !visibleDueReviews.some(review => review.id === id)));
+  };
+  const completeSelectedReviews = async () => {
+    if (selectedVisibleIds.length === 0) { toast.error("Selecione ao menos uma revisão"); return; }
+    const selectedReviews = visibleDueReviews.filter(review => selectedVisibleIds.includes(review.id));
+    const { error } = await supabase.from("spaced_reviews").update({ completed: true, performance_rating: 3 }).eq("user_id", userId).in("id", selectedVisibleIds);
+    if (error) { toast.error("Não consegui concluir as revisões selecionadas"); return; }
+    const uniqueTargets = Array.from(new Map(selectedReviews.map(review => [`${review.subject_id || ""}:${review.topic_id || ""}`, review])).values());
+    await Promise.all(uniqueTargets.map(review => supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "manual", subjectId: review.subject_id, topicId: review.topic_id } })));
+    setSelectedReviewIds(prev => prev.filter(id => !selectedVisibleIds.includes(id)));
+    toast.success(`${selectedVisibleIds.length} revisões concluídas e curva atualizada`);
     loadData();
   };
 
