@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck, CheckCircle2 } from "lucide-react";
+import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck, CheckCircle2, History, TimerReset } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -82,6 +82,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [dueReviews, setDueReviews] = useState<DueReview[]>([]);
   const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([]);
   const [reviewScope, setReviewScope] = useState<"all" | "current_edital">("current_edital");
+  const [reviewsPaused, setReviewsPaused] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [plannerView, setPlannerView] = useState<"calendar" | "reviews" | "queue" | "audit">("calendar");
@@ -378,6 +379,17 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
 
   const visibleDueReviews = dueReviews.filter(review => reviewScope === "all" || review.edital_relevant);
   const selectedVisibleIds = selectedReviewIds.filter(id => visibleDueReviews.some(review => review.id === id));
+  const selectedVisibleReviews = visibleDueReviews.filter(review => selectedVisibleIds.includes(review.id));
+  const selectedEstimatedMinutes = selectedVisibleReviews.reduce((sum, review) => sum + Number(review.estimated_minutes || 0), 0);
+  const reviewSummary = visibleDueReviews.reduce((acc, review) => {
+    acc.total += 1;
+    acc.minutes += Number(review.estimated_minutes || 0);
+    if (review.topic_id) acc.topics.add(review.topic_id);
+    if (review.subject_id) acc.subjects.add(review.subject_id);
+    if (review.priority_rank === 1) acc.urgent += 1;
+    return acc;
+  }, { total: 0, minutes: 0, urgent: 0, topics: new Set<string>(), subjects: new Set<string>() });
+  const batchReviewLogs = auditLogs.filter(log => log.event_type === "batch_reviews_completed");
   const toggleReviewSelection = (reviewId: string, checked: boolean) => {
     setSelectedReviewIds(prev => checked ? [...new Set([...prev, reviewId])] : prev.filter(id => id !== reviewId));
   };
@@ -385,14 +397,24 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     setSelectedReviewIds(prev => checked ? [...new Set([...prev, ...visibleDueReviews.map(review => review.id)])] : prev.filter(id => !visibleDueReviews.some(review => review.id === id)));
   };
   const completeSelectedReviews = async () => {
+    if (reviewsPaused) { toast.info("Pausa rápida ativa: suas seleções foram mantidas para concluir depois."); return; }
     if (selectedVisibleIds.length === 0) { toast.error("Selecione ao menos uma revisão"); return; }
-    const selectedReviews = visibleDueReviews.filter(review => selectedVisibleIds.includes(review.id));
+    const selectedReviews = selectedVisibleReviews;
     const { error } = await supabase.from("spaced_reviews").update({ completed: true, performance_rating: 3 }).eq("user_id", userId).in("id", selectedVisibleIds);
     if (error) { toast.error("Não consegui concluir as revisões selecionadas"); return; }
     const uniqueTargets = Array.from(new Map(selectedReviews.map(review => [`${review.subject_id || ""}:${review.topic_id || ""}`, review])).values());
     await Promise.all(uniqueTargets.map(review => supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "manual", subjectId: review.subject_id, topicId: review.topic_id } })));
+    await (supabase as any).from("planner_audit_logs").insert({
+      user_id: userId,
+      subject_id: uniqueTargets[0]?.subject_id || null,
+      event_type: "batch_reviews_completed",
+      event_source: "planner_reviews_bulk_action",
+      explanation: `${selectedReviews.length} revisões concluídas em lote; curvas recalculadas apenas para ${uniqueTargets.length} assunto(s)/tema(s) impactado(s).`,
+      after_state: { completedCount: selectedReviews.length, estimatedMinutes: selectedEstimatedMinutes, impactedTargets: uniqueTargets.length, topics: selectedReviews.map(review => review.topic_name || review.subject_name || "Tema") },
+      metadata: { reviewScope, targetExam: studyProfile?.target_exam || null, targetPosition: studyProfile?.target_position || null, reviewIds: selectedVisibleIds },
+    });
     setSelectedReviewIds(prev => prev.filter(id => !selectedVisibleIds.includes(id)));
-    toast.success(`${selectedVisibleIds.length} revisões concluídas e curva atualizada`);
+    toast.success(`${selectedVisibleIds.length} revisões concluídas; ${uniqueTargets.length} curva(s) impactada(s) atualizada(s)`);
     loadData();
   };
 
@@ -468,10 +490,15 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
           <CardHeader className="space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Revisões: hoje e próximos 7 dias</CardTitle>
-              <Button size="sm" onClick={completeSelectedReviews} disabled={selectedVisibleIds.length === 0}>
-                <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir selecionadas
+              <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" variant={reviewsPaused ? "secondary" : "outline"} onClick={() => setReviewsPaused(prev => !prev)}>
+                <TimerReset className="h-3 w-3 mr-1" /> {reviewsPaused ? "Retomar" : "Pausa rápida"}
+              </Button>
+              <Button size="sm" onClick={completeSelectedReviews} disabled={selectedVisibleIds.length === 0 || reviewsPaused}>
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir selecionadas{selectedEstimatedMinutes > 0 ? ` · ${selectedEstimatedMinutes} min` : ""}
                 {selectedVisibleIds.length > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">{selectedVisibleIds.length}</Badge>}
               </Button>
+              </div>
             </div>
             <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
               <div className="space-y-1">
@@ -491,6 +518,13 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-4">
+              <div className="rounded border border-border/50 bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Revisões</p><p className="text-lg font-semibold">{reviewSummary.total}</p></div>
+              <div className="rounded border border-border/50 bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Disciplinas</p><p className="text-lg font-semibold">{reviewSummary.subjects.size}</p></div>
+              <div className="rounded border border-border/50 bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Temas</p><p className="text-lg font-semibold">{reviewSummary.topics.size}</p></div>
+              <div className="rounded border border-border/50 bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Tempo / urgentes</p><p className="text-lg font-semibold">{reviewSummary.minutes} min · {reviewSummary.urgent}</p></div>
+            </div>
+            {reviewsPaused && <div className="rounded border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">Pausa rápida ativa: filtro e seleções ficam preservados até você retomar.</div>}
             {visibleDueReviews.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma revisão pendente para esse filtro nos próximos 7 dias.</p> : visibleDueReviews.map(review => (
               <div key={review.id} className="flex items-start gap-3 rounded border border-border/50 bg-muted/20 p-3">
                 <Checkbox className="mt-1" checked={selectedReviewIds.includes(review.id)} onCheckedChange={(checked) => toggleReviewSelection(review.id, Boolean(checked))} />
@@ -511,6 +545,20 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                 </Button>
               </div>
             ))}
+            {batchReviewLogs.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-2 text-sm font-semibold"><History className="h-4 w-4 text-primary" />Histórico de revisões em lote</div>
+                {batchReviewLogs.slice(0, 5).map(log => (
+                  <div key={log.id} className="rounded border border-border/50 bg-muted/20 p-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{log.after_state?.completedCount || 0} concluídas · {log.after_state?.estimatedMinutes || 0} min</span>
+                      <span className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd/MM HH:mm")}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{(log.after_state?.topics || []).slice(0, 6).join(" · ")}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
