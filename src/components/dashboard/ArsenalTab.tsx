@@ -10,6 +10,14 @@ import { Shield, BookOpen, CheckCircle, Target, Plus, Loader2, Trash2, Upload, F
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { z } from "zod";
+
+const processEditalPayloadSchema = z.object({
+  editalText: z.string().trim().min(20, "Texto do edital muito curto").max(15000, "Texto do edital muito longo"),
+  targetExam: z.string().trim().max(180).nullable().optional(),
+  targetPosition: z.string().trim().max(180).nullable().optional(),
+  banca: z.string().trim().max(120).nullable().optional(),
+});
 
 interface ArsenalTabProps { userId: string; }
 
@@ -89,11 +97,19 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke("process-edital", { body });
+      const payload = processEditalPayloadSchema.safeParse(body);
+      if (!payload.success) throw new Error(payload.error.issues[0]?.message || "Dados inválidos para processar o edital");
+
+      const { data, error } = await supabase.functions.invoke("process-edital", { body: payload.data });
       if (error) throw new Error(error.message || "Erro ao processar edital");
       if (!data?.success) throw new Error(data?.error || "A IA não retornou disciplinas válidas");
 
-      toast.success(`Edital processado! ${data.subjects?.length || 0} disciplinas extraídas com análise de incidência e relevância`);
+      const summary = data.summary;
+      toast.success(
+        summary
+          ? `Edital processado: ${summary.insertedSubjects} disciplinas, ${summary.insertedTopics} tópicos e ${summary.insertedPlans} planos inseridos.`
+          : `Edital processado! ${data.subjects?.length || 0} disciplinas extraídas com análise de incidência e relevância`
+      );
       setEditalText("");
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
