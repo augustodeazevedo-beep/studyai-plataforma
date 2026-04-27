@@ -162,6 +162,8 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
   const processEdital = async () => {
     setProcessing(true);
+    setPdfFailure(null);
+    const submissionId = crypto.randomUUID();
     try {
       const profile = await getProfileData();
 
@@ -173,9 +175,30 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       };
 
       if (uploadMode === "pdf" && selectedFile) {
-        const extractedText = await extractPdfText(selectedFile);
+        let extractedText = "";
+        let fileHash = "";
+        try {
+          const validation = await validatePdfFile(selectedFile);
+          fileHash = await getPdfHash(selectedFile);
+          await logPdfFlow(submissionId, "validation_completed", "success", { ...validation, fileHash, fileName: selectedFile.name.slice(0, 120) });
+          await logPdfFlow(submissionId, "browser_extraction_started", "started", { worker: "pdfjs legacy browser" });
+          extractedText = await extractPdfText(selectedFile);
+          await logPdfFlow(submissionId, "browser_extraction_completed", "success", { textLength: extractedText.length, worker: "pdfjs legacy browser" });
+        } catch (browserError: any) {
+          const safeMessage = browserError?.message || "Falha ao ler o PDF no navegador.";
+          const isValidationError = safeMessage.includes("extensão") || safeMessage.includes("assinatura") || safeMessage.includes("corrompido") || safeMessage.includes("vazio") || safeMessage.includes("grande") || safeMessage.includes("válido");
+          await logPdfFlow(submissionId, isValidationError ? "validation_failed" : "browser_extraction_failed", "failed", { fileName: selectedFile.name.slice(0, 120), size: selectedFile.size, mime: selectedFile.type || null }, isValidationError ? "invalid_pdf" : "browser_pdf_failed", safeMessage);
+          if (isValidationError) {
+            createPdfFailure(submissionId, "Validação do arquivo", "invalid_pdf", safeMessage, true);
+            setProcessing(false);
+            return;
+          }
+          fileHash = fileHash || await getPdfHash(selectedFile);
+          extractedText = await extractPdfTextWithBackend(selectedFile, submissionId, fileHash);
+        }
         if (extractedText.length < 20) {
-          toast.error("Não consegui ler texto suficiente desse PDF. Se ele for escaneado, use Colar Texto.");
+          await logPdfFlow(submissionId, "text_quality_failed", "failed", { textLength: extractedText.length }, "no_text", "PDF sem texto suficiente para processamento.");
+          createPdfFailure(submissionId, "Extração de texto", "no_text", "Não consegui ler texto suficiente desse PDF. Se ele for escaneado, use Colar Texto.", true);
           setProcessing(false);
           return;
         }
@@ -192,9 +215,11 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       const payload = processEditalPayloadSchema.safeParse(body);
       if (!payload.success) throw new Error(payload.error.issues[0]?.message || "Dados inválidos para processar o edital");
 
+      if (uploadMode === "pdf") await logPdfFlow(submissionId, "ai_processing_started", "started", { textLength: payload.data.editalText.length });
       const { data, error } = await supabase.functions.invoke("process-edital", { body: payload.data });
       if (error) throw new Error(error.message || "Erro ao processar edital");
       if (!data?.success) throw new Error(data?.error || "A IA não retornou disciplinas válidas");
+      if (uploadMode === "pdf") await logPdfFlow(submissionId, "completed", "success", { insertedSubjects: data.summary?.counts?.insertedSubjects || 0, updatedSubjects: data.summary?.counts?.updatedSubjects || 0 });
 
       const summary = data.summary as ProcessingSummary | undefined;
       if (summary) setProcessingSummary(summary);
@@ -206,7 +231,15 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       setEditalText("");
       resetSelectedFile();
       loadData();
-    } catch (e: any) { toast.error(e.message || "Erro ao processar edital"); }
+    } catch (e: any) {
+      const message = e.message || "Erro ao processar edital";
+      if (uploadMode === "pdf") {
+        await logPdfFlow(submissionId, "processing_failed", "failed", { mode: uploadMode }, "processing_failed", message);
+        createPdfFailure(submissionId, "Processamento", "processing_failed", message, true);
+      } else {
+        toast.error(message);
+      }
+    }
     setProcessing(false);
   };
 
