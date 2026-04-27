@@ -35,6 +35,42 @@ export type Database = {
         }
         Relationships: []
       }
+      content_audit_reports: {
+        Row: {
+          created_at: string
+          findings: Json
+          id: string
+          protections: Json
+          report_type: string
+          sources: Json
+          status: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          findings?: Json
+          id?: string
+          protections?: Json
+          report_type?: string
+          sources?: Json
+          status?: string
+          summary?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          findings?: Json
+          id?: string
+          protections?: Json
+          report_type?: string
+          sources?: Json
+          status?: string
+          summary?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -355,6 +391,63 @@ export type Database = {
         }
         Relationships: []
       }
+      public_source_audits: {
+        Row: {
+          copyright_assessment: string
+          created_at: string
+          id: string
+          origin: string
+          source_note: string
+          source_title: string
+          source_url: string | null
+          storage_notes: string
+          subject_id: string | null
+          topic_id: string | null
+          user_id: string
+        }
+        Insert: {
+          copyright_assessment?: string
+          created_at?: string
+          id?: string
+          origin?: string
+          source_note?: string
+          source_title?: string
+          source_url?: string | null
+          storage_notes?: string
+          subject_id?: string | null
+          topic_id?: string | null
+          user_id: string
+        }
+        Update: {
+          copyright_assessment?: string
+          created_at?: string
+          id?: string
+          origin?: string
+          source_note?: string
+          source_title?: string
+          source_url?: string | null
+          storage_notes?: string
+          subject_id?: string | null
+          topic_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_source_audits_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "user_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_source_audits_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_attempts: {
         Row: {
           created_at: string
@@ -477,6 +570,7 @@ export type Database = {
           performance_rating: number | null
           review_date: string
           subject_id: string | null
+          topic_id: string | null
           user_id: string
         }
         Insert: {
@@ -488,6 +582,7 @@ export type Database = {
           performance_rating?: number | null
           review_date: string
           subject_id?: string | null
+          topic_id?: string | null
           user_id: string
         }
         Update: {
@@ -499,6 +594,7 @@ export type Database = {
           performance_rating?: number | null
           review_date?: string
           subject_id?: string | null
+          topic_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -507,6 +603,13 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "user_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spaced_reviews_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
             referencedColumns: ["id"]
           },
         ]
@@ -671,6 +774,7 @@ export type Database = {
           pages_start: number | null
           started_at: string
           subject_id: string | null
+          topic_id: string | null
           user_id: string
         }
         Insert: {
@@ -685,6 +789,7 @@ export type Database = {
           pages_start?: number | null
           started_at?: string
           subject_id?: string | null
+          topic_id?: string | null
           user_id: string
         }
         Update: {
@@ -699,6 +804,7 @@ export type Database = {
           pages_start?: number | null
           started_at?: string
           subject_id?: string | null
+          topic_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -707,6 +813,13 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "user_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_sessions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
             referencedColumns: ["id"]
           },
         ]
@@ -734,6 +847,78 @@ export type Database = {
           reason?: string
         }
         Relationships: []
+      }
+      topic_review_schedules: {
+        Row: {
+          comprehension_score: number
+          created_at: string
+          forgetting_risk: number
+          id: string
+          intensity_score: number
+          interval_days: number
+          last_reviewed_at: string | null
+          last_studied_at: string | null
+          next_review_at: string
+          psyche_score: number
+          recommendation: string
+          status: string
+          subject_id: string
+          topic_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comprehension_score?: number
+          created_at?: string
+          forgetting_risk?: number
+          id?: string
+          intensity_score?: number
+          interval_days?: number
+          last_reviewed_at?: string | null
+          last_studied_at?: string | null
+          next_review_at?: string
+          psyche_score?: number
+          recommendation?: string
+          status?: string
+          subject_id: string
+          topic_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comprehension_score?: number
+          created_at?: string
+          forgetting_risk?: number
+          id?: string
+          intensity_score?: number
+          interval_days?: number
+          last_reviewed_at?: string | null
+          last_studied_at?: string | null
+          next_review_at?: string
+          psyche_score?: number
+          recommendation?: string
+          status?: string
+          subject_id?: string
+          topic_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_review_schedules_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "user_subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_review_schedules_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       topics: {
         Row: {
