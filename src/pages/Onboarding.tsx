@@ -448,32 +448,33 @@ const Onboarding = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <Label>Horas diárias de estudo</Label>
-                    <div className="flex gap-2 flex-wrap">
-                      {["1", "2", "3", "4", "5", "6", "8", "10"].map((h) => (
-                        <button
-                          key={h}
-                          onClick={() => setDailyHours(h)}
-                          className={cn(
-                            "px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all",
-                            dailyHours === h
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/30"
-                          )}
-                        >
-                          {h}h
-                        </button>
-                      ))}
+                    <Label>Tempo de estudo por dia</Label>
+                    <div className="space-y-3">
+                      {DAYS_OF_WEEK.filter((day) => studyDays.includes(day.key)).map((day) => {
+                        const total = studyMinutesByDay[day.key] || 0;
+                        return (
+                          <div key={day.key} className="grid grid-cols-[3rem_1fr_1fr] gap-2 items-end rounded-lg border border-border/60 p-3">
+                            <span className="text-sm font-medium text-primary pb-2">{day.label}</span>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Horas</Label>
+                              <Input type="number" min={0} value={Math.floor(total / 60)} onChange={(e) => updateDayMinutes(day.key, "hours", e.target.value)} className="text-center" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Minutos</Label>
+                              <Input type="number" min={0} max={59} step={5} value={total % 60} onChange={(e) => updateDayMinutes(day.key, "minutes", e.target.value)} className="text-center" />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
                   <div className="p-4 rounded-lg bg-muted/50 border border-border">
                     <p className="text-sm text-muted-foreground">
                       <Sparkles className="inline h-4 w-4 text-primary mr-1" />
-                      Com <strong className="text-foreground">{dailyHours}h</strong> por dia em{" "}
-                      <strong className="text-foreground">{studyDays.length} dias</strong>, você terá{" "}
+                      Com disponibilidade personalizada em <strong className="text-foreground">{studyDays.length} dias</strong>, você terá{" "}
                       <strong className="text-primary">
-                        {Number(dailyHours) * studyDays.length}h por semana
+                        {formatMinutes(studyDays.reduce((sum, day) => sum + (studyMinutesByDay[day] || 0), 0))} por semana
                       </strong>{" "}
                       de estudo.
                     </p>
