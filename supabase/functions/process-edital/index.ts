@@ -15,6 +15,11 @@ const clampScore = (value: unknown, fallback = 3) => {
   return Math.min(5, Math.max(1, Math.round(numeric)));
 };
 
+const scoreSchema = z.preprocess(
+  (value) => clampScore(value),
+  z.number().int().min(1).max(5),
+);
+
 const cleanText = (value: unknown, maxLength = 15000) =>
   String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 
@@ -38,8 +43,8 @@ const sourceSchema = z.object({
 const extractedSubjectsSchema = z.object({
   subjects: z.array(z.object({
     name: z.string().trim().min(1).max(180),
-    relevance: z.coerce.number().finite(),
-    incidence: z.coerce.number().finite(),
+    relevance: scoreSchema,
+    incidence: scoreSchema,
     relevanceReason: z.string().trim().max(360).optional().default(""),
     incidenceReason: z.string().trim().max(360).optional().default(""),
     sources: z.array(sourceSchema).optional().default([]),
