@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns";
@@ -54,6 +55,10 @@ interface DueReview {
   topic_name?: string;
   forgetting_risk?: number;
   recommendation?: string;
+  priority_label?: string;
+  priority_rank?: number;
+  estimated_minutes?: number;
+  edital_relevant?: boolean;
 }
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -72,8 +77,11 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [nextAction, setNextAction] = useState<NextActionSuggestion | null>(null);
   const [psycheState, setPsycheStateLocal] = useState<PsycheState | null>(null);
   const [psycheProfile, setPsycheProfile] = useState<any>(null);
+  const [studyProfile, setStudyProfile] = useState<any>(null);
   const [nowQueue, setNowQueue] = useState<NowQueueItem[]>([]);
   const [dueReviews, setDueReviews] = useState<DueReview[]>([]);
+  const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([]);
+  const [reviewScope, setReviewScope] = useState<"all" | "current_edital">("current_edital");
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [plannerView, setPlannerView] = useState<"calendar" | "reviews" | "queue" | "audit">("calendar");
@@ -100,13 +108,15 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     const today = format(new Date(), "yyyy-MM-dd");
     const sevenDaysAhead = format(addDays(new Date(), 7), "yyyy-MM-dd");
 
-    const [subRes, topicRes, sesRes, blockRes, psyRes, checkRes, queueData, reviewRes, scheduleRes, auditRes] = await Promise.all([
+    const [subRes, topicRes, sesRes, blockRes, psyRes, checkRes, profileRes, planRes, queueData, reviewRes, scheduleRes, auditRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("topics").select("*").eq("user_id", userId).order("order_index"),
       supabase.from("study_sessions").select("*, user_subjects(name), topics(name)").eq("user_id", userId).gte("started_at", heatmapStart).order("started_at", { ascending: false }),
       supabase.from("study_calendar_blocks").select("*, user_subjects(name)").eq("user_id", userId).gte("block_date", monthStart).lte("block_date", monthEnd).order("order_index"),
       supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("psyche_checkins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
+      supabase.from("profiles").select("target_exam, target_position, banca").eq("user_id", userId).maybeSingle(),
+      supabase.from("study_plan").select("*, user_subjects(name)").eq("user_id", userId).order("priority_score", { ascending: false }),
       buildNowQueue(userId),
       (supabase as any).from("spaced_reviews").select("*, user_subjects(name), topics(name)").eq("user_id", userId).eq("completed", false).gte("review_date", today).lte("review_date", sevenDaysAhead),
       (supabase as any).from("topic_review_schedules").select("subject_id, topic_id, forgetting_risk, recommendation").eq("user_id", userId),
@@ -117,19 +127,31 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     setSessions(sesRes.data || []);
     setBlocks((blockRes.data || []).map((b: any) => ({ ...b, subject_name: b.user_subjects?.name })));
     setPsycheProfile(psyRes.data);
+    setStudyProfile(profileRes.data);
     setNowQueue(queueData || []);
     const schedules = scheduleRes.data || [];
+    const planData = planRes.data || [];
+    const planSubjectIds = new Set(planData.map((row: any) => row.subject_id).filter(Boolean));
     const reviews = (reviewRes.data || []).map((review: any) => {
       const schedule = schedules.find((item: any) => item.topic_id ? item.topic_id === review.topic_id : item.subject_id === review.subject_id && !item.topic_id);
+      const risk = Number(schedule?.forgetting_risk || 0);
+      const daysUntilDue = Math.max(0, Math.ceil((new Date(`${review.review_date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000));
+      const priorityRank = risk >= 75 || daysUntilDue === 0 ? 1 : risk >= 55 || daysUntilDue <= 2 ? 2 : 3;
+      const estimatedMinutes = Math.max(8, Math.min(30, Math.round((8 + risk * 0.18 + (review.topic_id ? 2 : 6)) / 5) * 5));
       return {
         ...review,
         subject_name: review.user_subjects?.name,
         topic_name: review.topics?.name,
-        forgetting_risk: Number(schedule?.forgetting_risk || 0),
+        forgetting_risk: risk,
         recommendation: schedule?.recommendation || "Revisão espaçada recomendada para reduzir lacuna de memória.",
+        priority_label: priorityRank === 1 ? "Fazer primeiro" : priorityRank === 2 ? "Alta" : "Manutenção",
+        priority_rank: priorityRank,
+        estimated_minutes: estimatedMinutes,
+        edital_relevant: planSubjectIds.size === 0 || planSubjectIds.has(review.subject_id),
       };
-    }).sort((a: DueReview, b: DueReview) => (Number(b.forgetting_risk || 0) - Number(a.forgetting_risk || 0)) || a.review_date.localeCompare(b.review_date));
+    }).sort((a: DueReview, b: DueReview) => (Number(a.priority_rank || 9) - Number(b.priority_rank || 9)) || (Number(b.forgetting_risk || 0) - Number(a.forgetting_risk || 0)) || a.review_date.localeCompare(b.review_date));
     setDueReviews(reviews);
+    setSelectedReviewIds(prev => prev.filter(id => reviews.some((review: DueReview) => review.id === id)));
     setAuditLogs(auditRes.data || []);
     const ps = buildPsycheState(psyRes.data, checkRes.data || []);
     setPsycheStateLocal(ps);
@@ -142,8 +164,6 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     }
 
     // Compute next action from current study_plan + algorithm
-    const planRes = await supabase.from("study_plan").select("*, user_subjects(name)").eq("user_id", userId).order("priority_score", { ascending: false });
-    const planData = planRes.data || [];
     if (planData.length > 0) {
       // Reconstruct minimal DisciplinePriority list from study_plan rows for pickNextAction
       const fauxPriorities = planData.map((row: any) => ({
@@ -356,6 +376,26 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     loadData();
   };
 
+  const visibleDueReviews = dueReviews.filter(review => reviewScope === "all" || review.edital_relevant);
+  const selectedVisibleIds = selectedReviewIds.filter(id => visibleDueReviews.some(review => review.id === id));
+  const toggleReviewSelection = (reviewId: string, checked: boolean) => {
+    setSelectedReviewIds(prev => checked ? [...new Set([...prev, reviewId])] : prev.filter(id => id !== reviewId));
+  };
+  const toggleAllVisibleReviews = (checked: boolean) => {
+    setSelectedReviewIds(prev => checked ? [...new Set([...prev, ...visibleDueReviews.map(review => review.id)])] : prev.filter(id => !visibleDueReviews.some(review => review.id === id)));
+  };
+  const completeSelectedReviews = async () => {
+    if (selectedVisibleIds.length === 0) { toast.error("Selecione ao menos uma revisão"); return; }
+    const selectedReviews = visibleDueReviews.filter(review => selectedVisibleIds.includes(review.id));
+    const { error } = await supabase.from("spaced_reviews").update({ completed: true, performance_rating: 3 }).eq("user_id", userId).in("id", selectedVisibleIds);
+    if (error) { toast.error("Não consegui concluir as revisões selecionadas"); return; }
+    const uniqueTargets = Array.from(new Map(selectedReviews.map(review => [`${review.subject_id || ""}:${review.topic_id || ""}`, review])).values());
+    await Promise.all(uniqueTargets.map(review => supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "manual", subjectId: review.subject_id, topicId: review.topic_id } })));
+    setSelectedReviewIds(prev => prev.filter(id => !selectedVisibleIds.includes(id)));
+    toast.success(`${selectedVisibleIds.length} revisões concluídas e curva atualizada`);
+    loadData();
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold font-display">🗓️ Planner de Estudos</h1>
@@ -425,19 +465,46 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
 
       {plannerView === "reviews" && (
         <Card className="glass">
-          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Revisões: hoje e próximos 7 dias</CardTitle></CardHeader>
+          <CardHeader className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Revisões: hoje e próximos 7 dias</CardTitle>
+              <Button size="sm" onClick={completeSelectedReviews} disabled={selectedVisibleIds.length === 0}>
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir selecionadas
+                {selectedVisibleIds.length > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">{selectedVisibleIds.length}</Badge>}
+              </Button>
+            </div>
+            <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
+              <div className="space-y-1">
+                <Label className="text-xs">Filtro do edital</Label>
+                <Select value={reviewScope} onValueChange={(value: "all" | "current_edital") => { setReviewScope(value); setSelectedReviewIds([]); }}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="current_edital">{studyProfile?.target_exam || "Concurso atual"}{studyProfile?.target_position ? ` — ${studyProfile.target_position}` : ""}</SelectItem>
+                    <SelectItem value="all">Todos os temas dos próximos 7 dias</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 rounded border border-border/50 bg-muted/20 px-3 py-2">
+                <Checkbox checked={visibleDueReviews.length > 0 && selectedVisibleIds.length === visibleDueReviews.length} onCheckedChange={(checked) => toggleAllVisibleReviews(Boolean(checked))} />
+                <span className="text-xs text-muted-foreground">Selecionar visíveis</span>
+              </div>
+            </div>
+          </CardHeader>
           <CardContent className="space-y-3">
-            {dueReviews.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma revisão pendente para os próximos 7 dias.</p> : dueReviews.map(review => (
+            {visibleDueReviews.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma revisão pendente para esse filtro nos próximos 7 dias.</p> : visibleDueReviews.map(review => (
               <div key={review.id} className="flex items-start gap-3 rounded border border-border/50 bg-muted/20 p-3">
+                <Checkbox className="mt-1" checked={selectedReviewIds.includes(review.id)} onCheckedChange={(checked) => toggleReviewSelection(review.id, Boolean(checked))} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold">{review.topic_name || review.subject_name || "Tema de revisão"}</span>
                     {review.topic_name && <Badge variant="outline" className="text-xs">{review.subject_name}</Badge>}
                     <Badge className="text-xs">{format(new Date(`${review.review_date}T00:00:00`), "dd/MM")}</Badge>
+                    <Badge variant={review.priority_rank === 1 ? "destructive" : review.priority_rank === 2 ? "default" : "secondary"} className="text-xs">{review.priority_label}</Badge>
                     <Badge variant={Number(review.forgetting_risk || 0) >= 70 ? "destructive" : "secondary"} className="text-xs">Risco {Math.round(Number(review.forgetting_risk || 0))}%</Badge>
+                    <Badge variant="outline" className="text-xs">~{review.estimated_minutes} min</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{review.recommendation}</p>
-                  <p className="text-xs text-primary/80 mt-0.5">Intervalo atual: {review.interval_days} dia(s)</p>
+                  <p className="text-xs text-primary/80 mt-0.5">Prioridade automática pelo risco de lacuna, proximidade da data e escopo do edital · Intervalo atual: {review.interval_days} dia(s)</p>
                 </div>
                 <Button size="sm" onClick={() => completeReview(review)}>
                   <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir
