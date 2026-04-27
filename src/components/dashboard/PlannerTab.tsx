@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns";
@@ -54,6 +55,10 @@ interface DueReview {
   topic_name?: string;
   forgetting_risk?: number;
   recommendation?: string;
+  priority_label?: string;
+  priority_rank?: number;
+  estimated_minutes?: number;
+  edital_relevant?: boolean;
 }
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -74,6 +79,8 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [psycheProfile, setPsycheProfile] = useState<any>(null);
   const [nowQueue, setNowQueue] = useState<NowQueueItem[]>([]);
   const [dueReviews, setDueReviews] = useState<DueReview[]>([]);
+  const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([]);
+  const [reviewScope, setReviewScope] = useState<"all" | "current_edital">("current_edital");
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [plannerView, setPlannerView] = useState<"calendar" | "reviews" | "queue" | "audit">("calendar");
@@ -100,13 +107,15 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     const today = format(new Date(), "yyyy-MM-dd");
     const sevenDaysAhead = format(addDays(new Date(), 7), "yyyy-MM-dd");
 
-    const [subRes, topicRes, sesRes, blockRes, psyRes, checkRes, queueData, reviewRes, scheduleRes, auditRes] = await Promise.all([
+    const [subRes, topicRes, sesRes, blockRes, psyRes, checkRes, profileRes, planRes, queueData, reviewRes, scheduleRes, auditRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
       supabase.from("topics").select("*").eq("user_id", userId).order("order_index"),
       supabase.from("study_sessions").select("*, user_subjects(name), topics(name)").eq("user_id", userId).gte("started_at", heatmapStart).order("started_at", { ascending: false }),
       supabase.from("study_calendar_blocks").select("*, user_subjects(name)").eq("user_id", userId).gte("block_date", monthStart).lte("block_date", monthEnd).order("order_index"),
       supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("psyche_checkins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
+      supabase.from("profiles").select("target_exam, target_position, banca").eq("user_id", userId).maybeSingle(),
+      supabase.from("study_plan").select("*, user_subjects(name)").eq("user_id", userId).order("priority_score", { ascending: false }),
       buildNowQueue(userId),
       (supabase as any).from("spaced_reviews").select("*, user_subjects(name), topics(name)").eq("user_id", userId).eq("completed", false).gte("review_date", today).lte("review_date", sevenDaysAhead),
       (supabase as any).from("topic_review_schedules").select("subject_id, topic_id, forgetting_risk, recommendation").eq("user_id", userId),
@@ -119,17 +128,28 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     setPsycheProfile(psyRes.data);
     setNowQueue(queueData || []);
     const schedules = scheduleRes.data || [];
+    const planData = planRes.data || [];
+    const planSubjectIds = new Set(planData.map((row: any) => row.subject_id).filter(Boolean));
     const reviews = (reviewRes.data || []).map((review: any) => {
       const schedule = schedules.find((item: any) => item.topic_id ? item.topic_id === review.topic_id : item.subject_id === review.subject_id && !item.topic_id);
+      const risk = Number(schedule?.forgetting_risk || 0);
+      const daysUntilDue = Math.max(0, Math.ceil((new Date(`${review.review_date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000));
+      const priorityRank = risk >= 75 || daysUntilDue === 0 ? 1 : risk >= 55 || daysUntilDue <= 2 ? 2 : 3;
+      const estimatedMinutes = Math.max(8, Math.min(30, Math.round((8 + risk * 0.18 + (review.topic_id ? 2 : 6)) / 5) * 5));
       return {
         ...review,
         subject_name: review.user_subjects?.name,
         topic_name: review.topics?.name,
-        forgetting_risk: Number(schedule?.forgetting_risk || 0),
+        forgetting_risk: risk,
         recommendation: schedule?.recommendation || "Revisão espaçada recomendada para reduzir lacuna de memória.",
+        priority_label: priorityRank === 1 ? "Fazer primeiro" : priorityRank === 2 ? "Alta" : "Manutenção",
+        priority_rank: priorityRank,
+        estimated_minutes: estimatedMinutes,
+        edital_relevant: planSubjectIds.size === 0 || planSubjectIds.has(review.subject_id),
       };
-    }).sort((a: DueReview, b: DueReview) => (Number(b.forgetting_risk || 0) - Number(a.forgetting_risk || 0)) || a.review_date.localeCompare(b.review_date));
+    }).sort((a: DueReview, b: DueReview) => (Number(a.priority_rank || 9) - Number(b.priority_rank || 9)) || (Number(b.forgetting_risk || 0) - Number(a.forgetting_risk || 0)) || a.review_date.localeCompare(b.review_date));
     setDueReviews(reviews);
+    setSelectedReviewIds(prev => prev.filter(id => reviews.some((review: DueReview) => review.id === id)));
     setAuditLogs(auditRes.data || []);
     const ps = buildPsycheState(psyRes.data, checkRes.data || []);
     setPsycheStateLocal(ps);
@@ -142,8 +162,6 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     }
 
     // Compute next action from current study_plan + algorithm
-    const planRes = await supabase.from("study_plan").select("*, user_subjects(name)").eq("user_id", userId).order("priority_score", { ascending: false });
-    const planData = planRes.data || [];
     if (planData.length > 0) {
       // Reconstruct minimal DisciplinePriority list from study_plan rows for pickNextAction
       const fauxPriorities = planData.map((row: any) => ({
