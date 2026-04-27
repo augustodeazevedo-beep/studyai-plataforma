@@ -5,6 +5,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const clampScore = (value: unknown, fallback = 3) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(5, Math.max(1, Math.round(numeric)));
+};
+
+const cleanText = (value: unknown, maxLength = 15000) =>
+  String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -21,24 +30,16 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    const { editalText, pdfBase64, targetExam, targetPosition, banca } = await req.json();
+    const { editalText, targetExam, targetPosition, banca } = await req.json();
+    const edital = cleanText(editalText);
 
-    // Build the user content - either text or PDF
-    let userContent: any[];
-    if (pdfBase64) {
-      userContent = [
-        { type: "text", text: `Analise este edital de concurso e extraia todas as disciplinas e tópicos do conteúdo programático. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.` },
-        { type: "image_url", image_url: { url: `data:application/pdf;base64,${pdfBase64}` } },
-      ];
-    } else if (editalText && editalText.trim().length >= 20) {
-      userContent = [
-        { type: "text", text: `Analise o seguinte conteúdo programático de edital. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.\n\n${editalText.substring(0, 15000)}` },
-      ];
-    } else {
+    if (edital.length < 20) {
       return new Response(JSON.stringify({ error: "Envie o texto do edital ou um PDF" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const userContent = `Analise o seguinte conteúdo programático de edital. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.\n\n${edital}`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
