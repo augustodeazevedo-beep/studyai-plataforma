@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
 
       const relevantSessions = sessions.filter((s: any) => target.topic ? s.topic_id === target.topic.id : s.subject_id === target.subject.id);
       const relevantReviews = reviews.filter((r: any) => target.topic ? r.topic_id === target.topic.id : r.subject_id === target.subject.id);
-      const planRow = plan.find((p: any) => p.subject_id === target.subject.id) || {};
+      const planRow: any = plan.find((p: any) => p.subject_id === target.subject.id) || {};
       const lastSession = relevantSessions.map((s: any) => s.started_at).sort().at(-1) || null;
       const lastReview = relevantReviews.filter((r: any) => r.completed).map((r: any) => r.review_date).sort().at(-1) || null;
       const lastTouch = [lastSession, lastReview].filter(Boolean).sort().at(-1) || null;
