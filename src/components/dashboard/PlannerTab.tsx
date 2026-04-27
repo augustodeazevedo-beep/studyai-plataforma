@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck, CheckCircle2 } from "lucide-react";
+import { Play, Pause, RotateCcw, Star, Plus, ChevronLeft, ChevronRight, GripVertical, Trash2, Sparkles, Zap, Heart, ListChecks, ClipboardList, ArrowRight, SearchCheck, CheckCircle2, History, TimerReset } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isToday, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -82,6 +82,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [dueReviews, setDueReviews] = useState<DueReview[]>([]);
   const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([]);
   const [reviewScope, setReviewScope] = useState<"all" | "current_edital">("current_edital");
+  const [reviewsPaused, setReviewsPaused] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null);
   const [plannerView, setPlannerView] = useState<"calendar" | "reviews" | "queue" | "audit">("calendar");
