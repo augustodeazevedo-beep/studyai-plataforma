@@ -106,8 +106,8 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const extractPdfText = async (file: File) => {
     await validatePdfFile(file);
     const [{ default: pdfjsWorker }, pdfjsLib] = await Promise.all([
-      import("pdfjs-dist/build/pdf.worker.mjs?url"),
-      import("pdfjs-dist"),
+      import("pdfjs-dist/legacy/build/pdf.worker.mjs?url"),
+      import("pdfjs-dist/legacy/build/pdf.mjs"),
     ]);
     pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
     const data = new Uint8Array(await file.arrayBuffer());
