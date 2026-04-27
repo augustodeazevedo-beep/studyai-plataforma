@@ -277,7 +277,11 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      await validatePdfFile(file);
+      setPdfFailure(null);
+      const submissionId = crypto.randomUUID();
+      const validation = await validatePdfFile(file);
+      const fileHash = await getPdfHash(file);
+      await logPdfFlow(submissionId, "selected", "success", { ...validation, fileHash, fileName: file.name.slice(0, 120) });
       setSelectedFile(file);
     } catch (error: any) {
       resetSelectedFile();
