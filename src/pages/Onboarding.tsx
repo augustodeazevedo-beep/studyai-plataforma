@@ -55,6 +55,15 @@ const DAYS_OF_WEEK = [
   { key: "dom", label: "Dom" },
 ];
 
+const DEFAULT_STUDY_MINUTES_BY_DAY = { seg: 120, ter: 120, qua: 120, qui: 120, sex: 120, sab: 0, dom: 0 } as Record<string, number>;
+
+const formatMinutes = (minutes: number) => {
+  const safe = Math.max(0, Math.round(minutes || 0));
+  const hours = Math.floor(safe / 60);
+  const mins = safe % 60;
+  return `${hours}h${mins ? ` ${mins}min` : ""}`;
+};
+
 const STEPS = [
   { icon: Target, title: "Seu Objetivo", description: "Concurso e banca" },
   { icon: BookOpen, title: "Disciplinas", description: "Matérias do edital" },
@@ -87,7 +96,7 @@ const Onboarding = () => {
 
   // Step 3: Schedule
   const [studyDays, setStudyDays] = useState<string[]>(["seg", "ter", "qua", "qui", "sex"]);
-  const [dailyHours, setDailyHours] = useState("2");
+  const [studyMinutesByDay, setStudyMinutesByDay] = useState<Record<string, number>>(DEFAULT_STUDY_MINUTES_BY_DAY);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -118,16 +127,29 @@ const Onboarding = () => {
   };
 
   const toggleDay = (day: string) => {
-    setStudyDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
+    setStudyDays((prev) => {
+      const next = prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day];
+      setStudyMinutesByDay((current) => ({ ...current, [day]: next.includes(day) && !current[day] ? 60 : current[day] || 0 }));
+      return next;
+    });
+  };
+
+  const updateDayMinutes = (day: string, part: "hours" | "minutes", value: string) => {
+    const numeric = Math.max(0, Number(value) || 0);
+    setStudyMinutesByDay((prev) => {
+      const current = Math.max(0, prev[day] || 0);
+      const hours = Math.floor(current / 60);
+      const minutes = current % 60;
+      const next = part === "hours" ? Math.round(numeric) * 60 + minutes : hours * 60 + Math.min(59, Math.round(numeric));
+      return { ...prev, [day]: next };
+    });
   };
 
   const canProceed = () => {
     switch (step) {
       case 0: return targetExam && targetPosition.trim();
       case 1: return subjects.length >= 1;
-      case 2: return studyDays.length >= 1 && Number(dailyHours) > 0;
+      case 2: return studyDays.length >= 1 && studyDays.some((day) => (studyMinutesByDay[day] || 0) > 0);
       case 3: return true;
       default: return false;
     }
@@ -138,6 +160,9 @@ const Onboarding = () => {
     setSaving(true);
 
     try {
+      const totalWeeklyMinutes = studyDays.reduce((sum, day) => sum + Math.max(0, studyMinutesByDay[day] || 0), 0);
+      const averageDailyHours = studyDays.length ? totalWeeklyMinutes / studyDays.length / 60 : 0;
+
       // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
@@ -146,10 +171,11 @@ const Onboarding = () => {
           target_position: targetPosition.trim(),
           exam_date: examDate ? format(examDate, "yyyy-MM-dd") : null,
           study_days: studyDays,
-          daily_hours: Number(dailyHours),
+          daily_hours: Math.round(averageDailyHours * 100) / 100,
+          study_minutes_by_day: studyMinutesByDay,
           banca: banca || null,
           onboarding_completed: true,
-        })
+        } as any)
         .eq("user_id", user.id);
 
       if (profileError) throw profileError;
@@ -422,32 +448,33 @@ const Onboarding = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <Label>Horas diárias de estudo</Label>
-                    <div className="flex gap-2 flex-wrap">
-                      {["1", "2", "3", "4", "5", "6", "8", "10"].map((h) => (
-                        <button
-                          key={h}
-                          onClick={() => setDailyHours(h)}
-                          className={cn(
-                            "px-4 py-2.5 rounded-lg border-2 text-sm font-medium transition-all",
-                            dailyHours === h
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/30"
-                          )}
-                        >
-                          {h}h
-                        </button>
-                      ))}
+                    <Label>Tempo de estudo por dia</Label>
+                    <div className="space-y-3">
+                      {DAYS_OF_WEEK.filter((day) => studyDays.includes(day.key)).map((day) => {
+                        const total = studyMinutesByDay[day.key] || 0;
+                        return (
+                          <div key={day.key} className="grid grid-cols-[3rem_1fr_1fr] gap-2 items-end rounded-lg border border-border/60 p-3">
+                            <span className="text-sm font-medium text-primary pb-2">{day.label}</span>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Horas</Label>
+                              <Input type="number" min={0} value={Math.floor(total / 60)} onChange={(e) => updateDayMinutes(day.key, "hours", e.target.value)} className="text-center" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Minutos</Label>
+                              <Input type="number" min={0} max={59} step={5} value={total % 60} onChange={(e) => updateDayMinutes(day.key, "minutes", e.target.value)} className="text-center" />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
                   <div className="p-4 rounded-lg bg-muted/50 border border-border">
                     <p className="text-sm text-muted-foreground">
                       <Sparkles className="inline h-4 w-4 text-primary mr-1" />
-                      Com <strong className="text-foreground">{dailyHours}h</strong> por dia em{" "}
-                      <strong className="text-foreground">{studyDays.length} dias</strong>, você terá{" "}
+                      Com disponibilidade personalizada em <strong className="text-foreground">{studyDays.length} dias</strong>, você terá{" "}
                       <strong className="text-primary">
-                        {Number(dailyHours) * studyDays.length}h por semana
+                        {formatMinutes(studyDays.reduce((sum, day) => sum + (studyMinutesByDay[day] || 0), 0))} por semana
                       </strong>{" "}
                       de estudo.
                     </p>
