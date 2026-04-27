@@ -43,13 +43,28 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     return data || {} as Record<string, any>;
   };
 
+  const extractPdfText = async (file: File) => {
+    const [{ default: pdfjsWorker }, pdfjsLib] = await Promise.all([
+      import("pdfjs-dist/build/pdf.worker.mjs?url"),
+      import("pdfjs-dist"),
+    ]);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    const data = new Uint8Array(await file.arrayBuffer());
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    const pageTexts = await Promise.all(
+      Array.from({ length: pdf.numPages }, async (_, index) => {
+        const page = await pdf.getPage(index + 1);
+        const content = await page.getTextContent();
+        return content.items.map((item: any) => item.str || "").join(" ");
+      })
+    );
+    return pageTexts.join("\n").replace(/\s+/g, " ").trim();
+  };
+
   const processEdital = async () => {
     setProcessing(true);
     try {
       const profile = await getProfileData();
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      if (!token) { toast.error("Faça login novamente"); setProcessing(false); return; }
 
       let body: any = {
         targetExam: profile.target_exam,
@@ -58,16 +73,13 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
       };
 
       if (uploadMode === "pdf" && selectedFile) {
-        const reader = new FileReader();
-        const base64 = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(",")[1]); // Remove data:...;base64, prefix
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(selectedFile);
-        });
-        body.pdfBase64 = base64;
+        const extractedText = await extractPdfText(selectedFile);
+        if (extractedText.length < 20) {
+          toast.error("Não consegui ler texto suficiente desse PDF. Se ele for escaneado, use a opção Colar Texto.");
+          setProcessing(false);
+          return;
+        }
+        body.editalText = extractedText;
       } else if (uploadMode === "text") {
         if (editalText.trim().length < 20) { toast.error("Texto do edital muito curto"); setProcessing(false); return; }
         body.editalText = editalText;
@@ -77,14 +89,9 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
         return;
       }
 
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-edital`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
-
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || `Erro ${resp.status}`);
+      const { data, error } = await supabase.functions.invoke("process-edital", { body });
+      if (error) throw new Error(error.message || "Erro ao processar edital");
+      if (!data?.success) throw new Error(data?.error || "A IA não retornou disciplinas válidas");
 
       toast.success(`Edital processado! ${data.subjects?.length || 0} disciplinas extraídas com análise de incidência e relevância`);
       setEditalText("");
