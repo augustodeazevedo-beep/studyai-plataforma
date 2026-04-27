@@ -348,6 +348,14 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     window.setTimeout(() => setHighlightedBlockId(null), 6000);
   };
 
+  const completeReview = async (review: DueReview) => {
+    const { error } = await supabase.from("spaced_reviews").update({ completed: true, performance_rating: review.performance_rating || 3 }).eq("id", review.id).eq("user_id", userId);
+    if (error) { toast.error("Não consegui concluir a revisão"); return; }
+    await supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "manual", subjectId: review.subject_id, topicId: review.topic_id } });
+    toast.success("Revisão concluída e curva atualizada");
+    loadData();
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold font-display">🗓️ Planner de Estudos</h1>
@@ -403,6 +411,10 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
         <Button size="sm" variant={plannerView === "calendar" ? "default" : "outline"} onClick={() => setPlannerView("calendar")}>
           <ClipboardList className="h-4 w-4 mr-1" /> Calendário
         </Button>
+        <Button size="sm" variant={plannerView === "reviews" ? "default" : "outline"} onClick={() => setPlannerView("reviews")}>
+          <CheckCircle2 className="h-4 w-4 mr-1" /> Revisões
+          {dueReviews.length > 0 && <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">{dueReviews.length}</Badge>}
+        </Button>
         <Button size="sm" variant={plannerView === "queue" ? "default" : "outline"} onClick={() => setPlannerView("queue")}>
           <ListChecks className="h-4 w-4 mr-1" /> Fila Agora
         </Button>
@@ -410,6 +422,31 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
           <SearchCheck className="h-4 w-4 mr-1" /> Auditoria
         </Button>
       </div>
+
+      {plannerView === "reviews" && (
+        <Card className="glass">
+          <CardHeader><CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Revisões: hoje e próximos 7 dias</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {dueReviews.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma revisão pendente para os próximos 7 dias.</p> : dueReviews.map(review => (
+              <div key={review.id} className="flex items-start gap-3 rounded border border-border/50 bg-muted/20 p-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold">{review.topic_name || review.subject_name || "Tema de revisão"}</span>
+                    {review.topic_name && <Badge variant="outline" className="text-xs">{review.subject_name}</Badge>}
+                    <Badge className="text-xs">{format(new Date(`${review.review_date}T00:00:00`), "dd/MM")}</Badge>
+                    <Badge variant={Number(review.forgetting_risk || 0) >= 70 ? "destructive" : "secondary"} className="text-xs">Risco {Math.round(Number(review.forgetting_risk || 0))}%</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{review.recommendation}</p>
+                  <p className="text-xs text-primary/80 mt-0.5">Intervalo atual: {review.interval_days} dia(s)</p>
+                </div>
+                <Button size="sm" onClick={() => completeReview(review)}>
+                  <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {plannerView === "queue" && (
         <Card className="glass">
