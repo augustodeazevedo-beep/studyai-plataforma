@@ -179,6 +179,23 @@ const parseTopics = (topics: Array<string | { name: string }>) => {
   });
 };
 
+const logScoreNormalization = (submissionId: string, userId: string, subjectName: unknown, field: "relevance" | "incidence", original: unknown, normalized: number) => {
+  const numeric = parseScoreNumber(original);
+  const discrepant = !Number.isFinite(numeric) || numeric < 1 || numeric > 5 || Math.round(numeric) !== numeric || typeof original === "string";
+  if (!discrepant) return;
+
+  console.warn("process-edital-score-normalization", JSON.stringify({
+    submissionId,
+    userId,
+    subject: cleanText(subjectName, 120) || "sem nome",
+    field,
+    originalType: typeof original,
+    originalValue: typeof original === "string" || typeof original === "number" ? original : "non_numeric",
+    normalized,
+    reason: !Number.isFinite(numeric) ? "default_safe_score" : numeric < 1 || numeric > 5 ? "out_of_range_clamped" : typeof original === "string" ? "numeric_string_converted" : "rounded_to_integer",
+  }));
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
