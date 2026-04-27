@@ -131,7 +131,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     }
     const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const data = new Uint8Array(await file.arrayBuffer());
-    const pdf = await pdfjsLib.getDocument({ data, disableWorker: true, isEvalSupported: false, disableFontFace: true }).promise;
+    const pdf = await pdfjsLib.getDocument({ data, disableWorker: true, isEvalSupported: false, disableFontFace: true } as any).promise;
     const pageTexts = await Promise.all(
       Array.from({ length: pdf.numPages }, async (_, index) => {
         const page = await pdf.getPage(index + 1);
