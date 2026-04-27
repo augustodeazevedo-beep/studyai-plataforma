@@ -113,7 +113,7 @@ Responda sempre em português. Seja preciso, didático e adapte ao estado atual 
     });
   } catch (e) {
     console.error("professor-tools error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Erro interno ao gerar material. Tente novamente." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
