@@ -201,6 +201,6 @@ Deno.serve(async (req) => {
     return json({ error: "Sessão inválida." }, 401);
   } catch (error) {
     console.error("recalculate-review-schedule error:", error);
-    return json({ error: error instanceof Error ? error.message : "Erro ao recalcular revisões" }, 500);
+    return json({ error: "Erro interno ao recalcular revisões. Tente novamente." }, 500);
   }
 });
