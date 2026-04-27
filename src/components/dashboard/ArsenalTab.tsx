@@ -65,6 +65,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [forceReprocess, setForceReprocess] = useState(false);
   const [processingSummary, setProcessingSummary] = useState<ProcessingSummary | null>(null);
+  const [pdfFailure, setPdfFailure] = useState<{ submissionId: string; stage: string; message: string; code: string; canRetry: boolean } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -87,7 +88,19 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
   const resetSelectedFile = () => {
     setSelectedFile(null);
+    setPdfFailure(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const getPdfHash = async (file: File) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()))).map(byte => byte.toString(16).padStart(2, "0")).join("");
+
+  const logPdfFlow = async (submissionId: string, stage: string, status: string, metadata: Record<string, unknown> = {}, errorCode?: string, safeMessage?: string) => {
+    await (supabase as any).from("pdf_processing_logs").insert({ user_id: userId, submission_id: submissionId, stage, status, error_code: errorCode || null, safe_message: safeMessage || null, metadata });
+  };
+
+  const createPdfFailure = (submissionId: string, stage: string, code: string, message: string, canRetry = true) => {
+    setPdfFailure({ submissionId, stage, code, message, canRetry });
+    toast.error(message);
   };
 
   const validatePdfFile = async (file: File) => {
@@ -101,6 +114,9 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     const header = new Uint8Array(await file.slice(0, 5).arrayBuffer());
     const signature = String.fromCharCode(...header);
     if (signature !== "%PDF-") throw new Error("O arquivo não possui assinatura de PDF válida. Tente outro arquivo ou use Colar Texto.");
+    const tail = await file.slice(Math.max(0, file.size - 4096)).text();
+    if (!tail.includes("%%EOF")) throw new Error("O PDF parece corrompido ou incompleto. Baixe novamente o edital e tente outra vez.");
+    return { declaredMime: file.type || "não informado", detectedMime: "application/pdf", signature, size: file.size };
   };
 
   const extractPdfText = async (file: File) => {
