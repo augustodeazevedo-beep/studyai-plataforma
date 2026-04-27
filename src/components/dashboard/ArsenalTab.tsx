@@ -102,7 +102,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
   const createPdfFailure = (submissionId: string, stage: string, code: string, message: string, canRetry = true) => {
     setPdfFailure({ submissionId, stage, code, message, canRetry });
-    toast.error(message);
+    toast.error(`${message} ID da submissão: ${submissionId}`);
   };
 
   const validatePdfFile = async (file: File) => {
@@ -182,8 +182,11 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
         let extractedText = "";
         let fileHash = "";
         try {
+          await logPdfFlow(submissionId, "validation_started", "started", { fileName: selectedFile.name.slice(0, 120), size: selectedFile.size, mime: selectedFile.type || null });
           const validation = await validatePdfFile(selectedFile);
+          await logPdfFlow(submissionId, "hash_started", "started", { algorithm: "SHA-256" });
           fileHash = await getPdfHash(selectedFile);
+          await logPdfFlow(submissionId, "hash_completed", "success", { fileHash });
           await logPdfFlow(submissionId, "validation_completed", "success", { ...validation, fileHash, fileName: selectedFile.name.slice(0, 120) });
           await logPdfFlow(submissionId, "browser_extraction_started", "started", { worker: "pdfjs legacy browser" });
           extractedText = await extractPdfText(selectedFile);
@@ -283,14 +286,23 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     try {
       setPdfFailure(null);
       const submissionId = crypto.randomUUID();
+      await logPdfFlow(submissionId, "upload_selected", "started", { fileName: file.name.slice(0, 120), size: file.size, mime: file.type || null });
+      await logPdfFlow(submissionId, "validation_started", "started", { fileName: file.name.slice(0, 120), size: file.size, mime: file.type || null });
       const validation = await validatePdfFile(file);
+      await logPdfFlow(submissionId, "hash_started", "started", { algorithm: "SHA-256" });
       const fileHash = await getPdfHash(file);
-      await logPdfFlow(submissionId, "selected", "success", { ...validation, fileHash, fileName: file.name.slice(0, 120) });
+      await logPdfFlow(submissionId, "hash_completed", "success", { fileHash });
+      await logPdfFlow(submissionId, "validation_completed", "success", { ...validation, fileHash, fileName: file.name.slice(0, 120) });
       setPdfSubmissionId(submissionId);
       setSelectedFile(file);
     } catch (error: any) {
-      resetSelectedFile();
-      toast.error(error.message || "PDF inválido. Use outro arquivo ou cole o texto do edital.");
+      const submissionId = crypto.randomUUID();
+      const message = error.message || "PDF inválido. Use outro arquivo ou cole o texto do edital.";
+      setSelectedFile(null);
+      setPdfSubmissionId(submissionId);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      await logPdfFlow(submissionId, "validation_failed", "failed", { fileName: file.name.slice(0, 120), size: file.size, mime: file.type || null }, "invalid_pdf", message);
+      createPdfFailure(submissionId, "Validação do arquivo", "invalid_pdf", message, false);
     }
   };
 
