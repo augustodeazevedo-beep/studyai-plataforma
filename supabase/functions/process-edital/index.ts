@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,25 @@ const clampScore = (value: unknown, fallback = 3) => {
 
 const cleanText = (value: unknown, maxLength = 15000) =>
   String(value || "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+
+const normalizeName = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+
+const requestSchema = z.object({
+  editalText: z.string().trim().min(20).max(15000),
+  targetExam: z.string().trim().max(180).nullish(),
+  targetPosition: z.string().trim().max(180).nullish(),
+  banca: z.string().trim().max(120).nullish(),
+});
+
+const extractedSubjectsSchema = z.object({
+  subjects: z.array(z.object({
+    name: z.string().trim().min(1).max(180),
+    relevance: z.coerce.number().min(1).max(5),
+    incidence: z.coerce.number().min(1).max(5),
+    topics: z.array(z.string().trim().min(1).max(240)).default([]),
+  })).min(1),
+});
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -30,14 +50,15 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    const { editalText, targetExam, targetPosition, banca } = await req.json();
-    const edital = cleanText(editalText);
-
-    if (edital.length < 20) {
-      return new Response(JSON.stringify({ error: "Envie o texto do edital ou um PDF" }), {
+    const requestBody = requestSchema.safeParse(await req.json());
+    if (!requestBody.success) {
+      return new Response(JSON.stringify({ error: "Payload inválido para processar edital", details: requestBody.error.flatten().fieldErrors }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const { editalText, targetExam, targetPosition, banca } = requestBody.data;
+    const edital = cleanText(editalText);
 
     const userContent = `Analise o seguinte conteúdo programático de edital. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.\n\n${edital}`;
 
@@ -117,47 +138,91 @@ Critérios para RELEVÂNCIA:
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("No tool call in AI response");
 
-    const parsed = JSON.parse(toolCall.function.arguments);
-    const subjects = Array.isArray(parsed.subjects) ? parsed.subjects : [];
-    if (subjects.length === 0) {
-      return new Response(JSON.stringify({ error: "Não encontrei disciplinas no conteúdo informado." }), {
+    const parsed = extractedSubjectsSchema.safeParse(JSON.parse(toolCall.function.arguments));
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: "A IA retornou disciplinas em formato inválido", details: parsed.error.flatten().fieldErrors }), {
         status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const subjects = parsed.data.subjects;
+
+    const { data: existingSubjectsData, error: existingSubjectsError } = await supabase
+      .from("user_subjects")
+      .select("id, name")
+      .eq("user_id", user.id);
+    if (existingSubjectsError) throw existingSubjectsError;
+
+    const existingSubjects = new Map((existingSubjectsData || []).map((subject: any) => [normalizeName(subject.name), subject]));
+    const summary = { insertedSubjects: 0, skippedSubjects: 0, insertedTopics: 0, skippedTopics: 0, insertedPlans: 0, skippedPlans: 0 };
 
     // Insert subjects and topics
     const insertedSubjects = [];
     for (const s of subjects) {
       const name = cleanText(s.name, 180);
       if (!name) continue;
+      const subjectKey = normalizeName(name);
       const relevance = clampScore(s.relevance);
       const incidence = clampScore(s.incidence);
-      const { data: subjectData, error: subjectError } = await supabase
-        .from("user_subjects")
-        .insert({
-          user_id: user.id,
-          name,
-          weight: relevance,
-          incidence,
-          knowledge_level: 1,
-        })
-        .select("id")
-        .single();
+      let subjectData = existingSubjects.get(subjectKey) as any;
 
-      if (subjectError) throw subjectError;
+      if (subjectData) {
+        summary.skippedSubjects += 1;
+      } else {
+        const { data: insertedSubject, error: subjectError } = await supabase
+          .from("user_subjects")
+          .insert({ user_id: user.id, name, weight: relevance, incidence, knowledge_level: 1 })
+          .select("id, name")
+          .single();
 
-      insertedSubjects.push({ ...s, name, relevance, incidence, id: subjectData.id });
+        if (subjectError) throw subjectError;
+        subjectData = insertedSubject;
+        existingSubjects.set(subjectKey, subjectData);
+        insertedSubjects.push({ ...s, name, relevance, incidence, id: subjectData.id });
+        summary.insertedSubjects += 1;
+      }
 
       const topics = Array.isArray(s.topics) ? s.topics.map((t: unknown) => cleanText(t, 240)).filter(Boolean) : [];
       if (topics.length > 0) {
-        const topicRows = topics.map((t: string, i: number) => ({
-          user_id: user.id, subject_id: subjectData.id, name: t, order_index: i,
-        }));
-        const { error: topicsError } = await supabase.from("topics").insert(topicRows);
-        if (topicsError) throw topicsError;
+        const { data: existingTopicsData, error: existingTopicsError } = await supabase
+          .from("topics")
+          .select("name")
+          .eq("user_id", user.id)
+          .eq("subject_id", subjectData.id);
+        if (existingTopicsError) throw existingTopicsError;
+
+        const existingTopicNames = new Set((existingTopicsData || []).map((topic: any) => normalizeName(topic.name)));
+        const nextOrderIndex = existingTopicNames.size;
+        const topicRows = topics
+          .filter((t: string) => {
+            const key = normalizeName(t);
+            if (existingTopicNames.has(key)) { summary.skippedTopics += 1; return false; }
+            existingTopicNames.add(key);
+            return true;
+          })
+          .map((t: string, i: number) => ({ user_id: user.id, subject_id: subjectData.id, name: t, order_index: nextOrderIndex + i }));
+
+        if (topicRows.length > 0) {
+          const { error: topicsError } = await supabase.from("topics").insert(topicRows);
+          if (topicsError) throw topicsError;
+          summary.insertedTopics += topicRows.length;
+        }
       }
 
       // Also create study_plan entry with incidence data
+      const { data: existingPlan, error: existingPlanError } = await supabase
+        .from("study_plan")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("subject_id", subjectData.id)
+        .maybeSingle();
+      if (existingPlanError) throw existingPlanError;
+
+      if (existingPlan) {
+        summary.skippedPlans += 1;
+        continue;
+      }
+
       const { error: planError } = await supabase.from("study_plan").insert({
         user_id: user.id,
         subject_id: subjectData.id,
@@ -170,15 +235,22 @@ Critérios para RELEVÂNCIA:
         recommended_hours_weekly: Math.ceil((relevance + incidence) / 2),
       });
       if (planError) throw planError;
+      summary.insertedPlans += 1;
     }
 
-    if (insertedSubjects.length === 0) {
+    if (summary.insertedSubjects === 0 && summary.insertedTopics === 0 && summary.insertedPlans === 0) {
+      return new Response(JSON.stringify({ success: true, subjects: insertedSubjects, summary, message: "Nenhuma disciplina ou tópico novo foi inserido; este edital parece já ter sido processado." }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (insertedSubjects.length === 0 && summary.insertedTopics === 0 && summary.insertedPlans === 0) {
       return new Response(JSON.stringify({ error: "Nenhuma disciplina válida foi gerada pela IA." }), {
         status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ success: true, subjects: insertedSubjects }), {
+    return new Response(JSON.stringify({ success: true, subjects: insertedSubjects, summary }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
