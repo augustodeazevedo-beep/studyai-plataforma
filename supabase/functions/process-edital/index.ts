@@ -9,8 +9,13 @@ const corsHeaders = {
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+const parseScoreNumber = (value: unknown) => {
+  if (typeof value === "string") return Number(value.trim().replace(",", "."));
+  return Number(value);
+};
+
 const clampScore = (value: unknown, fallback = 3) => {
-  const numeric = Number(value);
+  const numeric = parseScoreNumber(value);
   if (!Number.isFinite(numeric)) return fallback;
   return Math.min(5, Math.max(1, Math.round(numeric)));
 };
@@ -31,6 +36,7 @@ const requestSchema = z.object({
   targetExam: z.string().trim().max(180).nullish(),
   targetPosition: z.string().trim().max(180).nullish(),
   banca: z.string().trim().max(120).nullish(),
+  submissionId: z.string().uuid().optional(),
   forceReprocess: z.boolean().optional().default(false),
 });
 
