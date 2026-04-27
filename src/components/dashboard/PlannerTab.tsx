@@ -58,10 +58,27 @@ interface DueReview {
   priority_label?: string;
   priority_rank?: number;
   estimated_minutes?: number;
+  review_type?: "leitura" | "flashcards" | "questoes";
   edital_relevant?: boolean;
 }
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+const inferReviewType = (recommendation: string, risk: number, priorityRank: number): DueReview["review_type"] => {
+  const text = recommendation.toLowerCase();
+  if (/quest|simulado|acurácia|erro|desempenho/.test(text) || (priorityRank === 1 && risk >= 80)) return "questoes";
+  if (/flashcard|resumo|leve|memoriz/.test(text) || (priorityRank === 3 && risk < 55)) return "flashcards";
+  return "leitura";
+};
+
+const estimateReviewMinutes = (args: { risk: number; priorityRank: number; hasTopic: boolean; daysUntilDue: number; reviewType: DueReview["review_type"] }) => {
+  const typeBase = args.reviewType === "questoes" ? 22 : args.reviewType === "leitura" ? 16 : 10;
+  const scopeMinutes = args.hasTopic ? 2 : 6;
+  const urgencyMinutes = args.daysUntilDue === 0 ? 5 : args.daysUntilDue <= 2 ? 3 : 0;
+  const priorityMultiplier = args.priorityRank === 1 ? 1.25 : args.priorityRank === 2 ? 1.1 : 0.9;
+  const riskMinutes = Math.min(10, Math.max(0, args.risk * 0.1));
+  return Math.max(8, Math.min(45, Math.round(((typeBase + scopeMinutes + urgencyMinutes + riskMinutes) * priorityMultiplier) / 5) * 5));
+};
 
 const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [subjects, setSubjects] = useState<any[]>([]);
