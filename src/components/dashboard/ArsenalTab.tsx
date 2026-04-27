@@ -138,6 +138,28 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     return pageTexts.join("\n").replace(/\s+/g, " ").trim();
   };
 
+  const extractPdfTextWithBackend = async (file: File, submissionId: string, fileHash: string) => {
+    const storagePath = `${userId}/edital-submissions/${submissionId}.pdf`;
+    await logPdfFlow(submissionId, "storage_upload_started", "started", { storagePath, fileHash, size: file.size, mime: file.type || null });
+    const { error: uploadError } = await supabase.storage.from("study-materials").upload(storagePath, file, { contentType: "application/pdf", upsert: false });
+    if (uploadError) {
+      await logPdfFlow(submissionId, "storage_upload_failed", "failed", { storagePath }, uploadError.message.includes("already exists") ? "overwrite_blocked" : "upload_failed", "Não foi possível enviar o PDF para fallback seguro.");
+      throw new Error(uploadError.message.includes("already exists") ? "Submissão duplicada bloqueada para impedir sobrescrita. Tente novamente." : "Não foi possível enviar o PDF para processamento seguro.");
+    }
+
+    await logPdfFlow(submissionId, "storage_upload_completed", "success", { storagePath });
+    await logPdfFlow(submissionId, "backend_extraction_started", "started", { storagePath, worker: "backend fallback" });
+    const { data, error } = await supabase.functions.invoke("extract-pdf-text", { body: { submissionId, storagePath, fileHash } });
+    if (error || !data?.success) {
+      const message = data?.error || "Não foi possível extrair texto do PDF no backend.";
+      await logPdfFlow(submissionId, data?.stage || "backend_extraction_failed", "failed", { storagePath }, data?.code || "backend_failed", message);
+      throw new Error(message);
+    }
+
+    await logPdfFlow(submissionId, "backend_extraction_completed", "success", { pages: data.pages, textLength: data.textLength, worker: "backend fallback" });
+    return String(data.editalText || "");
+  };
+
   const processEdital = async () => {
     setProcessing(true);
     try {
