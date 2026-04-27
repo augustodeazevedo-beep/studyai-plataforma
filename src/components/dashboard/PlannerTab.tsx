@@ -490,10 +490,15 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
           <CardHeader className="space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-sm flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" />Revisões: hoje e próximos 7 dias</CardTitle>
-              <Button size="sm" onClick={completeSelectedReviews} disabled={selectedVisibleIds.length === 0}>
-                <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir selecionadas
+              <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" variant={reviewsPaused ? "secondary" : "outline"} onClick={() => setReviewsPaused(prev => !prev)}>
+                <TimerReset className="h-3 w-3 mr-1" /> {reviewsPaused ? "Retomar" : "Pausa rápida"}
+              </Button>
+              <Button size="sm" onClick={completeSelectedReviews} disabled={selectedVisibleIds.length === 0 || reviewsPaused}>
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Concluir selecionadas{selectedEstimatedMinutes > 0 ? ` · ${selectedEstimatedMinutes} min` : ""}
                 {selectedVisibleIds.length > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px]">{selectedVisibleIds.length}</Badge>}
               </Button>
+              </div>
             </div>
             <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
               <div className="space-y-1">
@@ -513,6 +518,13 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-4">
+              <div className="rounded border border-border/50 bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Revisões</p><p className="text-lg font-semibold">{reviewSummary.total}</p></div>
+              <div className="rounded border border-border/50 bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Disciplinas</p><p className="text-lg font-semibold">{reviewSummary.subjects.size}</p></div>
+              <div className="rounded border border-border/50 bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Temas</p><p className="text-lg font-semibold">{reviewSummary.topics.size}</p></div>
+              <div className="rounded border border-border/50 bg-muted/20 p-3"><p className="text-xs text-muted-foreground">Tempo / urgentes</p><p className="text-lg font-semibold">{reviewSummary.minutes} min · {reviewSummary.urgent}</p></div>
+            </div>
+            {reviewsPaused && <div className="rounded border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">Pausa rápida ativa: filtro e seleções ficam preservados até você retomar.</div>}
             {visibleDueReviews.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma revisão pendente para esse filtro nos próximos 7 dias.</p> : visibleDueReviews.map(review => (
               <div key={review.id} className="flex items-start gap-3 rounded border border-border/50 bg-muted/20 p-3">
                 <Checkbox className="mt-1" checked={selectedReviewIds.includes(review.id)} onCheckedChange={(checked) => toggleReviewSelection(review.id, Boolean(checked))} />
@@ -533,6 +545,20 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                 </Button>
               </div>
             ))}
+            {batchReviewLogs.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-2 text-sm font-semibold"><History className="h-4 w-4 text-primary" />Histórico de revisões em lote</div>
+                {batchReviewLogs.slice(0, 5).map(log => (
+                  <div key={log.id} className="rounded border border-border/50 bg-muted/20 p-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{log.after_state?.completedCount || 0} concluídas · {log.after_state?.estimatedMinutes || 0} min</span>
+                      <span className="text-xs text-muted-foreground">{format(new Date(log.created_at), "dd/MM HH:mm")}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{(log.after_state?.topics || []).slice(0, 6).join(" · ")}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
