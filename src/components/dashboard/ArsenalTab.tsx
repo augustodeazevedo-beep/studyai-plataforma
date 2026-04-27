@@ -10,10 +10,6 @@ import { Shield, BookOpen, CheckCircle, Target, Plus, Loader2, Trash2, Upload, F
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface ArsenalTabProps { userId: string; }
 
@@ -48,6 +44,11 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   };
 
   const extractPdfText = async (file: File) => {
+    const [{ default: pdfjsWorker }, pdfjsLib] = await Promise.all([
+      import("pdfjs-dist/build/pdf.worker.mjs?url"),
+      import("pdfjs-dist"),
+    ]);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
     const data = new Uint8Array(await file.arrayBuffer());
     const pdf = await pdfjsLib.getDocument({ data }).promise;
     const pageTexts = await Promise.all(
