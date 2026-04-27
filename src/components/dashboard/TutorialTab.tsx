@@ -106,6 +106,24 @@ const TutorialTab = ({ userId }: TutorialTabProps) => {
         </CardContent>
       </Card>
 
+      <Card className="glass border-primary/20">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Gauge className="h-4 w-4 text-primary" /> Eficiência + Efetividade: a lógica do cálculo</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm text-foreground/90">
+          <p><strong>Eficiência</strong> é estudar o máximo de conteúdo relevante com o menor desperdício de energia. <strong>Efetividade</strong> é converter esse esforço em nota: compreender, lembrar e acertar questões no dia da prova.</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> Busca da eficiência</p>
+              <p className="text-muted-foreground mt-1">O sistema evita alocar tempo demais no que você já domina e pouco no que mais pesa no edital. Ele cruza tempo disponível, intensidade recente, relevância, incidência e estado Psique para sugerir a próxima ação possível — não a rotina idealizada.</p>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+              <p className="font-semibold text-primary flex items-center gap-2"><Target className="h-3.5 w-3.5" /> Busca da efetividade</p>
+              <p className="text-muted-foreground mt-1">O sistema prioriza temas com maior chance de gerar ganho de nota: alto peso, alta incidência, baixa compreensão, baixa taxa de acerto ou alto risco de esquecimento. A meta é acertar mais, não apenas cumprir horas.</p>
+            </div>
+          </div>
+          <p className="text-muted-foreground italic">Em termos simples: a plataforma calcula onde cada minuto de estudo tende a produzir o maior retorno pedagógico, respeitando sua capacidade cognitiva do dia.</p>
+        </CardContent>
+      </Card>
+
       {/* Student Model */}
       <Card className="glass">
         <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" /> Como a IA "Enxerga" Você</CardTitle></CardHeader>
