@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import {
-  CalendarDays, Shield, BarChart3, BookOpen, History,
+  CalendarDays, Shield, BarChart3, BookOpen, History, Activity,
   Sparkles, Brain, MessageCircle, Trophy, Settings, LogOut, Menu, X,
   ChevronLeft, HelpCircle, Palette, Heart,
 } from "lucide-react";
@@ -10,7 +10,7 @@ import BrandLogo from "@/components/brand/BrandLogo";
 
 export type TabKey =
   | "planner" | "arsenal" | "analysis" | "notebooks" | "history"
-  | "predictor" | "coach" | "professor" | "psyche" | "achievements" | "settings" | "tutorial";
+  | "predictor" | "coach" | "professor" | "psyche" | "performance" | "achievements" | "settings" | "tutorial";
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -25,6 +25,7 @@ const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: b
   { key: "planner", label: "Planner", icon: CalendarDays, separator: "Execução" },
   { key: "notebooks", label: "Cadernos", icon: BookOpen },
   { key: "analysis", label: "Análise", icon: BarChart3, separator: "Inteligência" },
+  { key: "performance", label: "Métricas", icon: Activity },
   { key: "coach", label: "Coach.IA", icon: Brain, ai: true },
   { key: "professor", label: "Professor.IA", icon: MessageCircle, ai: true },
   { key: "predictor", label: "Previsor.IA", icon: Sparkles, ai: true },
