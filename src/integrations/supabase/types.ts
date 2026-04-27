@@ -205,6 +205,42 @@ export type Database = {
           },
         ]
       }
+      pdf_processing_logs: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          id: string
+          metadata: Json
+          safe_message: string | null
+          stage: string
+          status: string
+          submission_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          metadata?: Json
+          safe_message?: string | null
+          stage: string
+          status: string
+          submission_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          metadata?: Json
+          safe_message?: string | null
+          stage?: string
+          status?: string
+          submission_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       planner_audit_logs: {
         Row: {
           after_state: Json | null
