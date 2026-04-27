@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
 const clampScore = (value: unknown, fallback = 3) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
@@ -19,10 +22,17 @@ const normalizeName = (value: string) =>
   value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
 const requestSchema = z.object({
-  editalText: z.string().trim().min(20).max(15000),
+  editalText: z.string().trim().min(20, "editalText deve conter texto válido").max(15000),
   targetExam: z.string().trim().max(180).nullish(),
   targetPosition: z.string().trim().max(180).nullish(),
   banca: z.string().trim().max(120).nullish(),
+  forceReprocess: z.boolean().optional().default(false),
+});
+
+const sourceSchema = z.object({
+  title: z.string().trim().max(180).optional().default("Fonte pública"),
+  url: z.string().trim().max(600).optional().default(""),
+  note: z.string().trim().max(280).optional().default(""),
 });
 
 const extractedSubjectsSchema = z.object({
@@ -30,62 +40,178 @@ const extractedSubjectsSchema = z.object({
     name: z.string().trim().min(1).max(180),
     relevance: z.coerce.number().min(1).max(5),
     incidence: z.coerce.number().min(1).max(5),
-    topics: z.array(z.string().trim().min(1).max(240)).default([]),
+    relevanceReason: z.string().trim().max(360).optional().default(""),
+    incidenceReason: z.string().trim().max(360).optional().default(""),
+    sources: z.array(sourceSchema).optional().default([]),
+    topics: z.array(z.union([
+      z.string().trim().min(1).max(240),
+      z.object({ name: z.string().trim().min(1).max(240) }),
+    ])).default([]),
   })).min(1),
 });
+
+type DetailItem = {
+  name: string;
+  subject?: string;
+  reason: string;
+  previous?: Record<string, number | string | null>;
+  next?: Record<string, number | string | null>;
+  sources?: Array<{ title?: string; url?: string; note?: string }>;
+};
+
+type ProcessingSummary = {
+  counts: {
+    insertedSubjects: number;
+    skippedSubjects: number;
+    updatedSubjects: number;
+    insertedTopics: number;
+    skippedTopics: number;
+    insertedPlans: number;
+    skippedPlans: number;
+    updatedPlans: number;
+  };
+  subjects: { inserted: DetailItem[]; skipped: DetailItem[]; updated: DetailItem[] };
+  topics: { inserted: DetailItem[]; skipped: DetailItem[] };
+  plans: { inserted: DetailItem[]; skipped: DetailItem[]; updated: DetailItem[] };
+  research: { status: "consulted" | "not_configured" | "failed"; summary: string; citations: string[]; queryHints: string[] };
+};
+
+const createSummary = (): ProcessingSummary => ({
+  counts: {
+    insertedSubjects: 0,
+    skippedSubjects: 0,
+    updatedSubjects: 0,
+    insertedTopics: 0,
+    skippedTopics: 0,
+    insertedPlans: 0,
+    skippedPlans: 0,
+    updatedPlans: 0,
+  },
+  subjects: { inserted: [], skipped: [], updated: [] },
+  topics: { inserted: [], skipped: [] },
+  plans: { inserted: [], skipped: [], updated: [] },
+  research: { status: "not_configured", summary: "", citations: [], queryHints: [] },
+});
+
+const pushDetail = (summary: ProcessingSummary, path: "subjects.inserted" | "subjects.skipped" | "subjects.updated" | "topics.inserted" | "topics.skipped" | "plans.inserted" | "plans.skipped" | "plans.updated", item: DetailItem) => {
+  const [group, bucket] = path.split(".") as ["subjects" | "topics" | "plans", string];
+  (summary[group] as any)[bucket].push(item);
+};
+
+const buildPriority = (relevance: number, incidence: number) => Number(((relevance + incidence) / 2).toFixed(2));
+
+const buildResearchQueries = (targetExam?: string | null, targetPosition?: string | null, banca?: string | null) => {
+  const exam = cleanText(targetExam, 120) || "concurso público";
+  const position = cleanText(targetPosition, 120) || "cargo semelhante";
+  const board = cleanText(banca, 80) || "banca organizadora";
+  return [
+    `site da banca ${board} provas anteriores ${position} ${exam}`,
+    `${board} edital anterior conteúdo programático ${position} ${exam}`,
+    `${board} provas gabaritos ${position} disciplinas mais cobradas`,
+  ];
+};
+
+const getPublicResearchContext = async (targetExam?: string | null, targetPosition?: string | null, banca?: string | null) => {
+  const queryHints = buildResearchQueries(targetExam, targetPosition, banca);
+  const apiKey = Deno.env.get("PERPLEXITY_API_KEY");
+  if (!apiKey) {
+    return {
+      status: "not_configured" as const,
+      summary: `Consulta pública externa não configurada no backend. Use as seguintes buscas para auditoria humana: ${queryHints.join(" | ")}`,
+      citations: [] as string[],
+      queryHints,
+    };
+  }
+
+  try {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "sonar",
+        temperature: 0.1,
+        max_tokens: 1800,
+        messages: [
+          { role: "system", content: "Você pesquisa concursos públicos brasileiros em fontes abertas e resume evidências objetivas, priorizando páginas oficiais de bancas, provas, gabaritos e editais anteriores." },
+          { role: "user", content: `Pesquise evidências públicas para estimar relevância e incidência de disciplinas. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}. Priorize: ${queryHints.join("; ")}. Responda em português com achados curtos e fontes.` },
+        ],
+      }),
+    });
+
+    if (!response.ok) throw new Error(`research status ${response.status}`);
+    const data = await response.json();
+    return {
+      status: "consulted" as const,
+      summary: cleanText(data.choices?.[0]?.message?.content || "Consulta pública realizada sem resumo estruturado.", 3500),
+      citations: Array.isArray(data.citations) ? data.citations.slice(0, 12).map((url: unknown) => String(url)) : [],
+      queryHints,
+    };
+  } catch (error) {
+    console.error("public research failed:", error);
+    return {
+      status: "failed" as const,
+      summary: "A consulta pública externa falhou; o processamento seguirá com o edital e os critérios técnicos declarados.",
+      citations: [] as string[],
+      queryHints,
+    };
+  }
+};
+
+const parseTopics = (topics: Array<string | { name: string }>) => {
+  const seen = new Set<string>();
+  return topics.map((topic) => cleanText(typeof topic === "string" ? topic : topic.name, 240)).filter((topic) => {
+    if (!topic) return false;
+    const key = normalizeName(topic);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    if (!authHeader) return jsonResponse({ error: "Sessão não autenticada." }, 401);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabase = createClient(supabaseUrl, supabaseKey, { global: { headers: { Authorization: authHeader } } });
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error("Unauthorized");
+    if (userError || !user) return jsonResponse({ error: "Sessão inválida." }, 401);
 
     const requestBody = requestSchema.safeParse(await req.json());
     if (!requestBody.success) {
-      return new Response(JSON.stringify({ error: "Payload inválido para processar edital", details: requestBody.error.flatten().fieldErrors }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Payload inválido para processar edital", details: requestBody.error.flatten().fieldErrors }, 400);
     }
 
-    const { editalText, targetExam, targetPosition, banca } = requestBody.data;
+    const { editalText, targetExam, targetPosition, banca, forceReprocess } = requestBody.data;
     const edital = cleanText(editalText);
-
-    const userContent = `Analise o seguinte conteúdo programático de edital. Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.\n\n${edital}`;
+    const research = await getPublicResearchContext(targetExam, targetPosition, banca);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `Você é um especialista em concursos públicos brasileiros com profundo conhecimento de bancas organizadoras (CESPE/CEBRASPE, FGV, FCC, VUNESP, etc.).
+    const systemPrompt = `Você é especialista em concursos públicos brasileiros e no algoritmo G-Force da Study.AI.
+Extraia disciplinas e tópicos do edital, sugerindo apenas os vetores Relevância e Incidência.
+Relevância = peso/importância da matéria no edital atual.
+Incidência = recorrência histórica em provas anteriores ou semelhantes do mesmo cargo/banca.
+Não estime Compreensão, Psique ou Intensidade: esses vetores vêm de registros do usuário no Arsenal, Planner e Bem Estar.
+Use o contexto de pesquisa pública quando disponível; se as fontes forem insuficientes, informe justificativa conservadora.
+Retorne fontes públicas resumidas quando houver URLs/citações no contexto.`;
 
-Sua tarefa é extrair do edital:
-1. Todas as DISCIPLINAS do conteúdo programático
-2. Os TÓPICOS de cada disciplina
-3. O grau de RELEVÂNCIA (1-5) de cada disciplina para o cargo, baseado no peso provável na prova
-4. O grau de INCIDÊNCIA (1-5) de cada disciplina, baseado na frequência com que aparece em provas anteriores de cargos iguais ou semelhantes, especialmente da mesma banca organizadora. Se a banca não tiver histórico para aquele cargo, considere provas de outras bancas para cargos semelhantes.
+    const userContent = `Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.
 
-Critérios para INCIDÊNCIA:
-- 5: Cai em praticamente todas as provas (>90% das provas)
-- 4: Frequente (70-90%)
-- 3: Regular (40-70%)
-- 2: Eventual (20-40%)
-- 1: Raro (<20%)
+Contexto de consulta pública:
+Status: ${research.status}
+Resumo: ${research.summary}
+Citações: ${research.citations.join("\n") || "sem URLs disponíveis"}
+Buscas sugeridas: ${research.queryHints.join(" | ")}
 
-Critérios para RELEVÂNCIA:
-- 5: Peso muito alto na prova (muitas questões ou peso multiplicador)
-- 4: Peso alto
-- 3: Peso médio
-- 2: Peso baixo
-- 1: Peso muito baixo ou caráter apenas eliminatório`;
+Edital:
+${edital}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -100,7 +226,7 @@ Critérios para RELEVÂNCIA:
           type: "function",
           function: {
             name: "extract_subjects",
-            description: "Extract subjects, topics, relevance and incidence from exam syllabus",
+            description: "Extrai disciplinas, tópicos, relevância, incidência, justificativas e fontes públicas do edital.",
             parameters: {
               type: "object",
               properties: {
@@ -109,10 +235,13 @@ Critérios para RELEVÂNCIA:
                   items: {
                     type: "object",
                     properties: {
-                      name: { type: "string", description: "Nome da disciplina" },
-                      relevance: { type: "number", description: "Relevância 1-5 (peso na prova)" },
-                      incidence: { type: "number", description: "Incidência 1-5 (frequência em provas passadas)" },
-                      topics: { type: "array", items: { type: "string" }, description: "Lista de tópicos específicos" },
+                      name: { type: "string" },
+                      relevance: { type: "number" },
+                      incidence: { type: "number" },
+                      relevanceReason: { type: "string" },
+                      incidenceReason: { type: "string" },
+                      sources: { type: "array", items: { type: "object", properties: { title: { type: "string" }, url: { type: "string" }, note: { type: "string" } } } },
+                      topics: { type: "array", items: { type: "string" } },
                     },
                     required: ["name", "relevance", "incidence", "topics"],
                   },
@@ -127,8 +256,8 @@ Critérios para RELEVÂNCIA:
     });
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 429) return jsonResponse({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }, 429);
+      if (response.status === 402) return jsonResponse({ error: "Créditos insuficientes para análise com IA." }, 402);
       const errText = await response.text();
       console.error("AI gateway error:", response.status, errText);
       throw new Error(`AI error: ${response.status}`);
@@ -136,127 +265,171 @@ Critérios para RELEVÂNCIA:
 
     const aiResult = await response.json();
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in AI response");
+    if (!toolCall) throw new Error("A IA não retornou dados estruturados.");
 
     const parsed = extractedSubjectsSchema.safeParse(JSON.parse(toolCall.function.arguments));
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: "A IA retornou disciplinas em formato inválido", details: parsed.error.flatten().fieldErrors }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "A IA retornou disciplinas em formato inválido", details: parsed.error.flatten().fieldErrors }, 422);
     }
-
-    const subjects = parsed.data.subjects;
 
     const { data: existingSubjectsData, error: existingSubjectsError } = await supabase
       .from("user_subjects")
-      .select("id, name")
+      .select("id, name, weight, incidence, knowledge_level")
       .eq("user_id", user.id);
     if (existingSubjectsError) throw existingSubjectsError;
 
     const existingSubjects = new Map((existingSubjectsData || []).map((subject: any) => [normalizeName(subject.name), subject]));
-    const summary = { insertedSubjects: 0, skippedSubjects: 0, insertedTopics: 0, skippedTopics: 0, insertedPlans: 0, skippedPlans: 0 };
+    const summary = createSummary();
+    summary.research = research;
+    const processedSubjects = [];
 
-    // Insert subjects and topics
-    const insertedSubjects = [];
-    for (const s of subjects) {
-      const name = cleanText(s.name, 180);
+    for (const extracted of parsed.data.subjects) {
+      const name = cleanText(extracted.name, 180);
       if (!name) continue;
-      const subjectKey = normalizeName(name);
-      const relevance = clampScore(s.relevance);
-      const incidence = clampScore(s.incidence);
-      let subjectData = existingSubjects.get(subjectKey) as any;
 
-      if (subjectData) {
-        summary.skippedSubjects += 1;
+      const relevance = clampScore(extracted.relevance);
+      const incidence = clampScore(extracted.incidence);
+      const subjectKey = normalizeName(name);
+      let subjectData = existingSubjects.get(subjectKey) as any;
+      const sources = extracted.sources?.length ? extracted.sources : research.citations.slice(0, 3).map((url) => ({ title: "Fonte pública consultada", url, note: "Referência usada para estimar incidência/relevância" }));
+
+      if (subjectData && forceReprocess) {
+        const previous = { relevance: Number(subjectData.weight ?? 0), incidence: Number(subjectData.incidence ?? 0) };
+        const { data: updatedSubject, error: updateSubjectError } = await supabase
+          .from("user_subjects")
+          .update({ weight: relevance, incidence })
+          .eq("id", subjectData.id)
+          .select("id, name, weight, incidence, knowledge_level")
+          .single();
+        if (updateSubjectError) throw updateSubjectError;
+        subjectData = updatedSubject;
+        existingSubjects.set(subjectKey, subjectData);
+        summary.counts.updatedSubjects += 1;
+        pushDetail(summary, "subjects.updated", { name, reason: "Reprocessamento ativado: relevância/incidência recalculadas.", previous, next: { relevance, incidence }, sources });
+      } else if (subjectData) {
+        summary.counts.skippedSubjects += 1;
+        pushDetail(summary, "subjects.skipped", { name, reason: "Disciplina equivalente já existia no Arsenal.", next: { relevance: Number(subjectData.weight ?? 0), incidence: Number(subjectData.incidence ?? 0) }, sources });
       } else {
+        const insertPayload = { user_id: user.id, name, weight: relevance, incidence, knowledge_level: 1 };
         const { data: insertedSubject, error: subjectError } = await supabase
           .from("user_subjects")
-          .insert({ user_id: user.id, name, weight: relevance, incidence, knowledge_level: 1 })
-          .select("id, name")
+          .insert(insertPayload)
+          .select("id, name, weight, incidence, knowledge_level")
           .single();
 
-        if (subjectError) throw subjectError;
-        subjectData = insertedSubject;
+        if (subjectError) {
+          if ((subjectError as any).code !== "23505") throw subjectError;
+          const { data: racedSubject, error: racedSubjectError } = await supabase
+            .from("user_subjects")
+            .select("id, name, weight, incidence, knowledge_level")
+            .eq("user_id", user.id);
+          if (racedSubjectError) throw racedSubjectError;
+          subjectData = (racedSubject || []).find((subject: any) => normalizeName(subject.name) === subjectKey);
+          if (!subjectData) throw subjectError;
+          summary.counts.skippedSubjects += 1;
+          pushDetail(summary, "subjects.skipped", { name, reason: "Disciplina equivalente foi criada em processamento simultâneo.", next: { relevance: Number(subjectData.weight ?? 0), incidence: Number(subjectData.incidence ?? 0) }, sources });
+        } else {
+          subjectData = insertedSubject;
+          summary.counts.insertedSubjects += 1;
+          pushDetail(summary, "subjects.inserted", { name, reason: "Nova disciplina identificada no edital.", next: { relevance, incidence }, sources });
+        }
         existingSubjects.set(subjectKey, subjectData);
-        insertedSubjects.push({ ...s, name, relevance, incidence, id: subjectData.id });
-        summary.insertedSubjects += 1;
       }
 
-      const topics = Array.isArray(s.topics) ? s.topics.map((t: unknown) => cleanText(t, 240)).filter(Boolean) : [];
-      if (topics.length > 0) {
-        const { data: existingTopicsData, error: existingTopicsError } = await supabase
-          .from("topics")
-          .select("name")
-          .eq("user_id", user.id)
-          .eq("subject_id", subjectData.id);
-        if (existingTopicsError) throw existingTopicsError;
+      processedSubjects.push({ ...extracted, id: subjectData.id, name, relevance, incidence, sources });
 
-        const existingTopicNames = new Set((existingTopicsData || []).map((topic: any) => normalizeName(topic.name)));
-        const nextOrderIndex = existingTopicNames.size;
-        const topicRows = topics
-          .filter((t: string) => {
-            const key = normalizeName(t);
-            if (existingTopicNames.has(key)) { summary.skippedTopics += 1; return false; }
-            existingTopicNames.add(key);
-            return true;
-          })
-          .map((t: string, i: number) => ({ user_id: user.id, subject_id: subjectData.id, name: t, order_index: nextOrderIndex + i }));
+      const { data: existingTopicsData, error: existingTopicsError } = await supabase
+        .from("topics")
+        .select("id, name, order_index")
+        .eq("user_id", user.id)
+        .eq("subject_id", subjectData.id);
+      if (existingTopicsError) throw existingTopicsError;
 
-        if (topicRows.length > 0) {
-          const { error: topicsError } = await supabase.from("topics").insert(topicRows);
-          if (topicsError) throw topicsError;
-          summary.insertedTopics += topicRows.length;
+      const existingTopicNames = new Set((existingTopicsData || []).map((topic: any) => normalizeName(topic.name)));
+      let nextOrderIndex = Math.max(-1, ...(existingTopicsData || []).map((topic: any) => Number(topic.order_index) || 0)) + 1;
+      for (const topicName of parseTopics(extracted.topics)) {
+        const topicKey = normalizeName(topicName);
+        if (existingTopicNames.has(topicKey)) {
+          summary.counts.skippedTopics += 1;
+          pushDetail(summary, "topics.skipped", { name: topicName, subject: name, reason: "Tópico equivalente já existia nesta disciplina." });
+          continue;
+        }
+
+        const { error: topicError } = await supabase.from("topics").insert({ user_id: user.id, subject_id: subjectData.id, name: topicName, order_index: nextOrderIndex });
+        if (topicError) {
+          if ((topicError as any).code !== "23505") throw topicError;
+          summary.counts.skippedTopics += 1;
+          pushDetail(summary, "topics.skipped", { name: topicName, subject: name, reason: "Tópico equivalente foi criado em processamento simultâneo." });
+        } else {
+          existingTopicNames.add(topicKey);
+          nextOrderIndex += 1;
+          summary.counts.insertedTopics += 1;
+          pushDetail(summary, "topics.inserted", { name: topicName, subject: name, reason: "Novo tópico identificado no edital." });
         }
       }
 
-      // Also create study_plan entry with incidence data
+      const priorityScore = buildPriority(relevance, incidence);
+      const planPayload = {
+        relevance,
+        incidence,
+        priority_score: priorityScore,
+        recommended_hours_weekly: Math.ceil(priorityScore),
+        gap_score: 5,
+      };
       const { data: existingPlan, error: existingPlanError } = await supabase
         .from("study_plan")
-        .select("id")
+        .select("id, relevance, incidence, priority_score, recommended_hours_weekly")
         .eq("user_id", user.id)
         .eq("subject_id", subjectData.id)
         .maybeSingle();
       if (existingPlanError) throw existingPlanError;
 
-      if (existingPlan) {
-        summary.skippedPlans += 1;
-        continue;
+      if (existingPlan && forceReprocess) {
+        const previous = {
+          relevance: Number(existingPlan.relevance ?? 0),
+          incidence: Number(existingPlan.incidence ?? 0),
+          priority: Number(existingPlan.priority_score ?? 0),
+        };
+        const { error: updatePlanError } = await supabase
+          .from("study_plan")
+          .update(planPayload)
+          .eq("id", existingPlan.id);
+        if (updatePlanError) throw updatePlanError;
+        summary.counts.updatedPlans += 1;
+        pushDetail(summary, "plans.updated", { name, reason: "Plano recalculado com os novos vetores Relevância/Incidência.", previous, next: { relevance, incidence, priority: priorityScore } });
+      } else if (existingPlan) {
+        summary.counts.skippedPlans += 1;
+        pushDetail(summary, "plans.skipped", { name, reason: "Plano já existia para esta disciplina.", next: { relevance: Number(existingPlan.relevance ?? 0), incidence: Number(existingPlan.incidence ?? 0), priority: Number(existingPlan.priority_score ?? 0) } });
+      } else {
+        const { error: planError } = await supabase.from("study_plan").insert({
+          user_id: user.id,
+          subject_id: subjectData.id,
+          ...planPayload,
+          accuracy: 0,
+          performance: 0,
+        });
+        if (planError) {
+          if ((planError as any).code !== "23505") throw planError;
+          summary.counts.skippedPlans += 1;
+          pushDetail(summary, "plans.skipped", { name, reason: "Plano equivalente foi criado em processamento simultâneo." });
+        } else {
+          summary.counts.insertedPlans += 1;
+          pushDetail(summary, "plans.inserted", { name, reason: "Plano inicial criado a partir do edital.", next: { relevance, incidence, priority: priorityScore } });
+        }
       }
-
-      const { error: planError } = await supabase.from("study_plan").insert({
-        user_id: user.id,
-        subject_id: subjectData.id,
-        relevance,
-        incidence,
-        accuracy: 0,
-        performance: 0,
-        gap_score: 5,
-        priority_score: (relevance + incidence) / 2,
-        recommended_hours_weekly: Math.ceil((relevance + incidence) / 2),
-      });
-      if (planError) throw planError;
-      summary.insertedPlans += 1;
     }
 
-    if (summary.insertedSubjects === 0 && summary.insertedTopics === 0 && summary.insertedPlans === 0) {
-      return new Response(JSON.stringify({ success: true, subjects: insertedSubjects, summary, message: "Nenhuma disciplina ou tópico novo foi inserido; este edital parece já ter sido processado." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const insertedTotal = summary.counts.insertedSubjects + summary.counts.insertedTopics + summary.counts.insertedPlans;
+    const updatedTotal = summary.counts.updatedSubjects + summary.counts.updatedPlans;
+    const message = insertedTotal === 0 && updatedTotal === 0
+      ? "Nenhum item novo foi inserido; este edital parece já ter sido processado."
+      : forceReprocess
+        ? "Edital reprocessado sem duplicar registros."
+        : "Edital processado com deduplicação ativa.";
 
-    if (insertedSubjects.length === 0 && summary.insertedTopics === 0 && summary.insertedPlans === 0) {
-      return new Response(JSON.stringify({ error: "Nenhuma disciplina válida foi gerada pela IA." }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ success: true, subjects: insertedSubjects, summary }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: true, subjects: processedSubjects, summary, message });
   } catch (e) {
     console.error("process-edital error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: e instanceof Error ? e.message : "Erro desconhecido ao processar edital" }, 500);
   }
 });
