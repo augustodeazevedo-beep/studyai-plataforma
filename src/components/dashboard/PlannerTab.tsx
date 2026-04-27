@@ -47,6 +47,7 @@ const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [topics, setTopics] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -73,7 +74,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const [addDate, setAddDate] = useState<string>("");
 
   // Quick session form
-  const [sessionForm, setSessionForm] = useState({ subject_id: "", material_name: "", pages_start: "", pages_end: "", duration_minutes: "60", comprehension_rating: 3 });
+  const [sessionForm, setSessionForm] = useState({ subject_id: "", topic_id: "", material_name: "", pages_start: "", pages_end: "", duration_minutes: "60", comprehension_rating: 3 });
 
   const loadData = useCallback(async () => {
     const monthStart = format(startOfMonth(currentMonth), "yyyy-MM-dd");
@@ -83,9 +84,10 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const heatmapStart = format(ninetyDaysAgo, "yyyy-MM-dd");
 
-    const [subRes, sesRes, blockRes, psyRes, checkRes, queueData, auditRes] = await Promise.all([
+    const [subRes, topicRes, sesRes, blockRes, psyRes, checkRes, queueData, auditRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", userId),
-      supabase.from("study_sessions").select("*, user_subjects(name)").eq("user_id", userId).gte("started_at", heatmapStart).order("started_at", { ascending: false }),
+      supabase.from("topics").select("*").eq("user_id", userId).order("order_index"),
+      supabase.from("study_sessions").select("*, user_subjects(name), topics(name)").eq("user_id", userId).gte("started_at", heatmapStart).order("started_at", { ascending: false }),
       supabase.from("study_calendar_blocks").select("*, user_subjects(name)").eq("user_id", userId).gte("block_date", monthStart).lte("block_date", monthEnd).order("order_index"),
       supabase.from("psyche_profiles").select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("psyche_checkins").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(5),
@@ -93,6 +95,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
       (supabase as any).from("planner_audit_logs").select("*, user_subjects(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(30),
     ]);
     setSubjects(subRes.data || []);
+    setTopics(topicRes.data || []);
     setSessions(sesRes.data || []);
     setBlocks((blockRes.data || []).map((b: any) => ({ ...b, subject_name: b.user_subjects?.name })));
     setPsycheProfile(psyRes.data);
@@ -271,7 +274,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
   const addSession = async () => {
     if (!sessionForm.subject_id) { toast.error("Selecione uma disciplina"); return; }
     const { error } = await supabase.from("study_sessions").insert({
-      user_id: userId, subject_id: sessionForm.subject_id, material_name: sessionForm.material_name || null,
+      user_id: userId, subject_id: sessionForm.subject_id, topic_id: sessionForm.topic_id || null, material_name: sessionForm.material_name || null,
       pages_start: sessionForm.pages_start ? parseInt(sessionForm.pages_start) : null,
       pages_end: sessionForm.pages_end ? parseInt(sessionForm.pages_end) : null,
       duration_minutes: sessionForm.duration_minutes ? parseInt(sessionForm.duration_minutes) : 0,
@@ -280,10 +283,12 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
     });
     if (error) { toast.error("Erro ao salvar sessão"); return; }
     toast.success("Sessão registrada! G-Force recalculando automaticamente…");
-    setSessionForm({ subject_id: "", material_name: "", pages_start: "", pages_end: "", duration_minutes: "60", comprehension_rating: 3 });
+    setSessionForm({ subject_id: "", topic_id: "", material_name: "", pages_start: "", pages_end: "", duration_minutes: "60", comprehension_rating: 3 });
     checkAchievements(userId);
     await recalculateAndPersistPlan(userId, { eventType: "study_session_registered", eventSource: "planner_quick_session", subjectId: sessionForm.subject_id, explanation: "Tempo real e compreensão da sessão alteraram os vetores de intensidade e compreensão." });
     await enforceForgettingCurve(userId);
+    const { data: reviewData } = await supabase.functions.invoke("recalculate-review-schedule", { body: { trigger: "study_session", subjectId: sessionForm.subject_id, topicId: sessionForm.topic_id || null } });
+    if (reviewData?.suggestions?.length) toast.info("Revisões recalculadas pela curva do esquecimento.");
     loadData();
   };
 
@@ -614,13 +619,21 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs">Disciplina</Label>
-                  <Select value={sessionForm.subject_id} onValueChange={v => setSessionForm(p => ({ ...p, subject_id: v }))}>
+                  <Select value={sessionForm.subject_id} onValueChange={v => setSessionForm(p => ({ ...p, subject_id: v, topic_id: "" }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>{subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs">Material</Label>
+                  <Label className="text-xs">Tema</Label>
+                  <Select value={sessionForm.topic_id} onValueChange={v => setSessionForm(p => ({ ...p, topic_id: v }))} disabled={!sessionForm.subject_id}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Opcional" /></SelectTrigger>
+                    <SelectContent>{topics.filter(t => t.subject_id === sessionForm.subject_id).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Material</Label>
                   <Input className="h-8 text-xs" value={sessionForm.material_name} onChange={e => setSessionForm(p => ({ ...p, material_name: e.target.value }))} placeholder="PDF, Videoaula, etc." />
                 </div>
               </div>
@@ -664,7 +677,7 @@ const PlannerTab = ({ userId }: PlannerTabProps) => {
                     <tr key={s.id} className="border-b border-border/50">
                       <td className="py-2">{format(new Date(s.started_at), "dd/MM")}</td>
                       <td>{(s as any).user_subjects?.name || "—"}</td>
-                      <td>{s.material_name || "—"}</td>
+                      <td>{s.material_name || (s as any).topics?.name || "—"}</td>
                       <td>{s.pages_start && s.pages_end ? `${s.pages_start}-${s.pages_end}` : "—"}</td>
                       <td>{s.duration_minutes || 0}min</td>
                       <td>{s.comprehension_rating ? "⭐".repeat(s.comprehension_rating) : "—"}</td>
