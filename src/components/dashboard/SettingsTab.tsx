@@ -54,7 +54,7 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
         const days = data.study_days || [];
         const legacyMinutes = Math.round((data.daily_hours || 2) * 60);
         setStudyDays(days);
-        setStudyMinutesByDay(data.study_minutes_by_day || Object.fromEntries(days.map((day: string) => [day, legacyMinutes])));
+        setStudyMinutesByDay((data.study_minutes_by_day && typeof data.study_minutes_by_day === "object" && !Array.isArray(data.study_minutes_by_day) ? data.study_minutes_by_day : Object.fromEntries(days.map((day: string) => [day, legacyMinutes]))) as Record<string, number>);
       }
     });
   }, [userId]);
@@ -172,19 +172,25 @@ const SettingsTab = ({ userId }: SettingsTabProps) => {
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Tempo diário de estudo</Label>
-            <div className="flex gap-3 items-end">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Horas</Label>
-                <Input type="number" min={0} max={16} value={dailyHours} onChange={(e) => setDailyHours(String(Math.max(0, Math.min(16, Number(e.target.value) || 0))))} className="w-20 text-center" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Minutos</Label>
-                <Input type="number" min={0} max={59} step={5} value={dailyMinutes} onChange={(e) => setDailyMinutes(String(Math.max(0, Math.min(59, Number(e.target.value) || 0))))} className="w-20 text-center" />
-              </div>
-              <span className="text-sm text-muted-foreground pb-2">
-                = {Number(dailyHours)}h{Number(dailyMinutes) > 0 ? `${dailyMinutes}min` : ""}
-              </span>
+            <Label>Tempo de estudo por dia</Label>
+            <div className="space-y-3">
+              {DAYS_OF_WEEK.filter((day) => studyDays.includes(day.key)).map((day) => {
+                const total = Number(studyMinutesByDay[day.key] || 0);
+                return (
+                  <div key={day.key} className="grid grid-cols-[3rem_1fr_1fr] gap-2 items-end rounded-lg border border-border/60 p-3">
+                    <span className="text-sm font-medium text-primary pb-2">{day.label}</span>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Horas</Label>
+                      <Input type="number" min={0} value={Math.floor(total / 60)} onChange={(e) => updateDayMinutes(day.key, "hours", e.target.value)} className="text-center" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Minutos</Label>
+                      <Input type="number" min={0} max={59} step={5} value={total % 60} onChange={(e) => updateDayMinutes(day.key, "minutes", e.target.value)} className="text-center" />
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground">Total semanal: <strong className="text-primary">{formatMinutes(studyDays.reduce((sum, day) => sum + Number(studyMinutesByDay[day] || 0), 0))}</strong></p>
             </div>
           </div>
         </CardContent>
