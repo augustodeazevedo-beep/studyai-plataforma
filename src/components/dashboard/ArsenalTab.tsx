@@ -22,6 +22,7 @@ const processEditalPayloadSchema = z.object({
   targetExam: z.string().trim().max(180).nullable().optional(),
   targetPosition: z.string().trim().max(180).nullable().optional(),
   banca: z.string().trim().max(120).nullable().optional(),
+  submissionId: z.string().uuid().optional(),
   forceReprocess: z.boolean().optional(),
 });
 
@@ -175,6 +176,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
         targetExam: profile.target_exam,
         targetPosition: profile.target_position,
         banca: profile.banca,
+        submissionId,
         forceReprocess,
       };
 
