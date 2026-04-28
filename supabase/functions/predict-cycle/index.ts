@@ -23,7 +23,14 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Missing authorization header");
 
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("predict-cycle configuration error: missing backend URL or publishable key");
+      return jsonResponse({ error: "Configuração interna indisponível. Tente novamente em instantes." }, 500);
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
@@ -31,7 +38,7 @@ Deno.serve(async (req) => {
     if (!user) throw new Error("Unauthorized");
 
     const { mode, dailyMinutes, startDate, subjectIds } = await req.json();
-    if (mode !== "predict_date" && mode !== "daily_minutes") {
+    if (mode !== "predict_date" && mode !== "calculate_rhythm") {
       return jsonResponse({ error: "Invalid prediction mode" }, 400);
     }
     if (!Array.isArray(subjectIds) || subjectIds.length === 0 || subjectIds.length > MAX_SUBJECT_IDS || !subjectIds.every((id) => typeof id === "string" && UUID_REGEX.test(id))) {
