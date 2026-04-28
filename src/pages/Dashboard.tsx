@@ -18,6 +18,7 @@ import TutorialTab from "@/components/dashboard/TutorialTab";
 import PsycheTab from "@/components/dashboard/PsycheTab";
 import PerformanceTab from "@/components/dashboard/PerformanceTab";
 import BrandLogo from "@/components/brand/BrandLogo";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -31,12 +32,20 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkOnboarding = async (userId: string) => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("onboarding_completed")
         .eq("user_id", userId)
         .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        toast.error("Não foi possível verificar seu onboarding agora.");
+        setLoading(false);
+        return;
+      }
       if (data && !data.onboarding_completed) {
         navigate("/onboarding");
         return;
@@ -62,7 +71,7 @@ const Dashboard = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { cancelled = true; subscription.unsubscribe(); };
   }, [navigate]);
 
   const handleLogout = async () => {
@@ -109,7 +118,7 @@ const Dashboard = () => {
       onLogout={handleLogout}
       userName={displayName}
     >
-      {renderTab()}
+      <div>{renderTab()}</div>
     </DashboardLayout>
   );
 };
