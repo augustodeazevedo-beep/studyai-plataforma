@@ -13,6 +13,8 @@ import { Shield, BookOpen, CheckCircle, Target, Plus, Loader2, Trash2, Upload, F
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
+import { recalculateAndPersistPlan } from "@/lib/planner-adaptation";
 import { z } from "zod";
 
 const MAX_PDF_SIZE_BYTES = 20 * 1024 * 1024;
@@ -68,6 +70,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const [forceReprocess, setForceReprocess] = useState(false);
   const [processingSummary, setProcessingSummary] = useState<ProcessingSummary | null>(null);
   const [pdfFailure, setPdfFailure] = useState<{ submissionId: string; stage: string; message: string; code: string; canRetry: boolean } | null>(null);
+  const [savingSubjectId, setSavingSubjectId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -313,6 +316,69 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
   const getSubjectPlan = (subjectId: string) => plan.find(p => p.subject_id === subjectId);
 
+  const clampVector = (value: number) => Math.min(5, Math.max(1, Math.round(Number(value) || 3)));
+
+  const setSubjectVectorLocal = (subjectId: string, field: "weight" | "incidence" | "knowledge_level", value: number) => {
+    const nextValue = clampVector(value);
+    setSubjects(prev => prev.map(subject => subject.id === subjectId ? { ...subject, [field]: nextValue } : subject));
+  };
+
+  const updateSubjectVector = async (subject: any, field: "weight" | "incidence" | "knowledge_level", value: number) => {
+    const nextValue = clampVector(value);
+    const previousValue = clampVector(Number(subject[field] ?? 3));
+
+    setSavingSubjectId(subject.id);
+    try {
+      const { error } = await (supabase as any)
+        .from("user_subjects")
+        .update({ [field]: nextValue })
+        .eq("id", subject.id)
+        .eq("user_id", userId);
+      if (error) throw error;
+
+      await recalculateAndPersistPlan(userId, {
+        eventType: "manual_gforce_vector_adjustment",
+        eventSource: "arsenal_subject_vectors",
+        subjectId: subject.id,
+        explanation: "Ajuste manual do usuário em vetores G-Force da disciplina no Arsenal.",
+        metadata: { field, previousValue, nextValue, subjectName: subject.name },
+      });
+
+      toast.success("Vetores atualizados e plano recalculado.");
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível atualizar o vetor.");
+      loadData();
+    } finally {
+      setSavingSubjectId(null);
+    }
+  };
+
+  const renderVectorControl = (subject: any, field: "weight" | "incidence" | "knowledge_level", label: string, helper: string) => {
+    const value = clampVector(Number(subject[field] ?? 3));
+    const saving = savingSubjectId === subject.id;
+    return (
+      <div className="rounded-xl border border-border/60 bg-muted/10 p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <Label className="text-xs font-medium">{label}</Label>
+            <p className="text-[10px] text-muted-foreground">{helper}</p>
+          </div>
+          <Badge variant="outline" className="text-[10px] min-w-10 justify-center">{value}/5</Badge>
+        </div>
+        <Slider
+          min={1}
+          max={5}
+          step={1}
+          value={[value]}
+          disabled={saving}
+          onValueChange={([next]) => setSubjectVectorLocal(subject.id, field, next)}
+          onValueCommit={([next]) => updateSubjectVector(subject, field, next)}
+        />
+      </div>
+    );
+  };
+
   const renderDetailList = (items: SummaryDetail[], empty: string) => (
     items.length ? (
       <div className="space-y-2">
@@ -511,21 +577,38 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
                   <CardTitle className="text-primary text-sm">{s.name}</CardTitle>
                   <Button variant="ghost" size="icon" onClick={() => deleteSubject(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
                 </div>
-                <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-                  <span>Relevância: <strong className="text-foreground">{subPlan?.relevance || s.weight}/5</strong></span>
-                  <span>Incidência: <strong className="text-foreground">{subPlan?.incidence || s.incidence || "—"}/5</strong></span>
-                  <span>Conhecimento: <strong className="text-foreground">{s.knowledge_level}/5</strong></span>
+                <div className="flex gap-3 text-xs text-muted-foreground flex-wrap items-center">
+                  <span>Relevância: <strong className="text-foreground">{s.weight || 3}/5</strong></span>
+                  <span>Incidência: <strong className="text-foreground">{s.incidence || 3}/5</strong></span>
+                  <span>Compreensão: <strong className="text-foreground">{s.knowledge_level || 3}/5</strong></span>
+                  {savingSubjectId === s.id && <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="h-3 w-3 animate-spin" />Salvando</span>}
                 </div>
                 <Progress value={pct} className="h-1.5 mt-1" />
                 <span className="text-[10px] text-muted-foreground">{done}/{subTopics.length} tópicos concluídos</span>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {subTopics.map(t => (
-                  <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={t.completed} onCheckedChange={() => toggleTopic(t.id, t.completed)} />
-                    <span className={t.completed ? "line-through text-muted-foreground" : ""}>{t.name}</span>
-                  </label>
-                ))}
+              <CardContent className="space-y-4">
+                <div className="grid gap-3">
+                  {renderVectorControl(s, "weight", "Relevância", "Peso desta disciplina no edital")}
+                  {renderVectorControl(s, "incidence", "Incidência", "Frequência provável em provas")}
+                  {renderVectorControl(s, "knowledge_level", "Compreensão", "Seu domínio atual do conteúdo")}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-foreground">Tópicos previstos</p>
+                    <Badge variant="secondary" className="text-[10px]">{subTopics.length}</Badge>
+                  </div>
+                  {subTopics.length > 0 ? subTopics.map(t => (
+                    <label key={t.id} className="flex items-start gap-2 rounded-xl border border-border/50 bg-muted/10 p-2 text-sm cursor-pointer">
+                      <Checkbox checked={t.completed} onCheckedChange={() => toggleTopic(t.id, t.completed)} className="mt-0.5" />
+                      <span className={t.completed ? "line-through text-muted-foreground" : ""}>{t.name}</span>
+                    </label>
+                  )) : (
+                    <div className="rounded-xl border border-dashed border-border/70 p-3 text-xs text-muted-foreground">
+                      Nenhum tópico importado para esta disciplina. Adicione abaixo os conteúdos previstos no edital.
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2 mt-2">
                   <Input placeholder="Novo tópico" value={newTopicInputs[s.id] || ""} onChange={e => setNewTopicInputs(p => ({ ...p, [s.id]: e.target.value }))} className="text-xs h-8" onKeyDown={e => e.key === "Enter" && addTopic(s.id)} />
                   <Button size="sm" variant="outline" onClick={() => addTopic(s.id)} className="h-8"><Plus className="h-3 w-3" /></Button>
