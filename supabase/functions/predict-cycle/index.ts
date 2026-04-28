@@ -129,18 +129,40 @@ Deno.serve(async (req) => {
       supabase.from("study_sessions").select("subject_id, duration_minutes, started_at").eq("user_id", user.id).order("started_at", { ascending: false }).limit(50),
     ]);
 
+    const queryErrors = [
+      ["subjects", subjectsRes.error], ["topics", topicsRes.error], ["study_plan", planRes.error],
+      ["psyche", psycheRes.error], ["checkins", checkinsRes.error], ["sessions", sessionsRes.error],
+    ].filter(([, error]) => Boolean(error));
+    if (queryErrors.length > 0) {
+      await logEvent("error", "database_fetch", "Failed to load prediction context", { errors: queryErrors.map(([source, error]: any[]) => ({ source, message: error.message })) });
+      return jsonResponse({ error: "Não foi possível carregar seus dados para a previsão.", correlationId }, 500);
+    }
+    if ((subjectsRes.data || []).length !== subjectIds.length) {
+      await logEvent("warn", "subject_validation", "Some requested subjects were not available to the user", { requested: subjectIds.length, loaded: (subjectsRes.data || []).length });
+      return badRequest(correlationId, { subjectIds: "Uma ou mais disciplinas selecionadas não foram encontradas para este usuário." });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const psycheContext = buildPsycheContext(psycheRes.data, checkinsRes.data || []);
+    const subjectSanitization = sanitizeRows(subjectsRes.data || [], correlationId, "user_subjects");
+    const topicSanitization = sanitizeRows(topicsRes.data || [], correlationId, "topics");
+    if (subjectSanitization.discrepancies.length || topicSanitization.discrepancies.length) {
+      await logEvent("warn", "score_validation", "Invalid or out-of-range scores normalized before AI call", {
+        subjectDiscrepancies: subjectSanitization.discrepancies,
+        topicDiscrepancies: topicSanitization.discrepancies.slice(0, 100),
+      });
+    }
 
     const context = {
       mode, dailyMinutes, startDate,
-      subjects: subjectsRes.data || [],
-      topics: topicsRes.data || [],
+      subjects: subjectSanitization.sanitized,
+      topics: topicSanitization.sanitized,
       studyPlan: planRes.data || [],
       recentSessions: sessionsRes.data || [],
     };
+    await logEvent("info", "ai_request_start", "Calling AI model for prediction", { mode, subjects: context.subjects.length, topics: context.topics.length });
 
     const prompt = mode === "predict_date"
       ? `Com ${dailyMinutes} min/dia a partir de ${startDate}, preveja a data de conclusão para cada disciplina selecionada. Considere a prioridade G-Force, quantidade de tópicos, nível de compreensão atual e o estado Psique do aluno.`
@@ -173,21 +195,20 @@ INSTRUÇÕES ESPECÍFICAS:
     });
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const gatewayBody = await response.text();
+      await logEvent("error", "ai_response_error", "AI model returned an error", { status: response.status, body: gatewayBody.slice(0, 800) });
+      if (response.status === 429) return jsonResponse({ error: "Limite de uso da IA atingido. Tente novamente em instantes.", correlationId }, 429);
+      if (response.status === 402) return jsonResponse({ error: "Créditos de IA insuficientes para gerar a previsão.", correlationId }, 402);
       throw new Error(`AI error: ${response.status}`);
     }
 
     const aiResult = await response.json();
     const content = aiResult.choices?.[0]?.message?.content || "Não foi possível gerar previsão.";
+    await logEvent("info", "success", "Prediction generated successfully", { contentLength: content.length });
 
-    return new Response(JSON.stringify({ success: true, content }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: true, content, correlationId });
   } catch (e) {
-    console.error("predict-cycle error:", e);
-    return new Response(JSON.stringify({ error: "Erro interno ao gerar previsão. Tente novamente." }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    await logEvent("error", "unhandled_exception", "Unhandled predict-cycle error", { message: e instanceof Error ? e.message : String(e) });
+    return jsonResponse({ error: "Erro interno ao gerar previsão. Tente novamente.", correlationId }, 500);
   }
 });
