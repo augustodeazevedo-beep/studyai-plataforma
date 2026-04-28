@@ -1,44 +1,60 @@
 Plano de implementação
 
-1. Restaurar edição dos 3 vetores no Arsenal
-- Em cada card de disciplina, adicionar controles editáveis para:
-  - Relevância (`weight`)
-  - Incidência (`incidence`)
-  - Compreensão/Conhecimento (`knowledge_level`)
-- Usar controles mobile-first e fáceis de ajustar, provavelmente sliders 1–5 com valor visível e alternativa por input numérico compacto.
-- Adicionar estado visual de salvamento por disciplina para evitar cliques duplicados.
-- Validar sempre valores inteiros de 1 a 5 antes de salvar.
+1. Mover a edição dos vetores para o nível de tópico
+- Remover os controles editáveis de Relevância, Incidência e Compreensão do card da disciplina.
+- Manter no cabeçalho da disciplina apenas um resumo derivado dos tópicos, por exemplo médias dos vetores dos tópicos, para o usuário entender o panorama da disciplina.
+- Em cada lista de “Tópicos previstos”, exibir os tópicos em formato de tabela/bloco mobile-first com três colunas editáveis:
+  - Relevância
+  - Incidência
+  - Compreensão
+- Cada pontuação será uma nota decimal de 1 a 5, editável por campo numérico compacto, com `step=0.1`, `min=1`, `max=5`.
+- Normalizar qualquer valor digitado para número decimal seguro entre 1 e 5 antes de salvar.
 
-2. Persistir alterações e recalcular o G-Force
-- Ao alterar um vetor, atualizar `user_subjects` somente para a disciplina do próprio usuário.
-- Recalcular/atualizar o `study_plan` correspondente para manter Análise, Planner e recomendações coerentes.
-- Para Relevância e Incidência, atualizar também a linha existente em `study_plan` dessa disciplina quando houver plano.
-- Para Compreensão, refletir no recálculo do plano via algoritmo adaptativo, já que ela entra no vetor de lacuna/compreensão.
-- Registrar auditoria em `planner_audit_logs` usando o mecanismo existente, com motivo claro: ajuste manual do usuário nos vetores G-Force.
+2. Persistir os vetores por tópico
+- Criar campos específicos na tabela `topics` para guardar as pontuações por tópico:
+  - `relevance_score numeric default 3`
+  - `incidence_score numeric default 3`
+  - `comprehension_score numeric default 3`
+- Não alterar a lógica de autenticação/RLS, pois a tabela `topics` já possui políticas para o próprio usuário criar, ver e atualizar seus tópicos.
+- Ao criar tópico manualmente, salvar os três vetores com defaults seguros, provavelmente herdando as notas médias/atuais da disciplina ou usando 3 como neutro.
+- Ao importar tópicos via IA, preencher esses campos com as notas estimadas pela IA quando disponíveis; quando não houver score individual, usar os scores da disciplina como fallback seguro.
 
-3. Melhorar visibilidade dos tópicos importados do edital
-- Ajustar a exibição da lista de tópicos dentro de cada disciplina para facilitar revisão pós-IA.
-- Quando uma disciplina não tiver tópicos, mostrar um estado vazio orientando o usuário a adicionar manualmente tópicos previstos que a IA não identificou.
-- Manter a opção de adicionar tópico manualmente em cada disciplina.
-- Opcionalmente, destacar no resumo de processamento quantos tópicos foram adicionados e quantos foram ignorados por deduplicação.
+3. Sincronizar o G-Force da disciplina a partir dos tópicos
+- Após cada edição de vetor de tópico, recalcular os vetores agregados da disciplina usando a média dos tópicos daquela disciplina.
+- Atualizar `user_subjects.weight`, `user_subjects.incidence` e `user_subjects.knowledge_level` com esses agregados, para manter compatibilidade com o algoritmo G-Force atual.
+- Recalcular e persistir o `study_plan` via `recalculateAndPersistPlan`, mantendo Análise, Planner e recomendações coerentes.
+- Registrar auditoria em `planner_audit_logs` indicando ajuste manual em vetor G-Force de tópico, com antes/depois, `topicId`, `topicName`, `subjectId` e campo alterado.
 
-4. Melhorar o prompt/contrato do processador de edital para extrair tópicos mais completos
-- Refinar o prompt da função `process-edital` para exigir que a IA extraia tópicos específicos do conteúdo programático, não apenas disciplinas genéricas.
-- Orientar a IA a preservar itens previstos no edital como tópicos/subtópicos quando possível, com nomes curtos e úteis ao estudante.
-- Manter o limite de tamanho e a normalização já implementados para evitar novos erros 422.
+4. Ajustar o processador de edital com IA
+- Atualizar o contrato/prompt do `process-edital` para orientar a IA a atribuir Relevância, Incidência e Compreensão também por tópico específico.
+- Manter as validações robustas já implementadas: números/string numérica, clamp entre 1 e 5, normalização e logs por `submissionId`.
+- Persistir os scores no insert/update de tópicos e usar agregação para atualizar as disciplinas importadas.
 
-5. Verificação
-- Rodar build/typecheck para garantir que a interface compile.
-- Se a função `process-edital` for alterada, redeploy da função após aprovação.
-- Testar mentalmente o fluxo: upload/processamento do edital → disciplinas/tópicos aparecem → usuário edita relevância/incidência/compreensão → plano é atualizado sem duplicar dados.
+5. Adicionar tutorial simplificado acima de “Adicionar Nova Disciplina”
+- Inserir um único bloco explicativo antes do container de adição de disciplina.
+- Conteúdo objetivo e pedagógico:
+  - o que significa cada vetor;
+  - por que revisar as notas da IA;
+  - como notas de 1 a 5 influenciam a priorização do estudo;
+  - reforço de que essas pontuações são centrais para a proposta da Study.AI: estudo eficiente, efetivo, científico e alinhado à neurociência da aprendizagem.
+- Manter linguagem empática, não punitiva e mobile-first.
+
+6. Verificação
+- Rodar build/typecheck após implementação.
+- Confirmar o fluxo completo:
+  - IA importa disciplinas e tópicos;
+  - tópicos aparecem com três notas editáveis em colunas;
+  - usuário altera nota decimal;
+  - tópico salva;
+  - disciplina recebe médias atualizadas;
+  - plano G-Force é recalculado;
+  - auditoria é registrada;
+  - novos tópicos manuais já nascem com defaults seguros.
 
 Detalhes técnicos
 
-- Arquivo principal de UI: `src/components/dashboard/ArsenalTab.tsx`.
-- Backend de processamento: `supabase/functions/process-edital/index.ts`.
-- Tabelas usadas:
-  - `user_subjects`: fonte dos vetores editáveis (`weight`, `incidence`, `knowledge_level`).
-  - `topics`: tópicos por disciplina.
-  - `study_plan`: plano e pontuação derivados dos vetores.
-  - `planner_audit_logs`: auditoria das alterações do usuário.
-- Não deve ser necessária mudança de schema, pois os campos dos 3 vetores já existem.
+- UI principal: `src/components/dashboard/ArsenalTab.tsx`.
+- Processador de edital: `supabase/functions/process-edital/index.ts`.
+- Schema: adicionar colunas numéricas em `topics`; não editar arquivos gerados de integração.
+- Estratégia de compatibilidade: o G-Force atual continua usando `user_subjects`, mas os valores passam a ser derivados dos tópicos quando existirem tópicos pontuados.
+- Formato de edição: decimal de 1 a 5, com salvamento por tópico/campo e feedback visual de carregamento.
