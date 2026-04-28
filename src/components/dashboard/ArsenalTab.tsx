@@ -13,7 +13,6 @@ import { Shield, BookOpen, CheckCircle, Target, Plus, Loader2, Trash2, Upload, F
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Slider } from "@/components/ui/slider";
 import { recalculateAndPersistPlan } from "@/lib/planner-adaptation";
 import { z } from "zod";
 
@@ -71,6 +70,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const [processingSummary, setProcessingSummary] = useState<ProcessingSummary | null>(null);
   const [pdfFailure, setPdfFailure] = useState<{ submissionId: string; stage: string; message: string; code: string; canRetry: boolean } | null>(null);
   const [savingSubjectId, setSavingSubjectId] = useState<string | null>(null);
+  const [savingTopicKey, setSavingTopicKey] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -273,7 +273,16 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     const name = newTopicInputs[subjectId]?.trim();
     if (!name) return;
     const maxOrder = topics.filter(t => t.subject_id === subjectId).length;
-    const { error } = await supabase.from("topics").insert({ user_id: userId, subject_id: subjectId, name, order_index: maxOrder });
+    const subject = subjects.find(s => s.id === subjectId);
+    const { error } = await (supabase as any).from("topics").insert({
+      user_id: userId,
+      subject_id: subjectId,
+      name,
+      order_index: maxOrder,
+      relevance_score: clampVector(Number(subject?.weight ?? 3)),
+      incidence_score: clampVector(Number(subject?.incidence ?? 3)),
+      comprehension_score: clampVector(Number(subject?.knowledge_level ?? 3)),
+    });
     if (error) { toast.error(error.code === "23505" ? "Esse tópico já existe nesta disciplina" : "Erro ao adicionar tópico"); return; }
     setNewTopicInputs(prev => ({ ...prev, [subjectId]: "" }));
     loadData();
@@ -317,6 +326,37 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const getSubjectPlan = (subjectId: string) => plan.find(p => p.subject_id === subjectId);
 
   const clampVector = (value: number) => Math.min(5, Math.max(1, Math.round(Number(value) || 3)));
+  const clampDecimalVector = (value: number) => Math.min(5, Math.max(1, Math.round((Number(value) || 3) * 10) / 10));
+  const topicVectorFields = [
+    { key: "relevance_score", label: "Relevância" },
+    { key: "incidence_score", label: "Incidência" },
+    { key: "comprehension_score", label: "Compreensão" },
+  ] as const;
+
+  const getTopicAverages = (subjectId: string) => {
+    const subTopics = topics.filter(t => t.subject_id === subjectId);
+    if (!subTopics.length) return null;
+    const avg = (field: "relevance_score" | "incidence_score" | "comprehension_score") =>
+      Math.round((subTopics.reduce((sum, topic) => sum + clampDecimalVector(Number(topic[field] ?? 3)), 0) / subTopics.length) * 10) / 10;
+    return { relevance: avg("relevance_score"), incidence: avg("incidence_score"), comprehension: avg("comprehension_score") };
+  };
+
+  const syncSubjectFromTopicAverages = async (subjectId: string) => {
+    const { data, error } = await (supabase as any)
+      .from("topics")
+      .select("relevance_score, incidence_score, comprehension_score")
+      .eq("user_id", userId)
+      .eq("subject_id", subjectId);
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length) return null;
+    const avg = (field: "relevance_score" | "incidence_score" | "comprehension_score") =>
+      clampDecimalVector(rows.reduce((sum: number, topic: any) => sum + clampDecimalVector(Number(topic[field] ?? 3)), 0) / rows.length);
+    const next = { weight: avg("relevance_score"), incidence: avg("incidence_score"), knowledge_level: Math.round(avg("comprehension_score")) };
+    const { error: subjectError } = await (supabase as any).from("user_subjects").update(next).eq("id", subjectId).eq("user_id", userId);
+    if (subjectError) throw subjectError;
+    return next;
+  };
 
   const setSubjectVectorLocal = (subjectId: string, field: "weight" | "incidence" | "knowledge_level", value: number) => {
     const nextValue = clampVector(value);
