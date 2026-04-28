@@ -8,6 +8,10 @@ const corsHeaders = {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+function getAnonKey() {
+  return Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+}
+
 const bodySchema = z.object({
   trigger: z.enum(["study_session", "psyche_checkin", "manual", "scheduled"]).default("manual"),
   subjectId: z.string().uuid().optional().nullable(),
@@ -193,7 +197,9 @@ Deno.serve(async (req) => {
     }
 
     if (authHeader) {
-      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, { global: { headers: { Authorization: authHeader } } });
+      const anonKey = getAnonKey();
+      if (!anonKey) return json({ error: "Configuração interna indisponível." }, 500);
+      const supabase = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, { global: { headers: { Authorization: authHeader } } });
       const { data: { user } } = await supabase.auth.getUser();
       if (user) return json({ success: true, ...(await recalculateForUser(supabase, user.id, parsed.data)) });
     }
