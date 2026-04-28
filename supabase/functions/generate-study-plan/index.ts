@@ -145,14 +145,10 @@ IMPORTANTE: Se o estado Psique indicar estresse elevado ou baixa energia, reduza
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }, 429);
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: "Créditos de IA insuficientes para gerar plano." }, 402);
       }
       throw new Error(`AI gateway error: ${response.status}`);
     }
@@ -181,13 +177,9 @@ IMPORTANTE: Se o estado Psique indicar estresse elevado ou baixa energia, reduza
     const { error: insertError } = await supabase.from("study_plan").insert(rows);
     if (insertError) throw insertError;
 
-    return new Response(JSON.stringify({ success: true, plan: rows }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: true, plan: rows });
   } catch (e) {
     console.error("generate-study-plan error:", e);
-    return new Response(JSON.stringify({ error: "Erro interno ao gerar plano de estudos. Tente novamente." }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Erro interno ao gerar plano de estudos. Tente novamente." }, 500);
   }
 });
