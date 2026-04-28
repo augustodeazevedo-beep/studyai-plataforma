@@ -9,19 +9,31 @@ const corsHeaders = {
 const MAX_SUBJECTS = 80;
 const MAX_PLAN_ROWS = 80;
 
+function getBackendConfig() {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return { url, key };
+}
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    if (!authHeader) return jsonResponse({ error: "Sessão inválida." }, 401);
 
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+    const { url, key } = getBackendConfig();
+    if (!url || !key) return jsonResponse({ error: "Configuração interna indisponível." }, 500);
+    const supabase = createClient(url, key, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) return jsonResponse({ error: "Sessão inválida." }, 401);
 
     const [profileRes, subjectsRes, sessionsRes, attemptsRes, planRes, psycheRes, checkinsRes, reviewsRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
@@ -80,8 +92,8 @@ Formato: markdown estruturado. Seja direto, motivador e específico. Justifique 
     });
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 429) return jsonResponse({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }, 429);
+      if (response.status === 402) return jsonResponse({ error: "Créditos de IA insuficientes para gerar orientação." }, 402);
       throw new Error(`AI error: ${response.status}`);
     }
 
@@ -90,13 +102,9 @@ Formato: markdown estruturado. Seja direto, motivador e específico. Justifique 
 
     await supabase.from("ai_coaching_history").insert({ user_id: user.id, content });
 
-    return new Response(JSON.stringify({ success: true, content }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: true, content });
   } catch (e) {
     console.error("ai-coach error:", e);
-    return new Response(JSON.stringify({ error: "Erro interno ao gerar orientação. Tente novamente." }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Erro interno ao gerar orientação. Tente novamente." }, 500);
   }
 });
