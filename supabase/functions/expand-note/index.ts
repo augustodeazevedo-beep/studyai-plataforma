@@ -8,6 +8,12 @@ const corsHeaders = {
 const MAX_NOTE_CONTENT_CHARS = 20_000;
 const MAX_SUBJECT_NAME_CHARS = 120;
 
+function getBackendConfig() {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return { url, key };
+}
+
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -20,14 +26,16 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    if (!authHeader) return jsonResponse({ error: "Sessão inválida." }, 401);
 
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+    const { url, key } = getBackendConfig();
+    if (!url || !key) return jsonResponse({ error: "Configuração interna indisponível." }, 500);
+    const supabase = createClient(url, key, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) return jsonResponse({ error: "Sessão inválida." }, 401);
 
     const { noteContent, subjectName } = await req.json();
     if (typeof noteContent !== "string" || noteContent.trim().length === 0) {
@@ -56,21 +64,17 @@ Deno.serve(async (req) => {
     });
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 429) return jsonResponse({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }, 429);
+      if (response.status === 402) return jsonResponse({ error: "Créditos de IA insuficientes para expandir a anotação." }, 402);
       throw new Error(`AI error: ${response.status}`);
     }
 
     const aiResult = await response.json();
     const content = aiResult.choices?.[0]?.message?.content || "Não foi possível expandir.";
 
-    return new Response(JSON.stringify({ success: true, content }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ success: true, content });
   } catch (e) {
     console.error("expand-note error:", e);
-    return new Response(JSON.stringify({ error: "Erro interno ao expandir anotação. Tente novamente." }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Erro interno ao expandir anotação. Tente novamente." }, 500);
   }
 });
