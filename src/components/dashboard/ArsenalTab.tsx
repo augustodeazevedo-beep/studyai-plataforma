@@ -326,7 +326,6 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const updateSubjectVector = async (subject: any, field: "weight" | "incidence" | "knowledge_level", value: number) => {
     const nextValue = clampVector(value);
     const previousValue = clampVector(Number(subject[field] ?? 3));
-    if (nextValue === previousValue) return;
 
     setSavingSubjectId(subject.id);
     try {
