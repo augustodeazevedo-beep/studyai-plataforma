@@ -80,6 +80,12 @@ function sanitizeRows<T extends Record<string, unknown>>(rows: T[], correlationI
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const correlationId = crypto.randomUUID();
+  let userId: string | null = null;
+  let logEvent: (level: string, stage: string, message: string, metadata?: Record<string, unknown>) => Promise<void> = async (level, stage, message, metadata = {}) => {
+    console[level === "error" ? "error" : level === "warn" ? "warn" : "log"]("predict-cycle", { correlationId, stage, message, ...metadata });
+  };
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Missing authorization header");
@@ -95,22 +101,24 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
+    logEvent = async (level, stage, message, metadata = {}) => {
+      const safeMetadata = JSON.parse(JSON.stringify(metadata, (_key, value) => typeof value === "string" && value.length > 500 ? `${value.slice(0, 500)}…` : value));
+      console[level === "error" ? "error" : level === "warn" ? "warn" : "log"]("predict-cycle", { correlationId, userId, level, stage, message, metadata: safeMetadata });
+      if (!userId) return;
+      const { error } = await supabase.from("predict_cycle_logs").insert({ user_id: userId, correlation_id: correlationId, level, stage, message, metadata: safeMetadata });
+      if (error) console.warn("predict-cycle persistent log failed", { correlationId, stage, error: error.message });
+    };
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthorized");
+    userId = user.id;
 
-    const { mode, dailyMinutes, startDate, subjectIds } = await req.json();
-    if (mode !== "predict_date" && mode !== "calculate_rhythm") {
-      return jsonResponse({ error: "Invalid prediction mode" }, 400);
-    }
-    if (!Array.isArray(subjectIds) || subjectIds.length === 0 || subjectIds.length > MAX_SUBJECT_IDS || !subjectIds.every((id) => typeof id === "string" && UUID_REGEX.test(id))) {
-      return jsonResponse({ error: "Invalid subject selection" }, 400);
-    }
-    if (typeof dailyMinutes !== "number" || !Number.isFinite(dailyMinutes) || dailyMinutes < 15 || dailyMinutes > 1_440) {
-      return jsonResponse({ error: "Invalid daily minutes" }, 400);
-    }
-    if (typeof startDate !== "string" || startDate.length > 20) {
-      return jsonResponse({ error: "Invalid start date" }, 400);
-    }
+    let rawBody: unknown;
+    try { rawBody = await req.json(); } catch { await logEvent("warn", "request_parse", "Invalid JSON body"); return badRequest(correlationId, { body: "Invalid JSON" }); }
+    const parsed = validateRequestBody(rawBody, correlationId);
+    if (!parsed.ok) { await logEvent("warn", "request_validation", "Invalid predict-cycle request", { details: await parsed.response.clone().json() }); return parsed.response; }
+    const { mode, dailyMinutes, startDate, subjectIds } = parsed.data;
+    await logEvent("info", "request_validated", "Predict-cycle request validated", { mode, dailyMinutes, startDate, subjectCount: subjectIds.length });
 
     const [subjectsRes, topicsRes, planRes, psycheRes, checkinsRes, sessionsRes] = await Promise.all([
       supabase.from("user_subjects").select("*").eq("user_id", user.id).in("id", subjectIds),
