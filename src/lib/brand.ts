@@ -26,19 +26,22 @@ export interface BrandLogoSettings {
 export const BRAND_STORAGE_KEY = "studyai:brand-kit";
 export const BRAND_UPDATED_EVENT = "studyai-brand-updated";
 
+const LEGACY_WORDMARKS = new Set(["/brand/studyai-wordmark.webp", "/brand/studyai-wordmark-light.webp"]);
+const LEGACY_MARKS = new Set(["/brand/studyai-mark.webp", "/brand/studyai-mark.png"]);
+
 export const defaultBrandSettings: BrandLogoSettings = {
   name: "Study.AI",
   tagline: "Inteligência pedagógica adaptativa",
-  wordmarkSrc: "/brand/studyai-wordmark.webp",
-  wordmarkLightSrc: "/brand/studyai-wordmark-light.webp",
-  markSrc: "/brand/studyai-mark.webp",
+  wordmarkSrc: "/brand/studyai-wordmark-new-dark.webp",
+  wordmarkLightSrc: "/brand/studyai-wordmark-new-light.webp",
+  markSrc: "/brand/studyai-mark-new.webp",
   fallbackSvg: "/brand/studyai-mark.svg",
   sizes: {
-    nav: 36,
-    auth: 48,
-    sidebar: 40,
+    nav: 44,
+    auth: 56,
+    sidebar: 48,
     sidebarCollapsed: 38,
-    footer: 28,
+    footer: 34,
   },
 };
 
@@ -52,6 +55,9 @@ export const getBrandSettings = (): BrandLogoSettings => {
     return {
       ...defaultBrandSettings,
       ...parsed,
+      wordmarkSrc: parsed.wordmarkSrc && !LEGACY_WORDMARKS.has(parsed.wordmarkSrc) ? parsed.wordmarkSrc : defaultBrandSettings.wordmarkSrc,
+      wordmarkLightSrc: parsed.wordmarkLightSrc && !LEGACY_WORDMARKS.has(parsed.wordmarkLightSrc) ? parsed.wordmarkLightSrc : defaultBrandSettings.wordmarkLightSrc,
+      markSrc: parsed.markSrc && !LEGACY_MARKS.has(parsed.markSrc) ? parsed.markSrc : defaultBrandSettings.markSrc,
       sizes: { ...defaultBrandSettings.sizes, ...parsed.sizes },
     };
   } catch {
