@@ -394,28 +394,53 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     }
   };
 
-  const renderVectorControl = (subject: any, field: "weight" | "incidence" | "knowledge_level", label: string, helper: string) => {
-    const value = clampVector(Number(subject[field] ?? 3));
-    const saving = savingSubjectId === subject.id;
+  const setTopicVectorLocal = (topicId: string, field: "relevance_score" | "incidence_score" | "comprehension_score", value: number) => {
+    const nextValue = clampDecimalVector(value);
+    setTopics(prev => prev.map(topic => topic.id === topicId ? { ...topic, [field]: nextValue } : topic));
+  };
+
+  const updateTopicVector = async (topic: any, field: "relevance_score" | "incidence_score" | "comprehension_score", value: number) => {
+    const nextValue = clampDecimalVector(value);
+    const previousValue = clampDecimalVector(Number(topic[field] ?? 3));
+    const savingKey = `${topic.id}:${field}`;
+    setSavingTopicKey(savingKey);
+    try {
+      const { error } = await (supabase as any).from("topics").update({ [field]: nextValue }).eq("id", topic.id).eq("user_id", userId);
+      if (error) throw error;
+      const subjectAverages = await syncSubjectFromTopicAverages(topic.subject_id);
+      await recalculateAndPersistPlan(userId, {
+        eventType: "manual_gforce_topic_vector_adjustment",
+        eventSource: "arsenal_topic_vectors",
+        subjectId: topic.subject_id,
+        explanation: "Ajuste manual do usuário em vetor G-Force de tópico no Arsenal.",
+        metadata: { field, previousValue, nextValue, topicId: topic.id, topicName: topic.name, subjectAverages },
+      });
+      toast.success("Nota do tópico salva e G-Force recalculado.");
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível atualizar a nota do tópico.");
+      loadData();
+    } finally {
+      setSavingTopicKey(null);
+    }
+  };
+
+  const renderTopicVectorInput = (topic: any, field: "relevance_score" | "incidence_score" | "comprehension_score") => {
+    const value = clampDecimalVector(Number(topic[field] ?? 3));
+    const saving = savingTopicKey === `${topic.id}:${field}`;
     return (
-      <div className="rounded-xl border border-border/60 bg-muted/10 p-3 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <Label className="text-xs font-medium">{label}</Label>
-            <p className="text-[10px] text-muted-foreground">{helper}</p>
-          </div>
-          <Badge variant="outline" className="text-[10px] min-w-10 justify-center">{value}/5</Badge>
-        </div>
-        <Slider
-          min={1}
-          max={5}
-          step={1}
-          value={[value]}
-          disabled={saving}
-          onValueChange={([next]) => setSubjectVectorLocal(subject.id, field, next)}
-          onValueCommit={([next]) => updateSubjectVector(subject, field, next)}
-        />
-      </div>
+      <Input
+        type="number"
+        min={1}
+        max={5}
+        step={0.1}
+        value={value}
+        disabled={saving}
+        aria-label={field}
+        className="h-8 min-w-16 text-center text-xs"
+        onChange={e => setTopicVectorLocal(topic.id, field, Number(e.target.value))}
+        onBlur={e => updateTopicVector(topic, field, Number(e.target.value))}
+      />
     );
   };
 
