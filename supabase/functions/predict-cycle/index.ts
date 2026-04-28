@@ -8,12 +8,73 @@ const corsHeaders = {
 
 const MAX_SUBJECT_IDS = 50;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ALLOWED_MODES = new Set(["predict_date", "calculate_rhythm"]);
+const SCORE_FIELDS = ["weight", "incidence", "knowledge_level", "relevance_score", "incidence_score", "comprehension_score"];
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function badRequest(correlationId: string, details: Record<string, unknown>) {
+  return jsonResponse({ error: "Dados inválidos para gerar previsão.", correlationId, details }, 400);
+}
+
+function validateRequestBody(body: unknown, correlationId: string) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { ok: false as const, response: badRequest(correlationId, { body: "Request body must be an object" }) };
+  }
+
+  const value = body as Record<string, unknown>;
+  const errors: Record<string, string> = {};
+  const mode = typeof value.mode === "string" ? value.mode : "";
+  const dailyMinutes = value.dailyMinutes;
+  const startDate = typeof value.startDate === "string" ? value.startDate : "";
+  const subjectIds = value.subjectIds;
+
+  if (!ALLOWED_MODES.has(mode)) errors.mode = "Use predict_date or calculate_rhythm";
+  if (typeof dailyMinutes !== "number" || !Number.isFinite(dailyMinutes) || !Number.isInteger(dailyMinutes) || dailyMinutes < 15 || dailyMinutes > 1_440) {
+    errors.dailyMinutes = "Must be an integer between 15 and 1440";
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || Number.isNaN(Date.parse(`${startDate}T00:00:00.000Z`))) {
+    errors.startDate = "Must be a valid date in YYYY-MM-DD format";
+  }
+  if (!Array.isArray(subjectIds) || subjectIds.length === 0 || subjectIds.length > MAX_SUBJECT_IDS) {
+    errors.subjectIds = `Must include 1 to ${MAX_SUBJECT_IDS} subject ids`;
+  } else if (!subjectIds.every((id) => typeof id === "string" && UUID_REGEX.test(id))) {
+    errors.subjectIds = "All subject ids must be valid UUIDs";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { ok: false as const, response: badRequest(correlationId, errors) };
+  }
+
+  return { ok: true as const, data: { mode, dailyMinutes, startDate, subjectIds: subjectIds as string[] } };
+}
+
+function sanitizeScore(value: unknown, fallback = 3) {
+  const score = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(score)) return { value: fallback, changed: true };
+  const clamped = Math.min(5, Math.max(1, score));
+  return { value: Number(clamped.toFixed(1)), changed: clamped !== score };
+}
+
+function sanitizeRows<T extends Record<string, unknown>>(rows: T[], correlationId: string, source: string) {
+  const discrepancies: Array<Record<string, unknown>> = [];
+  const sanitized = rows.map((row) => {
+    const next = { ...row };
+    for (const field of SCORE_FIELDS) {
+      if (!(field in next)) continue;
+      const result = sanitizeScore(next[field]);
+      if (result.changed) discrepancies.push({ source, id: next.id, field, previous: next[field], next: result.value });
+      next[field] = result.value;
+    }
+    return next;
+  });
+  if (discrepancies.length > 0) console.warn("predict-cycle score normalization", { correlationId, discrepancies });
+  return { sanitized, discrepancies };
 }
 
 Deno.serve(async (req) => {
