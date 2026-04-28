@@ -962,28 +962,37 @@ export type Database = {
       topics: {
         Row: {
           completed: boolean
+          comprehension_score: number
           created_at: string
           id: string
+          incidence_score: number
           name: string
           order_index: number
+          relevance_score: number
           subject_id: string
           user_id: string
         }
         Insert: {
           completed?: boolean
+          comprehension_score?: number
           created_at?: string
           id?: string
+          incidence_score?: number
           name: string
           order_index?: number
+          relevance_score?: number
           subject_id: string
           user_id: string
         }
         Update: {
           completed?: boolean
+          comprehension_score?: number
           created_at?: string
           id?: string
+          incidence_score?: number
           name?: string
           order_index?: number
+          relevance_score?: number
           subject_id?: string
           user_id?: string
         }
