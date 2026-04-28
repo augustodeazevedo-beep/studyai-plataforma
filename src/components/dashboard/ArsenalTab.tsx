@@ -13,6 +13,8 @@ import { Shield, BookOpen, CheckCircle, Target, Plus, Loader2, Trash2, Upload, F
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
+import { recalculateAndPersistPlan } from "@/lib/planner-adaptation";
 import { z } from "zod";
 
 const MAX_PDF_SIZE_BYTES = 20 * 1024 * 1024;
@@ -68,6 +70,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const [forceReprocess, setForceReprocess] = useState(false);
   const [processingSummary, setProcessingSummary] = useState<ProcessingSummary | null>(null);
   const [pdfFailure, setPdfFailure] = useState<{ submissionId: string; stage: string; message: string; code: string; canRetry: boolean } | null>(null);
+  const [savingSubjectId, setSavingSubjectId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -312,6 +315,70 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const completionPct = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
   const getSubjectPlan = (subjectId: string) => plan.find(p => p.subject_id === subjectId);
+
+  const clampVector = (value: number) => Math.min(5, Math.max(1, Math.round(Number(value) || 3)));
+
+  const setSubjectVectorLocal = (subjectId: string, field: "weight" | "incidence" | "knowledge_level", value: number) => {
+    const nextValue = clampVector(value);
+    setSubjects(prev => prev.map(subject => subject.id === subjectId ? { ...subject, [field]: nextValue } : subject));
+  };
+
+  const updateSubjectVector = async (subject: any, field: "weight" | "incidence" | "knowledge_level", value: number) => {
+    const nextValue = clampVector(value);
+    const previousValue = clampVector(Number(subject[field] ?? 3));
+    if (nextValue === previousValue) return;
+
+    setSavingSubjectId(subject.id);
+    try {
+      const { error } = await (supabase as any)
+        .from("user_subjects")
+        .update({ [field]: nextValue })
+        .eq("id", subject.id)
+        .eq("user_id", userId);
+      if (error) throw error;
+
+      await recalculateAndPersistPlan(userId, {
+        eventType: "manual_gforce_vector_adjustment",
+        eventSource: "arsenal_subject_vectors",
+        subjectId: subject.id,
+        explanation: "Ajuste manual do usuário em vetores G-Force da disciplina no Arsenal.",
+        metadata: { field, previousValue, nextValue, subjectName: subject.name },
+      });
+
+      toast.success("Vetores atualizados e plano recalculado.");
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível atualizar o vetor.");
+      loadData();
+    } finally {
+      setSavingSubjectId(null);
+    }
+  };
+
+  const renderVectorControl = (subject: any, field: "weight" | "incidence" | "knowledge_level", label: string, helper: string) => {
+    const value = clampVector(Number(subject[field] ?? 3));
+    const saving = savingSubjectId === subject.id;
+    return (
+      <div className="rounded-xl border border-border/60 bg-muted/10 p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <Label className="text-xs font-medium">{label}</Label>
+            <p className="text-[10px] text-muted-foreground">{helper}</p>
+          </div>
+          <Badge variant="outline" className="text-[10px] min-w-10 justify-center">{value}/5</Badge>
+        </div>
+        <Slider
+          min={1}
+          max={5}
+          step={1}
+          value={[value]}
+          disabled={saving}
+          onValueChange={([next]) => setSubjectVectorLocal(subject.id, field, next)}
+          onValueCommit={([next]) => updateSubjectVector(subject, field, next)}
+        />
+      </div>
+    );
+  };
 
   const renderDetailList = (items: SummaryDetail[], empty: string) => (
     items.length ? (
