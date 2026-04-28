@@ -61,7 +61,12 @@ const extractedSubjectsSchema = z.object({
     sources: z.array(sourceSchema).optional().default([]),
     topics: z.array(z.union([
       boundedTextSchema(240).pipe(z.string().min(1)),
-      z.object({ name: boundedTextSchema(240).pipe(z.string().min(1)) }),
+      z.object({
+        name: boundedTextSchema(240).pipe(z.string().min(1)),
+        relevance: scoreSchema.optional(),
+        incidence: scoreSchema.optional(),
+        comprehension: scoreSchema.optional(),
+      }),
     ])).default([]),
   })).min(1),
 });
@@ -173,11 +178,19 @@ const getPublicResearchContext = async (targetExam?: string | null, targetPositi
   }
 };
 
-const parseTopics = (topics: Array<string | { name: string }>) => {
+const parseTopics = (topics: Array<string | { name: string; relevance?: number; incidence?: number; comprehension?: number }>, fallback: { relevance: number; incidence: number; comprehension: number }) => {
   const seen = new Set<string>();
-  return topics.map((topic) => cleanText(typeof topic === "string" ? topic : topic.name, 240)).filter((topic) => {
-    if (!topic) return false;
-    const key = normalizeName(topic);
+  return topics.map((topic) => {
+    const name = cleanText(typeof topic === "string" ? topic : topic.name, 240);
+    return {
+      name,
+      relevance: typeof topic === "string" ? fallback.relevance : clampScore(topic.relevance, fallback.relevance),
+      incidence: typeof topic === "string" ? fallback.incidence : clampScore(topic.incidence, fallback.incidence),
+      comprehension: typeof topic === "string" ? fallback.comprehension : clampScore(topic.comprehension, fallback.comprehension),
+    };
+  }).filter((topic) => {
+    if (!topic.name) return false;
+    const key = normalizeName(topic.name);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
