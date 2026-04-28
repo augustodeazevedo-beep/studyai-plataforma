@@ -6,6 +6,10 @@ const corsHeaders = {
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+function getAnonKey() {
+  return Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+}
+
 async function auditUser(supabase: any, userId: string) {
   const [sourcesRes, materialsRes, reportsRes] = await Promise.all([
     supabase.from("public_source_audits").select("source_url, source_title, source_note, origin, copyright_assessment, storage_notes, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
@@ -54,7 +58,9 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     let targetUserId: string | null = null;
     if (authHeader) {
-      const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, { global: { headers: { Authorization: authHeader } } });
+      const anonKey = getAnonKey();
+      if (!anonKey) return json({ error: "Configuração interna indisponível." }, 500);
+      const userClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, { global: { headers: { Authorization: authHeader } } });
       const { data: { user } } = await userClient.auth.getUser();
       targetUserId = user?.id || null;
     }
