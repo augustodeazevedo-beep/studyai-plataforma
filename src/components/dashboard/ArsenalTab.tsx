@@ -578,21 +578,38 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
                   <CardTitle className="text-primary text-sm">{s.name}</CardTitle>
                   <Button variant="ghost" size="icon" onClick={() => deleteSubject(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
                 </div>
-                <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-                  <span>Relevância: <strong className="text-foreground">{subPlan?.relevance || s.weight}/5</strong></span>
-                  <span>Incidência: <strong className="text-foreground">{subPlan?.incidence || s.incidence || "—"}/5</strong></span>
-                  <span>Conhecimento: <strong className="text-foreground">{s.knowledge_level}/5</strong></span>
+                <div className="flex gap-3 text-xs text-muted-foreground flex-wrap items-center">
+                  <span>Relevância: <strong className="text-foreground">{s.weight || 3}/5</strong></span>
+                  <span>Incidência: <strong className="text-foreground">{s.incidence || 3}/5</strong></span>
+                  <span>Compreensão: <strong className="text-foreground">{s.knowledge_level || 3}/5</strong></span>
+                  {savingSubjectId === s.id && <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="h-3 w-3 animate-spin" />Salvando</span>}
                 </div>
                 <Progress value={pct} className="h-1.5 mt-1" />
                 <span className="text-[10px] text-muted-foreground">{done}/{subTopics.length} tópicos concluídos</span>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {subTopics.map(t => (
-                  <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={t.completed} onCheckedChange={() => toggleTopic(t.id, t.completed)} />
-                    <span className={t.completed ? "line-through text-muted-foreground" : ""}>{t.name}</span>
-                  </label>
-                ))}
+              <CardContent className="space-y-4">
+                <div className="grid gap-3">
+                  {renderVectorControl(s, "weight", "Relevância", "Peso desta disciplina no edital")}
+                  {renderVectorControl(s, "incidence", "Incidência", "Frequência provável em provas")}
+                  {renderVectorControl(s, "knowledge_level", "Compreensão", "Seu domínio atual do conteúdo")}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-foreground">Tópicos previstos</p>
+                    <Badge variant="secondary" className="text-[10px]">{subTopics.length}</Badge>
+                  </div>
+                  {subTopics.length > 0 ? subTopics.map(t => (
+                    <label key={t.id} className="flex items-start gap-2 rounded-xl border border-border/50 bg-muted/10 p-2 text-sm cursor-pointer">
+                      <Checkbox checked={t.completed} onCheckedChange={() => toggleTopic(t.id, t.completed)} className="mt-0.5" />
+                      <span className={t.completed ? "line-through text-muted-foreground" : ""}>{t.name}</span>
+                    </label>
+                  )) : (
+                    <div className="rounded-xl border border-dashed border-border/70 p-3 text-xs text-muted-foreground">
+                      Nenhum tópico importado para esta disciplina. Adicione abaixo os conteúdos previstos no edital.
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2 mt-2">
                   <Input placeholder="Novo tópico" value={newTopicInputs[s.id] || ""} onChange={e => setNewTopicInputs(p => ({ ...p, [s.id]: e.target.value }))} className="text-xs h-8" onKeyDown={e => e.key === "Enter" && addTopic(s.id)} />
                   <Button size="sm" variant="outline" onClick={() => addTopic(s.id)} className="h-8"><Plus className="h-3 w-3" /></Button>
