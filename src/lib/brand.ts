@@ -29,16 +29,16 @@ export const BRAND_UPDATED_EVENT = "studyai-brand-updated";
 export const defaultBrandSettings: BrandLogoSettings = {
   name: "Study.AI",
   tagline: "Inteligência pedagógica adaptativa",
-  wordmarkSrc: "/brand/studyai-wordmark.webp",
-  wordmarkLightSrc: "/brand/studyai-wordmark-light.webp",
-  markSrc: "/brand/studyai-mark.webp",
+  wordmarkSrc: "/brand/studyai-wordmark-new-dark.webp",
+  wordmarkLightSrc: "/brand/studyai-wordmark-new-light.webp",
+  markSrc: "/brand/studyai-mark-new.webp",
   fallbackSvg: "/brand/studyai-mark.svg",
   sizes: {
-    nav: 36,
-    auth: 48,
-    sidebar: 40,
+    nav: 44,
+    auth: 56,
+    sidebar: 48,
     sidebarCollapsed: 38,
-    footer: 28,
+    footer: 34,
   },
 };
 
