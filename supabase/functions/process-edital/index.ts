@@ -440,24 +440,24 @@ ${edital}`;
 
       const existingTopicNames = new Set((existingTopicsData || []).map((topic: any) => normalizeName(topic.name)));
       let nextOrderIndex = Math.max(-1, ...(existingTopicsData || []).map((topic: any) => Number(topic.order_index) || 0)) + 1;
-      for (const topicName of parseTopics(extracted.topics)) {
-        const topicKey = normalizeName(topicName);
+      for (const topic of parseTopics(extracted.topics, { relevance, incidence, comprehension: Number(subjectData.knowledge_level ?? 3) || 3 })) {
+        const topicKey = normalizeName(topic.name);
         if (existingTopicNames.has(topicKey)) {
           summary.counts.skippedTopics += 1;
-          pushDetail(summary, "topics.skipped", { name: topicName, subject: name, reason: "Tópico equivalente já existia nesta disciplina." });
+          pushDetail(summary, "topics.skipped", { name: topic.name, subject: name, reason: "Tópico equivalente já existia nesta disciplina." });
           continue;
         }
 
-        const { data: insertedTopic, error: topicError } = await supabase.from("topics").insert({ user_id: user.id, subject_id: subjectData.id, name: topicName, order_index: nextOrderIndex }).select("id").single();
+        const { data: insertedTopic, error: topicError } = await supabase.from("topics").insert({ user_id: user.id, subject_id: subjectData.id, name: topic.name, order_index: nextOrderIndex, relevance_score: topic.relevance, incidence_score: topic.incidence, comprehension_score: topic.comprehension }).select("id").single();
         if (topicError) {
           if ((topicError as any).code !== "23505") throw topicError;
           summary.counts.skippedTopics += 1;
-          pushDetail(summary, "topics.skipped", { name: topicName, subject: name, reason: "Tópico equivalente foi criado em processamento simultâneo." });
+          pushDetail(summary, "topics.skipped", { name: topic.name, subject: name, reason: "Tópico equivalente foi criado em processamento simultâneo." });
         } else {
           existingTopicNames.add(topicKey);
           nextOrderIndex += 1;
           summary.counts.insertedTopics += 1;
-          pushDetail(summary, "topics.inserted", { name: topicName, subject: name, reason: "Novo tópico identificado no edital." });
+          pushDetail(summary, "topics.inserted", { name: topic.name, subject: name, reason: "Novo tópico identificado no edital.", next: { relevance: topic.relevance, incidence: topic.incidence, comprehension: topic.comprehension } });
           for (const source of sources.filter((source: any) => source.url).slice(0, 3)) {
             await supabase.from("public_source_audits").insert({ user_id: user.id, subject_id: subjectData.id, topic_id: insertedTopic?.id || null, source_url: source.url, source_title: source.title || "Fonte pública", source_note: source.note || "Referência pública usada para Relevância/Incidência", origin: "process-edital", copyright_assessment: "Fonte pública usada como referência de incidência/relevância; sem reprodução integral de conteúdo protegido.", storage_notes: "Armazenados apenas metadados, tema, pontuação e referência da fonte." });
           }
