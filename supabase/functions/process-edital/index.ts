@@ -251,12 +251,17 @@ Deno.serve(async (req) => {
 
     const systemPrompt = `Você é especialista em concursos públicos brasileiros e no algoritmo G-Force da Study.AI.
 Extraia disciplinas e tópicos do edital, sugerindo apenas os vetores Relevância e Incidência.
+Priorize o conteúdo programático literal: cada item, subitem, eixo, unidade, assunto ou conteúdo previsto deve virar tópico útil da disciplina correspondente.
+Não retorne apenas disciplinas genéricas quando o edital listar conteúdos específicos; preserve os tópicos previstos mesmo que pareçam numerosos.
+Quando houver subtópicos muito longos, resuma em nomes curtos e revisáveis, mantendo o sentido do edital.
+Evite criar tópicos inventados fora do texto; se houver lacunas, prefira tópicos conservadores derivados do conteúdo explícito.
 Relevância = peso/importância da matéria no edital atual, sempre em escala inteira de 1 a 5.
 Incidência = recorrência histórica em provas anteriores ou semelhantes do mesmo cargo/banca, sempre em escala inteira de 1 a 5.
 Nunca retorne valores menores que 1 ou maiores que 5 para Relevância ou Incidência.
 Não estime Compreensão, Psique ou Intensidade: esses vetores vêm de registros do usuário no Arsenal, Planner e Bem Estar.
 Use o contexto de pesquisa pública quando disponível; se as fontes forem insuficientes, informe justificativa conservadora.
 Retorne fontes públicas resumidas quando houver URLs/citações no contexto.
+Para cada disciplina, retorne preferencialmente de 5 a 25 tópicos, salvo quando o edital trouxer menos itens.
 Formato obrigatório: os campos relevance e incidence devem ser números inteiros de 1 a 5 ou strings numéricas simples entre "1" e "5"; não use porcentagens, escala 0-10, decimais, texto ou valores nulos.`;
 
     const userContent = `Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.
@@ -283,7 +288,7 @@ ${edital}`;
           type: "function",
           function: {
             name: "extract_subjects",
-            description: "Extrai disciplinas, tópicos, relevância, incidência, justificativas e fontes públicas do edital.",
+            description: "Extrai disciplinas, tópicos específicos do conteúdo programático, relevância, incidência, justificativas e fontes públicas do edital.",
             parameters: {
               type: "object",
               properties: {
@@ -298,7 +303,7 @@ ${edital}`;
                       relevanceReason: { type: "string" },
                       incidenceReason: { type: "string" },
                       sources: { type: "array", items: { type: "object", properties: { title: { type: "string" }, url: { type: "string" }, note: { type: "string" } } } },
-                      topics: { type: "array", items: { type: "string" } },
+                      topics: { type: "array", description: "Itens e subitens específicos previstos no conteúdo programático da disciplina, em nomes curtos e revisáveis.", items: { type: "string", maxLength: 240 } },
                     },
                     required: ["name", "relevance", "incidence", "topics"],
                   },
