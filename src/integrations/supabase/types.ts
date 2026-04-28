@@ -280,6 +280,39 @@ export type Database = {
         }
         Relationships: []
       }
+      predict_cycle_logs: {
+        Row: {
+          correlation_id: string
+          created_at: string
+          id: string
+          level: string
+          message: string
+          metadata: Json
+          stage: string
+          user_id: string
+        }
+        Insert: {
+          correlation_id: string
+          created_at?: string
+          id?: string
+          level: string
+          message: string
+          metadata?: Json
+          stage: string
+          user_id: string
+        }
+        Update: {
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json
+          stage?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
