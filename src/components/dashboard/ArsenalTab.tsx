@@ -13,7 +13,6 @@ import { Shield, BookOpen, CheckCircle, Target, Plus, Loader2, Trash2, Upload, F
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Slider } from "@/components/ui/slider";
 import { recalculateAndPersistPlan } from "@/lib/planner-adaptation";
 import { z } from "zod";
 
@@ -71,6 +70,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const [processingSummary, setProcessingSummary] = useState<ProcessingSummary | null>(null);
   const [pdfFailure, setPdfFailure] = useState<{ submissionId: string; stage: string; message: string; code: string; canRetry: boolean } | null>(null);
   const [savingSubjectId, setSavingSubjectId] = useState<string | null>(null);
+  const [savingTopicKey, setSavingTopicKey] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
@@ -273,7 +273,16 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     const name = newTopicInputs[subjectId]?.trim();
     if (!name) return;
     const maxOrder = topics.filter(t => t.subject_id === subjectId).length;
-    const { error } = await supabase.from("topics").insert({ user_id: userId, subject_id: subjectId, name, order_index: maxOrder });
+    const subject = subjects.find(s => s.id === subjectId);
+    const { error } = await (supabase as any).from("topics").insert({
+      user_id: userId,
+      subject_id: subjectId,
+      name,
+      order_index: maxOrder,
+      relevance_score: clampVector(Number(subject?.weight ?? 3)),
+      incidence_score: clampVector(Number(subject?.incidence ?? 3)),
+      comprehension_score: clampVector(Number(subject?.knowledge_level ?? 3)),
+    });
     if (error) { toast.error(error.code === "23505" ? "Esse tópico já existe nesta disciplina" : "Erro ao adicionar tópico"); return; }
     setNewTopicInputs(prev => ({ ...prev, [subjectId]: "" }));
     loadData();
@@ -317,6 +326,37 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
   const getSubjectPlan = (subjectId: string) => plan.find(p => p.subject_id === subjectId);
 
   const clampVector = (value: number) => Math.min(5, Math.max(1, Math.round(Number(value) || 3)));
+  const clampDecimalVector = (value: number) => Math.min(5, Math.max(1, Math.round((Number(value) || 3) * 10) / 10));
+  const topicVectorFields = [
+    { key: "relevance_score", label: "Relevância" },
+    { key: "incidence_score", label: "Incidência" },
+    { key: "comprehension_score", label: "Compreensão" },
+  ] as const;
+
+  const getTopicAverages = (subjectId: string) => {
+    const subTopics = topics.filter(t => t.subject_id === subjectId);
+    if (!subTopics.length) return null;
+    const avg = (field: "relevance_score" | "incidence_score" | "comprehension_score") =>
+      Math.round((subTopics.reduce((sum, topic) => sum + clampDecimalVector(Number(topic[field] ?? 3)), 0) / subTopics.length) * 10) / 10;
+    return { relevance: avg("relevance_score"), incidence: avg("incidence_score"), comprehension: avg("comprehension_score") };
+  };
+
+  const syncSubjectFromTopicAverages = async (subjectId: string) => {
+    const { data, error } = await (supabase as any)
+      .from("topics")
+      .select("relevance_score, incidence_score, comprehension_score")
+      .eq("user_id", userId)
+      .eq("subject_id", subjectId);
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length) return null;
+    const avg = (field: "relevance_score" | "incidence_score" | "comprehension_score") =>
+      clampDecimalVector(rows.reduce((sum: number, topic: any) => sum + clampDecimalVector(Number(topic[field] ?? 3)), 0) / rows.length);
+    const next = { weight: avg("relevance_score"), incidence: avg("incidence_score"), knowledge_level: Math.round(avg("comprehension_score")) };
+    const { error: subjectError } = await (supabase as any).from("user_subjects").update(next).eq("id", subjectId).eq("user_id", userId);
+    if (subjectError) throw subjectError;
+    return next;
+  };
 
   const setSubjectVectorLocal = (subjectId: string, field: "weight" | "incidence" | "knowledge_level", value: number) => {
     const nextValue = clampVector(value);
@@ -354,28 +394,53 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
     }
   };
 
-  const renderVectorControl = (subject: any, field: "weight" | "incidence" | "knowledge_level", label: string, helper: string) => {
-    const value = clampVector(Number(subject[field] ?? 3));
-    const saving = savingSubjectId === subject.id;
+  const setTopicVectorLocal = (topicId: string, field: "relevance_score" | "incidence_score" | "comprehension_score", value: number) => {
+    const nextValue = clampDecimalVector(value);
+    setTopics(prev => prev.map(topic => topic.id === topicId ? { ...topic, [field]: nextValue } : topic));
+  };
+
+  const updateTopicVector = async (topic: any, field: "relevance_score" | "incidence_score" | "comprehension_score", value: number) => {
+    const nextValue = clampDecimalVector(value);
+    const previousValue = clampDecimalVector(Number(topic[field] ?? 3));
+    const savingKey = `${topic.id}:${field}`;
+    setSavingTopicKey(savingKey);
+    try {
+      const { error } = await (supabase as any).from("topics").update({ [field]: nextValue }).eq("id", topic.id).eq("user_id", userId);
+      if (error) throw error;
+      const subjectAverages = await syncSubjectFromTopicAverages(topic.subject_id);
+      await recalculateAndPersistPlan(userId, {
+        eventType: "manual_gforce_topic_vector_adjustment",
+        eventSource: "arsenal_topic_vectors",
+        subjectId: topic.subject_id,
+        explanation: "Ajuste manual do usuário em vetor G-Force de tópico no Arsenal.",
+        metadata: { field, previousValue, nextValue, topicId: topic.id, topicName: topic.name, subjectAverages },
+      });
+      toast.success("Nota do tópico salva e G-Force recalculado.");
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || "Não foi possível atualizar a nota do tópico.");
+      loadData();
+    } finally {
+      setSavingTopicKey(null);
+    }
+  };
+
+  const renderTopicVectorInput = (topic: any, field: "relevance_score" | "incidence_score" | "comprehension_score") => {
+    const value = clampDecimalVector(Number(topic[field] ?? 3));
+    const saving = savingTopicKey === `${topic.id}:${field}`;
     return (
-      <div className="rounded-xl border border-border/60 bg-muted/10 p-3 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <Label className="text-xs font-medium">{label}</Label>
-            <p className="text-[10px] text-muted-foreground">{helper}</p>
-          </div>
-          <Badge variant="outline" className="text-[10px] min-w-10 justify-center">{value}/5</Badge>
-        </div>
-        <Slider
-          min={1}
-          max={5}
-          step={1}
-          value={[value]}
-          disabled={saving}
-          onValueChange={([next]) => setSubjectVectorLocal(subject.id, field, next)}
-          onValueCommit={([next]) => updateSubjectVector(subject, field, next)}
-        />
-      </div>
+      <Input
+        type="number"
+        min={1}
+        max={5}
+        step={0.1}
+        value={value}
+        disabled={saving}
+        aria-label={field}
+        className="h-8 min-w-16 text-center text-xs"
+        onChange={e => setTopicVectorLocal(topic.id, field, Number(e.target.value))}
+        onBlur={e => updateTopicVector(topic, field, Number(e.target.value))}
+      />
     );
   };
 
@@ -552,6 +617,14 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
 
       {renderProcessingSummary()}
 
+      <Card className="glass border-primary/30">
+        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Target className="h-4 w-4" />Como revisar os vetores dos tópicos</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>Use notas decimais de 1 a 5 para ajustar cada tópico: Relevância mede o peso no edital, Incidência estima a chance de cobrança e Compreensão representa seu domínio atual.</p>
+          <p>Revisar essas notas ajuda a Study.AI priorizar o que realmente move sua aprovação: estudo eficiente, efetivo e orientado pelas melhores evidências científicas e técnicas de neurociência da aprendizagem.</p>
+        </CardContent>
+      </Card>
+
       <Card className="glass">
         <CardHeader><CardTitle className="text-sm">➕ Adicionar Nova Disciplina</CardTitle></CardHeader>
         <CardContent>
@@ -570,6 +643,7 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
           const done = subTopics.filter(t => t.completed).length;
           const pct = subTopics.length > 0 ? Math.round((done / subTopics.length) * 100) : 0;
           const subPlan = getSubjectPlan(s.id);
+          const averages = getTopicAverages(s.id);
           return (
             <Card key={s.id} className="glass">
               <CardHeader className="pb-2">
@@ -578,31 +652,34 @@ const ArsenalTab = ({ userId }: ArsenalTabProps) => {
                   <Button variant="ghost" size="icon" onClick={() => deleteSubject(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
                 </div>
                 <div className="flex gap-3 text-xs text-muted-foreground flex-wrap items-center">
-                  <span>Relevância: <strong className="text-foreground">{s.weight || 3}/5</strong></span>
-                  <span>Incidência: <strong className="text-foreground">{s.incidence || 3}/5</strong></span>
-                  <span>Compreensão: <strong className="text-foreground">{s.knowledge_level || 3}/5</strong></span>
-                  {savingSubjectId === s.id && <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="h-3 w-3 animate-spin" />Salvando</span>}
+                  <span>Média R: <strong className="text-foreground">{averages?.relevance ?? clampDecimalVector(Number(s.weight || 3))}/5</strong></span>
+                  <span>Média I: <strong className="text-foreground">{averages?.incidence ?? clampDecimalVector(Number(s.incidence || 3))}/5</strong></span>
+                  <span>Média C: <strong className="text-foreground">{averages?.comprehension ?? clampDecimalVector(Number(s.knowledge_level || 3))}/5</strong></span>
                 </div>
                 <Progress value={pct} className="h-1.5 mt-1" />
                 <span className="text-[10px] text-muted-foreground">{done}/{subTopics.length} tópicos concluídos</span>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-3">
-                  {renderVectorControl(s, "weight", "Relevância", "Peso desta disciplina no edital")}
-                  {renderVectorControl(s, "incidence", "Incidência", "Frequência provável em provas")}
-                  {renderVectorControl(s, "knowledge_level", "Compreensão", "Seu domínio atual do conteúdo")}
-                </div>
-
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-medium text-foreground">Tópicos previstos</p>
                     <Badge variant="secondary" className="text-[10px]">{subTopics.length}</Badge>
                   </div>
                   {subTopics.length > 0 ? subTopics.map(t => (
-                    <label key={t.id} className="flex items-start gap-2 rounded-xl border border-border/50 bg-muted/10 p-2 text-sm cursor-pointer">
-                      <Checkbox checked={t.completed} onCheckedChange={() => toggleTopic(t.id, t.completed)} className="mt-0.5" />
-                      <span className={t.completed ? "line-through text-muted-foreground" : ""}>{t.name}</span>
-                    </label>
+                    <div key={t.id} className="rounded-xl border border-border/50 bg-muted/10 p-3 space-y-3">
+                      <label className="flex items-start gap-2 text-sm cursor-pointer">
+                        <Checkbox checked={t.completed} onCheckedChange={() => toggleTopic(t.id, t.completed)} className="mt-0.5" />
+                        <span className={t.completed ? "line-through text-muted-foreground" : ""}>{t.name}</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {topicVectorFields.map(field => (
+                          <div key={field.key} className="space-y-1">
+                            <Label className="text-[10px] text-muted-foreground">{field.label}</Label>
+                            {renderTopicVectorInput(t, field.key)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )) : (
                     <div className="rounded-xl border border-dashed border-border/70 p-3 text-xs text-muted-foreground">
                       Nenhum tópico importado para esta disciplina. Adicione abaixo os conteúdos previstos no edital.

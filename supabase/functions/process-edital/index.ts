@@ -61,7 +61,12 @@ const extractedSubjectsSchema = z.object({
     sources: z.array(sourceSchema).optional().default([]),
     topics: z.array(z.union([
       boundedTextSchema(240).pipe(z.string().min(1)),
-      z.object({ name: boundedTextSchema(240).pipe(z.string().min(1)) }),
+      z.object({
+        name: boundedTextSchema(240).pipe(z.string().min(1)),
+        relevance: scoreSchema.optional(),
+        incidence: scoreSchema.optional(),
+        comprehension: scoreSchema.optional(),
+      }),
     ])).default([]),
   })).min(1),
 });
@@ -173,11 +178,19 @@ const getPublicResearchContext = async (targetExam?: string | null, targetPositi
   }
 };
 
-const parseTopics = (topics: Array<string | { name: string }>) => {
+const parseTopics = (topics: Array<string | { name: string; relevance?: number; incidence?: number; comprehension?: number }>, fallback: { relevance: number; incidence: number; comprehension: number }) => {
   const seen = new Set<string>();
-  return topics.map((topic) => cleanText(typeof topic === "string" ? topic : topic.name, 240)).filter((topic) => {
-    if (!topic) return false;
-    const key = normalizeName(topic);
+  return topics.map((topic) => {
+    const name = cleanText(typeof topic === "string" ? topic : topic.name, 240);
+    return {
+      name,
+      relevance: typeof topic === "string" ? fallback.relevance : clampScore(topic.relevance, fallback.relevance),
+      incidence: typeof topic === "string" ? fallback.incidence : clampScore(topic.incidence, fallback.incidence),
+      comprehension: typeof topic === "string" ? fallback.comprehension : clampScore(topic.comprehension, fallback.comprehension),
+    };
+  }).filter((topic) => {
+    if (!topic.name) return false;
+    const key = normalizeName(topic.name);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -250,19 +263,20 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const systemPrompt = `Você é especialista em concursos públicos brasileiros e no algoritmo G-Force da Study.AI.
-Extraia disciplinas e tópicos do edital, sugerindo apenas os vetores Relevância e Incidência.
+Extraia disciplinas e tópicos do edital, sugerindo os vetores Relevância, Incidência e uma Compreensão inicial conservadora por tópico.
 Priorize o conteúdo programático literal: cada item, subitem, eixo, unidade, assunto ou conteúdo previsto deve virar tópico útil da disciplina correspondente.
 Não retorne apenas disciplinas genéricas quando o edital listar conteúdos específicos; preserve os tópicos previstos mesmo que pareçam numerosos.
 Quando houver subtópicos muito longos, resuma em nomes curtos e revisáveis, mantendo o sentido do edital.
 Evite criar tópicos inventados fora do texto; se houver lacunas, prefira tópicos conservadores derivados do conteúdo explícito.
-Relevância = peso/importância da matéria no edital atual, sempre em escala inteira de 1 a 5.
-Incidência = recorrência histórica em provas anteriores ou semelhantes do mesmo cargo/banca, sempre em escala inteira de 1 a 5.
-Nunca retorne valores menores que 1 ou maiores que 5 para Relevância ou Incidência.
-Não estime Compreensão, Psique ou Intensidade: esses vetores vêm de registros do usuário no Arsenal, Planner e Bem Estar.
+Relevância = peso/importância do tópico no edital atual, sempre em escala de 1 a 5.
+Incidência = recorrência histórica provável do tópico em provas anteriores ou semelhantes, sempre em escala de 1 a 5.
+Compreensão inicial = default conservador de domínio do usuário sobre o tópico; use 3 salvo evidência textual clara de assunto introdutório ou avançado.
+Nunca retorne valores menores que 1 ou maiores que 5 para Relevância, Incidência ou Compreensão.
+Não estime Psique ou Intensidade: esses vetores vêm de registros do usuário no Arsenal, Planner e Bem Estar.
 Use o contexto de pesquisa pública quando disponível; se as fontes forem insuficientes, informe justificativa conservadora.
 Retorne fontes públicas resumidas quando houver URLs/citações no contexto.
 Para cada disciplina, retorne preferencialmente de 5 a 25 tópicos, salvo quando o edital trouxer menos itens.
-Formato obrigatório: os campos relevance e incidence devem ser números inteiros de 1 a 5 ou strings numéricas simples entre "1" e "5"; não use porcentagens, escala 0-10, decimais, texto ou valores nulos.`;
+Formato obrigatório: scores podem ser números de 1 a 5 ou strings numéricas simples entre "1" e "5"; não use porcentagens, escala 0-10, texto ou valores nulos. Para cada tópico, prefira objeto com name, relevance, incidence e comprehension.`;
 
     const userContent = `Concurso: ${targetExam || "não informado"}. Cargo: ${targetPosition || "não informado"}. Banca: ${banca || "não informada"}.
 
@@ -303,7 +317,7 @@ ${edital}`;
                       relevanceReason: { type: "string" },
                       incidenceReason: { type: "string" },
                       sources: { type: "array", items: { type: "object", properties: { title: { type: "string" }, url: { type: "string" }, note: { type: "string" } } } },
-                      topics: { type: "array", description: "Itens e subitens específicos previstos no conteúdo programático da disciplina, em nomes curtos e revisáveis.", items: { type: "string", maxLength: 240 } },
+                      topics: { type: "array", description: "Itens e subitens específicos previstos no conteúdo programático da disciplina, em nomes curtos e revisáveis, com vetores próprios.", items: { oneOf: [{ type: "string", maxLength: 240 }, { type: "object", properties: { name: { type: "string", maxLength: 240 }, relevance: { oneOf: [{ type: "number", minimum: 1, maximum: 5 }, { type: "string", pattern: "^[1-5]$" }] }, incidence: { oneOf: [{ type: "number", minimum: 1, maximum: 5 }, { type: "string", pattern: "^[1-5]$" }] }, comprehension: { oneOf: [{ type: "number", minimum: 1, maximum: 5 }, { type: "string", pattern: "^[1-5]$" }] } }, required: ["name", "relevance", "incidence", "comprehension"] }] } },
                     },
                     required: ["name", "relevance", "incidence", "topics"],
                   },
@@ -426,34 +440,50 @@ ${edital}`;
 
       const existingTopicNames = new Set((existingTopicsData || []).map((topic: any) => normalizeName(topic.name)));
       let nextOrderIndex = Math.max(-1, ...(existingTopicsData || []).map((topic: any) => Number(topic.order_index) || 0)) + 1;
-      for (const topicName of parseTopics(extracted.topics)) {
-        const topicKey = normalizeName(topicName);
+      for (const topic of parseTopics(extracted.topics, { relevance, incidence, comprehension: Number(subjectData.knowledge_level ?? 3) || 3 })) {
+        const topicKey = normalizeName(topic.name);
         if (existingTopicNames.has(topicKey)) {
           summary.counts.skippedTopics += 1;
-          pushDetail(summary, "topics.skipped", { name: topicName, subject: name, reason: "Tópico equivalente já existia nesta disciplina." });
+          pushDetail(summary, "topics.skipped", { name: topic.name, subject: name, reason: "Tópico equivalente já existia nesta disciplina." });
           continue;
         }
 
-        const { data: insertedTopic, error: topicError } = await supabase.from("topics").insert({ user_id: user.id, subject_id: subjectData.id, name: topicName, order_index: nextOrderIndex }).select("id").single();
+        const { data: insertedTopic, error: topicError } = await supabase.from("topics").insert({ user_id: user.id, subject_id: subjectData.id, name: topic.name, order_index: nextOrderIndex, relevance_score: topic.relevance, incidence_score: topic.incidence, comprehension_score: topic.comprehension }).select("id").single();
         if (topicError) {
           if ((topicError as any).code !== "23505") throw topicError;
           summary.counts.skippedTopics += 1;
-          pushDetail(summary, "topics.skipped", { name: topicName, subject: name, reason: "Tópico equivalente foi criado em processamento simultâneo." });
+          pushDetail(summary, "topics.skipped", { name: topic.name, subject: name, reason: "Tópico equivalente foi criado em processamento simultâneo." });
         } else {
           existingTopicNames.add(topicKey);
           nextOrderIndex += 1;
           summary.counts.insertedTopics += 1;
-          pushDetail(summary, "topics.inserted", { name: topicName, subject: name, reason: "Novo tópico identificado no edital." });
+          pushDetail(summary, "topics.inserted", { name: topic.name, subject: name, reason: "Novo tópico identificado no edital.", next: { relevance: topic.relevance, incidence: topic.incidence, comprehension: topic.comprehension } });
           for (const source of sources.filter((source: any) => source.url).slice(0, 3)) {
             await supabase.from("public_source_audits").insert({ user_id: user.id, subject_id: subjectData.id, topic_id: insertedTopic?.id || null, source_url: source.url, source_title: source.title || "Fonte pública", source_note: source.note || "Referência pública usada para Relevância/Incidência", origin: "process-edital", copyright_assessment: "Fonte pública usada como referência de incidência/relevância; sem reprodução integral de conteúdo protegido.", storage_notes: "Armazenados apenas metadados, tema, pontuação e referência da fonte." });
           }
         }
       }
 
-      const priorityScore = buildPriority(relevance, incidence);
+      const { data: scoredTopics, error: scoredTopicsError } = await supabase
+        .from("topics")
+        .select("relevance_score, incidence_score, comprehension_score")
+        .eq("user_id", user.id)
+        .eq("subject_id", subjectData.id);
+      if (scoredTopicsError) throw scoredTopicsError;
+      if (scoredTopics?.length) {
+        const avg = (field: "relevance_score" | "incidence_score" | "comprehension_score") =>
+          clampScore(scoredTopics.reduce((sum: number, topic: any) => sum + clampScore(topic[field]), 0) / scoredTopics.length);
+        const aggregated = { relevance: avg("relevance_score"), incidence: avg("incidence_score"), comprehension: avg("comprehension_score") };
+        await supabase.from("user_subjects").update({ weight: aggregated.relevance, incidence: aggregated.incidence, knowledge_level: aggregated.comprehension }).eq("id", subjectData.id).eq("user_id", user.id);
+        subjectData = { ...subjectData, weight: aggregated.relevance, incidence: aggregated.incidence, knowledge_level: aggregated.comprehension };
+      }
+
+      const planRelevance = Number(subjectData.weight ?? relevance);
+      const planIncidence = Number(subjectData.incidence ?? incidence);
+      const priorityScore = buildPriority(planRelevance, planIncidence);
       const planPayload = {
-        relevance,
-        incidence,
+        relevance: planRelevance,
+        incidence: planIncidence,
         priority_score: priorityScore,
         recommended_hours_weekly: Math.ceil(priorityScore),
         gap_score: 5,
