@@ -464,10 +464,26 @@ ${edital}`;
         }
       }
 
-      const priorityScore = buildPriority(relevance, incidence);
+      const { data: scoredTopics, error: scoredTopicsError } = await supabase
+        .from("topics")
+        .select("relevance_score, incidence_score, comprehension_score")
+        .eq("user_id", user.id)
+        .eq("subject_id", subjectData.id);
+      if (scoredTopicsError) throw scoredTopicsError;
+      if (scoredTopics?.length) {
+        const avg = (field: "relevance_score" | "incidence_score" | "comprehension_score") =>
+          clampScore(scoredTopics.reduce((sum: number, topic: any) => sum + clampScore(topic[field]), 0) / scoredTopics.length);
+        const aggregated = { relevance: avg("relevance_score"), incidence: avg("incidence_score"), comprehension: avg("comprehension_score") };
+        await supabase.from("user_subjects").update({ weight: aggregated.relevance, incidence: aggregated.incidence, knowledge_level: aggregated.comprehension }).eq("id", subjectData.id).eq("user_id", user.id);
+        subjectData = { ...subjectData, weight: aggregated.relevance, incidence: aggregated.incidence, knowledge_level: aggregated.comprehension };
+      }
+
+      const planRelevance = Number(subjectData.weight ?? relevance);
+      const planIncidence = Number(subjectData.incidence ?? incidence);
+      const priorityScore = buildPriority(planRelevance, planIncidence);
       const planPayload = {
-        relevance,
-        incidence,
+        relevance: planRelevance,
+        incidence: planIncidence,
         priority_score: priorityScore,
         recommended_hours_weekly: Math.ceil(priorityScore),
         gap_score: 5,
