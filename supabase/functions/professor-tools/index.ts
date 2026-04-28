@@ -38,25 +38,37 @@ Crie um resumo completo e otimizado sobre o tema solicitado.
 - Inclua ao final um "checkpoint de compreensão" com 2-3 perguntas rápidas.`,
 };
 
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+function getBackendConfig() {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+  return { url, key };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
+    if (!authHeader) return jsonResponse({ error: "Sessão inválida." }, 401);
 
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+    const { url, key } = getBackendConfig();
+    if (!url || !key) return jsonResponse({ error: "Configuração interna indisponível." }, 500);
+    const supabase = createClient(url, key, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
+    if (!user) return jsonResponse({ error: "Sessão inválida." }, 401);
 
     const { tool, topic, subjectName } = await req.json();
-    if (!tool || !topic) throw new Error("Tool and topic required");
+    if (typeof tool !== "string" || typeof topic !== "string" || topic.trim().length === 0 || topic.length > 240) return jsonResponse({ error: "Ferramenta ou tema inválido." }, 400);
 
     const toolPrompt = TOOL_PROMPTS[tool];
-    if (!toolPrompt) throw new Error("Invalid tool: " + tool);
+    if (!toolPrompt) return jsonResponse({ error: "Ferramenta inválida." }, 400);
 
     const [profileRes, subjectsRes, psycheRes, checkinsRes, planRes] = await Promise.all([
       supabase.from("profiles").select("target_exam, target_position, banca, daily_hours, exam_date").eq("user_id", user.id).maybeSingle(),
@@ -103,8 +115,8 @@ Responda sempre em português. Seja preciso, didático e adapte ao estado atual 
     });
 
     if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 429) return jsonResponse({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }, 429);
+      if (response.status === 402) return jsonResponse({ error: "Créditos de IA insuficientes para gerar material." }, 402);
       throw new Error(`AI error: ${response.status}`);
     }
 
@@ -113,8 +125,6 @@ Responda sempre em português. Seja preciso, didático e adapte ao estado atual 
     });
   } catch (e) {
     console.error("professor-tools error:", e);
-    return new Response(JSON.stringify({ error: "Erro interno ao gerar material. Tente novamente." }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Erro interno ao gerar material. Tente novamente." }, 500);
   }
 });
