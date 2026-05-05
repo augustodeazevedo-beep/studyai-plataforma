@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import {
   CalendarDays, Shield, BarChart3, BookOpen, History, Activity,
   Sparkles, Brain, MessageCircle, Trophy, Settings, LogOut, Menu, X,
-  ChevronLeft, HelpCircle, Palette, Heart,
+  ChevronLeft, HelpCircle, Palette, Heart, CalendarCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -10,7 +10,8 @@ import BrandLogo from "@/components/brand/BrandLogo";
 
 export type TabKey =
   | "planner" | "arsenal" | "analysis" | "notebooks" | "history"
-  | "predictor" | "coach" | "professor" | "psyche" | "performance" | "achievements" | "settings" | "tutorial";
+  | "predictor" | "coach" | "professor" | "psyche" | "performance" | "achievements" | "settings" | "tutorial"
+  | "cronograma_oab";
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -23,6 +24,7 @@ const NAV_ITEMS: { key: TabKey; label: string; icon: typeof CalendarDays; ai?: b
   { key: "psyche", label: "Bem-Estar", icon: Heart, separator: "Preparação" },
   { key: "arsenal", label: "Arsenal", icon: Shield },
   { key: "planner", label: "Planner", icon: CalendarDays, separator: "Execução" },
+  { key: "cronograma_oab", label: "Cronograma OAB", icon: CalendarCheck },
   { key: "notebooks", label: "Cadernos", icon: BookOpen },
   { key: "analysis", label: "Análise", icon: BarChart3, separator: "Inteligência" },
   { key: "performance", label: "Métricas", icon: Activity },

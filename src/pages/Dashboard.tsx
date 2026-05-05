@@ -17,6 +17,7 @@ import SettingsTab from "@/components/dashboard/SettingsTab";
 import TutorialTab from "@/components/dashboard/TutorialTab";
 import PsycheTab from "@/components/dashboard/PsycheTab";
 import PerformanceTab from "@/components/dashboard/PerformanceTab";
+import CronogramaOABTab from "@/components/dashboard/CronogramaOABTab";
 import BrandLogo from "@/components/brand/BrandLogo";
 import { toast } from "sonner";
 
@@ -107,6 +108,7 @@ const Dashboard = () => {
       case "achievements": return <AchievementsTab userId={user.id} />;
       case "settings": return <SettingsTab userId={user.id} />;
       case "tutorial": return <TutorialTab userId={user.id} />;
+      case "cronograma_oab": return <CronogramaOABTab userId={user.id} />;
       default: return <PlannerTab userId={user.id} />;
     }
   };
