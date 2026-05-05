@@ -161,7 +161,7 @@ const CronogramaOABTab = ({ userId }: CronogramaOABTabProps) => {
         {/* Progress indicator */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="font-semibold text-primary">Etapa 1</span>
-          <span>/</span><span>2</span><span>/</span><span>3</span>
+          <span>/</span><span>Etapa 2</span><span>/</span><span>Etapa 3</span>
           <span className="ml-1">— Configurar meu plano</span>
         </div>
 
@@ -278,7 +278,7 @@ const CronogramaOABTab = ({ userId }: CronogramaOABTabProps) => {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Etapa 1</span><span>/</span>
           <span className="font-semibold text-primary">Etapa 2</span>
-          <span>/</span><span>3</span>
+          <span>/</span><span>Etapa 3</span>
           <span className="ml-1">— Como está seu domínio por área?</span>
         </div>
 
@@ -368,7 +368,7 @@ const CronogramaOABTab = ({ userId }: CronogramaOABTabProps) => {
           <Button variant="outline" onClick={() => setStep(1)}>
             <ChevronLeft className="mr-1 h-4 w-4" /> Voltar
           </Button>
-          <Button size="lg" onClick={gerarCronograma}>
+          <Button size="lg" onClick={gerarCronograma} disabled={!dataProva || diasEstudo.length === 0}>
             <BookOpen className="mr-2 h-4 w-4" /> Gerar meu cronograma →
           </Button>
         </div>
