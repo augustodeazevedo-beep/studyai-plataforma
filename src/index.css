@@ -1,142 +1,301 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   Study.AI — Advocacy.AI Visual Identity v2.1
+   Legal AI Lab | AI-Native | Neural Link / Pedagogia Adaptativa
+   ============================================================ */
+
 @layer base {
   :root {
-    --background: 200 25% 7%;
-    --foreground: 70 30% 94%;
-
-    --card: 200 22% 11%;
-    --card-foreground: 70 30% 94%;
-
-    --popover: 200 22% 11%;
-    --popover-foreground: 70 30% 94%;
-
-    --primary: 74 86% 62%;
-    --primary-foreground: 200 25% 8%;
-
-    --secondary: 200 18% 16%;
-    --secondary-foreground: 70 30% 94%;
-
-    --muted: 200 14% 14%;
-    --muted-foreground: 200 10% 62%;
-
-    --accent: 188 85% 22%;
-    --accent-foreground: 188 85% 78%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 200 15% 18%;
-    --input: 200 15% 18%;
-    --ring: 74 86% 62%;
-
-    --radius: 0.75rem;
-
-    --sidebar-background: 200 22% 9%;
-    --sidebar-foreground: 70 30% 94%;
-    --sidebar-primary: 74 86% 62%;
-    --sidebar-primary-foreground: 200 25% 8%;
-    --sidebar-accent: 200 14% 14%;
-    --sidebar-accent-foreground: 70 30% 94%;
-    --sidebar-border: 200 15% 18%;
-    --sidebar-ring: 74 86% 62%;
-
-    --success: 142 76% 42%;
-    --success-foreground: 210 40% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 200 25% 8%;
-    --info: 188 85% 51%;
-    --info-foreground: 200 25% 8%;
-
-    --gradient-primary: linear-gradient(135deg, hsl(74, 86%, 62%), hsl(188, 85%, 51%));
-    --gradient-accent: linear-gradient(135deg, hsl(74, 86%, 62%), hsl(200, 25%, 12%));
-    --gradient-surface: linear-gradient(180deg, hsl(200, 22%, 11%), hsl(200, 25%, 7%));
-
-    --shadow-glow: 0 0 20px hsl(74 86% 62% / 0.30);
-    --shadow-glow-strong: 0 0 48px hsl(74 86% 62% / 0.45);
-  }
-
-  .dark {
-    --background: 200 25% 7%;
-    --foreground: 70 30% 94%;
-  }
-
-  :root:not(.dark) {
-    --background: 70 12% 95%;
-    --foreground: 200 22% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 200 22% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 200 22% 12%;
-    --primary: 74 80% 50%;
-    --primary-foreground: 200 25% 8%;
-    --secondary: 70 10% 90%;
-    --secondary-foreground: 200 22% 12%;
-    --muted: 70 10% 92%;
-    --muted-foreground: 200 10% 38%;
-    --accent: 188 70% 90%;
-    --accent-foreground: 188 85% 24%;
-    --destructive: 0 72% 51%;
+    /* Grafite metalizado escuro #14171C */
+    --background: 217 17% 9%;
+    --foreground: 210 28% 93%;
+    --card: 219 21% 13%;
+    --card-foreground: 210 28% 93%;
+    --popover: 219 21% 13%;
+    --popover-foreground: 210 28% 93%;
+    /* Verde limão neon #D4FF00 - 5% usage */
+    --primary: 73 100% 51%;
+    --primary-foreground: 217 17% 9%;
+    /* Muted #8A99B1 */
+    --secondary: 217 20% 62%;
+    --secondary-foreground: 210 28% 93%;
+    --muted: 219 21% 13%;
+    --muted-foreground: 217 20% 62%;
+    /* Ciano técnico #1DC9E8 */
+    --accent: 189 82% 51%;
+    --accent-foreground: 217 17% 9%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 70 10% 84%;
-    --input: 70 10% 84%;
-    --ring: 74 80% 50%;
-    --sidebar-background: 70 12% 95%;
-    --sidebar-foreground: 200 22% 12%;
-    --sidebar-primary: 74 80% 50%;
-    --sidebar-primary-foreground: 200 25% 8%;
-    --sidebar-accent: 70 10% 90%;
-    --sidebar-accent-foreground: 200 22% 12%;
-    --sidebar-border: 70 10% 84%;
-    --sidebar-ring: 74 80% 50%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 200 25% 8%;
-    --info: 188 85% 40%;
-    --info-foreground: 0 0% 100%;
-    --gradient-primary: linear-gradient(135deg, hsl(74, 80%, 50%), hsl(188, 85%, 45%));
-    --gradient-accent: linear-gradient(135deg, hsl(74, 80%, 50%), hsl(200, 22%, 14%));
-    --gradient-surface: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(70, 12%, 95%));
-    --shadow-glow: 0 0 20px hsl(74 80% 50% / 0.20);
-    --shadow-glow-strong: 0 0 40px hsl(74 80% 50% / 0.30);
+    /* Border #303841 */
+    --border: 212 15% 22%;
+    --input: 212 15% 22%;
+    --ring: 73 100% 51%;
+    --radius: 0.75rem;
+    /* Sidebar */
+    --sidebar-background: 219 21% 11%;
+    --sidebar-foreground: 210 28% 93%;
+    --sidebar-primary: 73 100% 51%;
+    --sidebar-primary-foreground: 217 17% 9%;
+    --sidebar-accent: 212 15% 22%;
+    --sidebar-accent-foreground: 210 28% 93%;
+    --sidebar-border: 212 15% 22%;
+    --sidebar-ring: 73 100% 51%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
+  * { @apply border-border; }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    background-image: radial-gradient(circle, hsl(212 15% 22% / 0.4) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
   }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+  h1,h2,h3,h4,h5,h6 {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-weight: 700;
   }
 }
 
 @layer utilities {
-  .text-gradient {
+  .font-mono-data { font-family: 'JetBrains Mono', monospace; }
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+  .neon-ai { color: hsl(73 100% 51%); text-shadow: 0 0 8px rgba(212,255,0,0.4); }
+  .text-neon { color: hsl(73 100% 51%); }
+  .text-cyan { color: hsl(189 82% 51%); }
+  .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: var(--gradient-primary);
+    background-image: linear-gradient(135deg, hsl(73 100% 51%), hsl(189 82% 51%));
   }
-
-  .glow {
-    box-shadow: var(--shadow-glow);
-  }
-
-  .glow-strong {
-    box-shadow: var(--shadow-glow-strong);
-  }
-
   .glass {
-    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+    background: rgba(27, 32, 41, 0.6);
+    backdrop-filter: blur(8px);
+    border: 1px solid hsl(212 15% 22%);
   }
-}
+  .glow-border { box-shadow: 0 0 0 1px hsl(73 100% 51% / 0.15), 0 0 20px -5px hsl(73 100% 51% / 0.12); }
+  .glow-border-hover:hover { box-shadow: 0 0 0 1px hsl(73 100% 51% / 0.35), 0 0 30px -5px hsl(73 100% 51% / 0.2); }
+  .glow-cyan { box-shadow: 0 0 0 1px hsl(189 82% 51% / 0.2), 0 0 20px -5px hsl(189 82% 51% / 0.15); }
+  .byline { font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500; color: hsl(217 20% 62%); letter-spacing: 0.04em; }
+  .panel-graphite { background: hsl(219 21% 11%); color: hsl(210 28% 93%); border: 1px solid hsl(212 15% 22%); }
+  .ai-processing-bar {
+    background: linear-gradient(90deg, hsl(73 100% 51%), hsl(189 82% 51%), hsl(73 100% 51%));
+    background-size: 200% 100%;
+    animation: ai-scan 2s linear infinite;
+    height: 2px;
+  }
+  @keyframes ai-scan { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+  .data-mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: hsl(189 82% 51%); letter-spacing: 0.04em; }
+  .badge-ai-native { font-size: 0.6rem; font-weight: 500; letter-spacing: 0.08em; color: hsl(217 20% 62%); text-transform: uppercase; }
+
+  /* ----------------------------------------------------------
+     Study.AI — Product-specific utilities
+     Neural Link | Brain/Circuit Isotipo | Pedagogia Adaptativa
+     ---------------------------------------------------------- */
+
+  /* ---- .neural-pulse — pulsing cyan glow for brain/circuit isotipo ---- */
+  .neural-pulse {
+    animation: neural-pulse-anim 2.4s ease-in-out infinite;
+    color: hsl(189 82% 51%);
+  }
+  @keyframes neural-pulse-anim {
+    0%, 100% {
+      filter: drop-shadow(0 0 4px hsl(189 82% 51% / 0.5))
+              drop-shadow(0 0 10px hsl(189 82% 51% / 0.25));
+      opacity: 1;
+    }
+    50% {
+      filter: drop-shadow(0 0 8px hsl(189 82% 51% / 0.8))
+              drop-shadow(0 0 20px hsl(189 82% 51% / 0.4))
+              drop-shadow(0 0 40px hsl(189 82% 51% / 0.15));
+      opacity: 0.88;
+    }
+  }
+
+  /* Box variant of neural-pulse (for container elements, not SVG) */
+  .neural-pulse-box {
+    animation: neural-pulse-box-anim 2.4s ease-in-out infinite;
+  }
+  @keyframes neural-pulse-box-anim {
+    0%, 100% {
+      box-shadow:
+        0 0 0 1px hsl(189 82% 51% / 0.2),
+        0 0 12px -3px hsl(189 82% 51% / 0.3);
+    }
+    50% {
+      box-shadow:
+        0 0 0 1px hsl(189 82% 51% / 0.45),
+        0 0 24px -3px hsl(189 82% 51% / 0.5),
+        0 0 48px -8px hsl(189 82% 51% / 0.2);
+    }
+  }
+
+  /* Circuit node dot — small connection point in neural link graphics */
+  .neural-node {
+    display: inline-block;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: hsl(189 82% 51%);
+    box-shadow: 0 0 6px hsl(189 82% 51% / 0.7);
+    animation: neural-pulse-anim 2.4s ease-in-out infinite;
+  }
+  .neural-node.neon {
+    background: hsl(73 100% 51%);
+    box-shadow: 0 0 6px hsl(73 100% 51% / 0.7);
+    animation: pulse-neon-study 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse-neon-study {
+    0%, 100% { box-shadow: 0 0 6px hsl(73 100% 51% / 0.7); }
+    50%       { box-shadow: 0 0 14px hsl(73 100% 51% / 0.9); }
+  }
+
+  /* ---- .adaptive-badge — "Inteligência Pedagógica Adaptativa" subtitle ---- */
+  .adaptive-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: hsl(217 20% 62%);
+    padding: 0.3rem 0.8rem 0.3rem 0.6rem;
+    border-radius: 9999px;
+    background: hsl(219 21% 13%);
+    border: 1px solid hsl(212 15% 22%);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Shimmer sweep on the badge */
+  .adaptive-badge::before {
+    content: '';
+    position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(189 82% 51% / 0.08), transparent);
+    animation: badge-shimmer 3.5s ease-in-out infinite;
+  }
+  @keyframes badge-shimmer {
+    0%   { left: -100%; }
+    60%  { left: 140%; }
+    100% { left: 140%; }
+  }
+  /* Leading dot indicator inside .adaptive-badge */
+  .adaptive-badge::after {
+    content: '';
+    display: inline-block;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: hsl(189 82% 51%);
+    box-shadow: 0 0 5px hsl(189 82% 51% / 0.8);
+    flex-shrink: 0;
+    order: -1;
+    animation: neural-pulse-anim 2.4s ease-in-out infinite;
+  }
+
+  /* Learning progress bar */
+  .learning-progress {
+    height: 4px;
+    border-radius: 9999px;
+    background: hsl(212 15% 22%);
+    overflow: hidden;
+  }
+  .learning-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, hsl(189 82% 51%), hsl(73 100% 51%));
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 8px hsl(189 82% 51% / 0.5);
+  }
+
+  /* Module / lesson card */
+  .lesson-card {
+    background: hsl(219 21% 13%);
+    border: 1px solid hsl(212 15% 22%);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    display: flex; flex-direction: column; gap: 0.6rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .lesson-card:hover {
+    border-color: hsl(189 82% 51% / 0.3);
+    box-shadow: 0 0 0 1px hsl(189 82% 51% / 0.08), 0 4px 20px -4px hsl(189 82% 51% / 0.1);
+  }
+  .lesson-card.completed {
+    border-color: hsl(73 100% 51% / 0.2);
+  }
+  .lesson-card.active {
+    border-color: hsl(189 82% 51% / 0.4);
+    box-shadow: 0 0 0 1px hsl(189 82% 51% / 0.12), 0 4px 20px -4px hsl(189 82% 51% / 0.15);
+  }
+
+  /* Difficulty level badge */
+  .badge-level-basico {
+    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: hsl(73 100% 51% / 0.1); color: hsl(73 100% 51%);
+    border: 1px solid hsl(73 100% 51% / 0.25);
+  }
+  .badge-level-intermediario {
+    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: hsl(189 82% 51% / 0.1); color: hsl(189 82% 51%);
+    border: 1px solid hsl(189 82% 51% / 0.25);
+  }
+  .badge-level-avancado {
+    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: hsl(270 60% 65% / 0.1); color: hsl(270 60% 75%);
+    border: 1px solid hsl(270 60% 65% / 0.25);
+  }
+
+  /* AI recommendation chip */
+  .chip-recomendado-ia {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.65rem; font-weight: 500; letter-spacing: 0.04em;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius);
+    background: hsl(73 100% 51% / 0.08);
+    color: hsl(73 100% 51%);
+    border: 1px solid hsl(73 100% 51% / 0.2);
+    animation: none;
+  }
+  .chip-recomendado-ia::before {
+    content: '';
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%;
+    background: hsl(73 100% 51%);
+    box-shadow: 0 0 6px hsl(73 100% 51% / 0.7);
+    animation: pulse-neon-study 2s ease-in-out infinite;
+  }
+
+  /* Quiz answer option */
+  .quiz-option {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    border: 1px solid hsl(212 15% 22%);
+    background: hsl(219 21% 13%);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 0.88rem;
+    color: hsl(210 28% 93%);
+  }
+  .quiz-option:hover { border-color: hsl(189 82% 51% / 0.35); background: hsl(219 21% 16%); }
+  .quiz-option.selected { border-color: hsl(189 82% 51%); background: hsl(189 82% 51% / 0.08); }
+  .quiz-option.correct  { border-color: hsl(73 100% 51%); background: hsl(73 100% 51% / 0.08); color: hsl(73 100% 51%); }
+  .quiz-option.wrong    { border-color: hsl(0 84% 60%); background: hsl(0 84% 60% / 0.08); color: hsl(0 84% 70%); }
+
+  /* Neon divider rule */
+  .rule-neon {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(73 100% 51% / 0.4), transparent);
+    border: none;
+    margin: 1.5rem 0;
+  }
+                }
