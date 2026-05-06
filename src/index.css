@@ -46,6 +46,34 @@
     --sidebar-border: 212 15% 22%;
     --sidebar-ring: 73 100% 51%;
   }
+
+  /* Light theme overrides — sidebar stays dark (graphite) per brand */
+  html:not(.dark) {
+    --background: 210 28% 97%;
+    --foreground: 217 17% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 217 17% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 17% 12%;
+    --primary: 189 82% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 20% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 217 15% 40%;
+    --accent: 73 80% 40%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 212 15% 85%;
+    --input: 212 15% 85%;
+    --ring: 189 82% 42%;
+    /* Sidebar tokens intentionally retained from :root (dark graphite) */
+  }
+
+  html:not(.dark) body {
+    background-image: radial-gradient(circle, hsl(212 15% 80% / 0.5) 1px, transparent 1px);
+  }
 }
 
 @layer base {
