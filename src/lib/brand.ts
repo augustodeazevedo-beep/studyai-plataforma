@@ -26,25 +26,15 @@ export interface BrandLogoSettings {
 export const BRAND_STORAGE_KEY = "studyai:brand-kit";
 export const BRAND_UPDATED_EVENT = "studyai-brand-updated";
 
-const LEGACY_WORDMARKS = new Set([
-  "/brand/studyai-wordmark.webp",
-  "/brand/studyai-wordmark-light.webp",
-  "/brand/studyai-wordmark-new-dark.webp",
-  "/brand/studyai-wordmark-new-light.webp",
-]);
-const LEGACY_MARKS = new Set([
-  "/brand/studyai-mark.webp",
-  "/brand/studyai-mark.png",
-  "/brand/studyai-mark-new.webp",
-  "/brand/studyai-mark-new.png",
-]);
+const LEGACY_WORDMARKS = new Set(["/brand/studyai-wordmark.webp", "/brand/studyai-wordmark-light.webp"]);
+const LEGACY_MARKS = new Set(["/brand/studyai-mark.webp", "/brand/studyai-mark.png"]);
 
 export const defaultBrandSettings: BrandLogoSettings = {
   name: "Study.AI",
   tagline: "Inteligência pedagógica adaptativa",
-  wordmarkSrc: "/brand/studyai-wordmark-v3-dark.webp",
-  wordmarkLightSrc: "/brand/studyai-wordmark-v3-light.webp",
-  markSrc: "/brand/studyai-mark-v3.webp",
+  wordmarkSrc: "/brand/studyai-wordmark-new-dark.webp",
+  wordmarkLightSrc: "/brand/studyai-wordmark-new-light.webp",
+  markSrc: "/brand/studyai-mark-new.webp",
   fallbackSvg: "/brand/studyai-mark.svg",
   sizes: {
     nav: 44,
