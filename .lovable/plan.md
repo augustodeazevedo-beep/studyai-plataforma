@@ -1,31 +1,26 @@
-## Substituir logotipo Study.AI pelo novo anexo
+## Objetivo
+Adicionar a marca "by Advocacy.AI" no rodapé da landing page (`src/pages/Index.tsx`), sinalizando que o Study.AI é um produto da Advocacy.AI.
 
-### O que será feito
+## O que será feito
 
-Substituir todos os assets de logo em `public/brand/` pelo novo logotipo enviado (cérebro azul-teal + "Study.AI" com ".AI" em verde-lima + tagline "Inteligência pedagógica adaptativa" + "by Advocacy.AI"), mantendo a identidade visual Advocacy.IA já implementada.
+1. **Adicionar o asset da marca Advocacy.AI**
+   - Copiar `user-uploads://Novo_-_Advocacy.AI_Completo_e_Sem_Fundo.png` para `src/assets/advocacy-ai-logo.png`.
+   - Usar a versão completa (símbolo + wordmark) em tamanho reduzido para o rodapé.
 
-### Etapas
+2. **Atualizar o rodapé da landing (`src/pages/Index.tsx`)**
+   - Adicionar uma linha/bloco "by Advocacy.AI" com o logo clicável (link externo `https://advocacy.ai`, `target="_blank"`, `rel="noopener noreferrer"`).
+   - Layout: pequena linha centralizada acima ou ao lado do copyright, com texto `by` em `text-muted-foreground` e o logo com altura ~20–24px, mantendo proporção e respeitando o tema escuro forçado da landing.
+   - Acessibilidade: `alt="Advocacy.AI"` e `aria-label` no link.
 
-1. **Importar imagem original**
-   - `code--copy user-uploads://Novo_-_Study.AI_Sem_Fundo.png` → `/tmp/studyai-source.png`
+3. **Garantir consistência visual**
+   - Como a landing força tema escuro (`document.documentElement.classList.add("dark")`), o PNG transparente atual (com wordmark claro) já funciona — sem necessidade de variante adicional.
+   - Não alterar outros logos, sidebar ou demais páginas — escopo limitado ao footer da landing.
 
-2. **Gerar variantes via Python/PIL** (script descartável em `/tmp`):
-   - **Wordmark light** (`public/brand/studyai-wordmark-new-light.webp` + `.png`): logo completo (cérebro + texto + tagline + "by Advocacy.AI") sobre fundo transparente, otimizado para fundos claros. Texto "Study." escurecido para grafite (#1F2A2E) garantindo contraste WCAG AA.
-   - **Wordmark dark** (`public/brand/studyai-wordmark-new-dark.webp` + `.png`): mesma composição, mas "Study." em off-white (#F2F3EE) e leve glow neon-lima no ".AI" para tema escuro do dashboard.
-   - **Mark/símbolo** (`public/brand/studyai-mark-new.webp` + `.png` + variantes 64/128/256/512): apenas o cérebro com circuitos recortado e centralizado, fundo transparente, usado em sidebar colapsada, favicons internos e botões.
-   - **Logo principal** (`public/brand/studyai-logo-new.png`): cópia em alta resolução do original.
+## Arquivos afetados
+- `src/assets/advocacy-ai-logo.png` (novo)
+- `src/pages/Index.tsx` (footer)
 
-3. **SVG fallback** (`public/brand/studyai-mark.svg`): manter — já alinhado à paleta lima/cyan.
-
-4. **Sem mudanças de código**: `BrandLogo` e `src/lib/brand.ts` já apontam para esses caminhos. A substituição dos arquivos atualiza UI automaticamente (landing, auth, sidebar, dashboard, footer).
-
-5. **QA visual**: abrir cada `.webp`/`.png` gerado, verificar transparência, recorte, contraste do texto sobre fundo claro e escuro, e legibilidade da tagline em tamanhos pequenos (sidebar 38px). Iterar se necessário.
-
-### Arquivos impactados
-
-- `public/brand/studyai-logo-new.png`
-- `public/brand/studyai-wordmark-new-light.webp` / `.png`
-- `public/brand/studyai-wordmark-new-dark.webp` / `.png`
-- `public/brand/studyai-mark-new.webp` / `.png` (+ 64/128/256/512)
-
-Sem alterações em código TS/TSX, sem migrações, sem edge functions.
+## Fora de escopo
+- Substituir logos do produto Study.AI.
+- Adicionar a marca em outras páginas (dashboard, auth, onboarding).
+- Ajustes em e-mails ou meta tags.
