@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import Sidebar, { TabKey } from "./Sidebar";
 import { Sparkles } from "lucide-react";
+import WelcomeBanner from "./WelcomeBanner";
 
 const QUOTES = [
   "Persistência transforma sonho em realidade.",
@@ -30,6 +31,7 @@ const DashboardLayout = ({ activeTab, onTabChange, onLogout, userName, children 
           <span className="text-sm text-muted-foreground italic">"{quote}"</span>
         </div>
         <div className="container mx-auto px-4 py-6 max-w-7xl">
+          <WelcomeBanner userName={userName} />
           {children}
         </div>
       </main>
