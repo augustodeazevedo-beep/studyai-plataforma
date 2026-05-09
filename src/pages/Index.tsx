@@ -10,7 +10,7 @@ import BrandLogo from "@/components/brand/BrandLogo";
 import heroBg from "@/assets/hero-bg.jpg";
 import ctaBg from "@/assets/cta-bg.jpg";
 import featuresBg from "@/assets/features-bg.jpg";
-
+import advocacyLogo from "@/assets/advocacy-ai-logo.png";
 
 const features = [
   {
@@ -372,20 +372,21 @@ const Index = () => {
               <a href="#" className="hover:text-foreground transition-colors">Contato</a>
             </div>
           </div>
-          <div className="flex flex-col items-center justify-center gap-2 pt-4 border-t border-border/50">
+          <div className="flex items-center justify-center gap-2 pt-4 border-t border-border/50">
+            <span className="text-xs text-muted-foreground">by</span>
             <a
               href="https://advocacy.ai"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Study.AI by Advocacy.AI"
+              aria-label="Advocacy.AI"
               className="inline-flex items-center transition-opacity hover:opacity-80"
             >
               <img
-                src="/brand/studyai-lockup-v3-dark.webp"
-                alt="Study.AI — Inteligência pedagógica adaptativa, by Advocacy.AI"
+                src={advocacyLogo}
+                alt="Advocacy.AI"
                 loading="lazy"
                 decoding="async"
-                className="h-14 w-auto object-contain"
+                className="h-7 w-auto object-contain"
               />
             </a>
           </div>
