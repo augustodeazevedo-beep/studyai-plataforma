@@ -10,7 +10,7 @@ import BrandLogo from "@/components/brand/BrandLogo";
 import heroBg from "@/assets/hero-bg.jpg";
 import ctaBg from "@/assets/cta-bg.jpg";
 import featuresBg from "@/assets/features-bg.jpg";
-import advocacyLogo from "@/assets/advocacy-ai-logo.png";
+
 
 const features = [
   {
