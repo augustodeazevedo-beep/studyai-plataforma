@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import Sidebar, { TabKey } from "./Sidebar";
 import { Sparkles } from "lucide-react";
 import WelcomeBanner from "./WelcomeBanner";
+import AppsLauncher from "./AppsLauncher";
 
 const QUOTES = [
   "Persistência transforma sonho em realidade.",
@@ -26,9 +27,12 @@ const DashboardLayout = ({ activeTab, onTabChange, onLogout, userName, children 
     <div className="min-h-screen bg-background flex">
       <Sidebar activeTab={activeTab} onTabChange={onTabChange} onLogout={onLogout} userName={userName} />
       <main className="flex-1 overflow-y-auto lg:ml-0">
-        <div className="flex items-center justify-end gap-2 px-6 py-3">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span className="text-sm text-muted-foreground italic">"{quote}"</span>
+        <div className="flex items-center justify-between gap-3 px-6 py-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sparkles className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-sm text-muted-foreground italic truncate">"{quote}"</span>
+          </div>
+          <AppsLauncher />
         </div>
         <div className="container mx-auto px-4 py-6 max-w-7xl">
           <WelcomeBanner userName={userName} />
