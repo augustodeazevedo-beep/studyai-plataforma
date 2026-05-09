@@ -1,46 +1,29 @@
 ## Objetivo
-Adicionar um menu "Apps" no canto superior direito do Dashboard, exibindo o ecossistema Advocacy.AI com todos os produtos. O produto atual (Study.AI) aparece destacado e marcado como ativo; os demais abrem em nova aba.
+Reduzir levemente o container de boas-vindas (`WelcomeBanner`) e trocar a imagem de fundo (atualmente "balança da justiça") por uma com identidade de **neurociência + IA**, mantendo a paleta Study.AI (ciano/teal sobre fundo escuro).
 
-## Onde aparece
-- Posicionado dentro do header superior do `DashboardLayout` (mesma linha onde hoje fica a quote motivacional), alinhado à direita.
-  - Layout: `flex items-center justify-between` — quote à esquerda, botão "Apps" à direita.
-- Visível em todas as abas do Dashboard.
+## Alterações
 
-## Componentes
+### 1. Nova imagem de fundo — `src/assets/dashboard-hero-bg.jpg` (substituir)
+Gerar via `imagegen--generate_image` (modelo `standard`, 1920x640, sem transparência) com prompt focado em:
+- Cérebro humano estilizado em wireframe/holográfico ciano-teal
+- Circuitos neurais, sinapses brilhantes, nós de rede neural
+- Partículas de dados, linhas de circuito sutis ao fundo
+- Fundo escuro (azul-marinho/preto) compatível com `bg-background`
+- Estética futurista, AI-native, tom científico (não cartoon)
+- Lado esquerdo mais escuro/limpo para o gradiente do texto respirar
 
-### Novo: `src/components/dashboard/AppsLauncher.tsx`
-- Botão trigger usando `DropdownMenu` (shadcn) com ícone `LayoutGrid` (lucide) + label "Apps".
-- Conteúdo do dropdown (largura ~320px, `rounded-xl`, paleta Study.AI com tokens semânticos):
-  - Cabeçalho pequeno: "ECOSSISTEMA" (uppercase, tracking, muted) e "Advocacy.AI" (com ".AI" em cor de destaque `text-primary`).
-  - Lista de apps. Cada item:
-    - Ícone à esquerda (lucide), nome do produto com sufixo ".AI" colorido em `text-primary`.
-    - Subtítulo curto descritivo (muted).
-    - Item ativo (Study.AI): borda `border-primary/40`, fundo `bg-primary/10`, com `Check` à direita.
-    - Demais itens: link `<a target="_blank" rel="noopener noreferrer">` com ícone `ExternalLink` ao lado do nome.
+### 2. Reduzir o container — `src/components/dashboard/WelcomeBanner.tsx`
+Apenas ajustes de espaçamento/tamanho (sem mexer em estrutura, gradiente ou cores):
+- Padding: `px-5 py-5 sm:px-8 sm:py-6` → `px-4 py-4 sm:px-7 sm:py-5`
+- Greeting `h1`: `text-xl sm:text-3xl` → `text-lg sm:text-2xl`
+- Chip "AI-Native · Study.AI": `mb-3` → `mb-2`
+- Data: `mt-2 text-sm sm:text-base` → `mt-1.5 text-xs sm:text-sm`
 
-### Lista de apps (constante no componente)
-- Inventaria.AI — `https://inventariaai.lovable.app` — "Planejamento patrimonial e sucessório" — ícone `Scale`
-- Peticiona.AI — `https://peticionaai-byadvocacyai.lovable.app` — "Petições, minutas e contratos" — ícone `FileText`
-- Advoga.AI — `https://advogaai-byadvocacy.lovable.app` — "Gestão de processos e escritório" — ícone `Briefcase`
-- Prospect.AI — `https://prospectai-byadvocacyai.lovable.app` — "Prospecção e inteligência de clientes" — ícone `Search`
-- Fin.AI — `https://finai-byadvocacyia.lovable.app` — "Gestão financeira do escritório" — ícone `Wallet`
-- Study.AI — `https://studyai-plataforma.lovable.app` — "Pesquisa jurídica e estudos" — ícone `GraduationCap` — **ATIVO**
-
-Observação: a URL de Inventaria.AI fornecida começa com "ttps://"; será corrigida para `https://inventariaai.lovable.app`.
-
-### Integração: `src/components/dashboard/DashboardLayout.tsx`
-- Trocar a barra superior de `flex items-center justify-end` para `flex items-center justify-between`.
-- Manter a quote à esquerda; renderizar `<AppsLauncher />` à direita.
-- No mobile (< sm): mostrar apenas o ícone do botão (label "Apps" oculto via `hidden sm:inline`).
-
-## Estilo
-- Tokens semânticos do design system (sem cores hard-coded). Bordas `rounded-xl`, ícones em quadrados arredondados com `bg-muted/40`.
-- Item ativo destacado em ciano (`text-primary`, `bg-primary/10`, `border border-primary/30`).
+Mantém: imagem importada, `opacity-70`, gradiente, nome em uppercase com `text-primary`, borda `rounded-xl`.
 
 ## Fora de escopo
-- Sem mudanças em sidebar, RLS, schema, edge functions, autenticação ou outras páginas (landing/auth/onboarding).
-- Sem SSO entre apps — cada link apenas abre em nova aba.
+- Sem mudanças em layout do header, AppsLauncher, sidebar, dados ou backend.
 
 ## Arquivos impactados
-- `src/components/dashboard/AppsLauncher.tsx` (novo)
-- `src/components/dashboard/DashboardLayout.tsx` (header recebe o launcher à direita)
+- `src/assets/dashboard-hero-bg.jpg` (regenerada)
+- `src/components/dashboard/WelcomeBanner.tsx` (ajuste fino de tamanho)
