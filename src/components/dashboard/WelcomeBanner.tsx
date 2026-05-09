@@ -35,16 +35,16 @@ const WelcomeBanner = ({ userName }: WelcomeBannerProps) => {
         loading="lazy"
       />
       <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-background/10" />
-      <div className="relative z-10 px-5 py-5 sm:px-8 sm:py-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/40 bg-primary/10 text-xs font-semibold text-primary mb-3">
+      <div className="relative z-10 px-4 py-4 sm:px-7 sm:py-5">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/40 bg-primary/10 text-xs font-semibold text-primary mb-2">
           <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           AI-Native · Study.AI
         </div>
-        <h1 className="font-display font-bold uppercase tracking-tight text-xl sm:text-3xl text-foreground leading-tight">
+        <h1 className="font-display font-bold uppercase tracking-tight text-lg sm:text-2xl text-foreground leading-tight">
           {greeting},{" "}
           <span className="text-primary">{userName.toUpperCase()}</span>
         </h1>
-        <p className="mt-2 text-sm sm:text-base text-muted-foreground">{dateStr}</p>
+        <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">{dateStr}</p>
       </div>
     </section>
   );
