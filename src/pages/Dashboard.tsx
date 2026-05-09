@@ -24,6 +24,7 @@ import { toast } from "sonner";
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileName, setProfileName] = useState<string>("");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get("tab") as TabKey) || "planner";
@@ -38,7 +39,7 @@ const Dashboard = () => {
     const checkOnboarding = async (userId: string) => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("onboarding_completed")
+        .select("onboarding_completed, full_name")
         .eq("user_id", userId)
         .maybeSingle();
       if (cancelled) return;
@@ -51,6 +52,7 @@ const Dashboard = () => {
         navigate("/onboarding");
         return;
       }
+      if (data?.full_name) setProfileName(data.full_name);
       setLoading(false);
     };
 
@@ -91,7 +93,11 @@ const Dashboard = () => {
     );
   }
 
-  const displayName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Estudante";
+  const displayName =
+    profileName ||
+    user.user_metadata?.full_name ||
+    user.email?.split("@")[0] ||
+    "Estudante";
 
   const renderTab = () => {
     switch (activeTab) {
