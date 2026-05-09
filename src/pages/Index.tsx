@@ -10,6 +10,7 @@ import BrandLogo from "@/components/brand/BrandLogo";
 import heroBg from "@/assets/hero-bg.jpg";
 import ctaBg from "@/assets/cta-bg.jpg";
 import featuresBg from "@/assets/features-bg.jpg";
+import advocacyLogo from "@/assets/advocacy-ai-logo.png";
 
 const features = [
   {
@@ -359,15 +360,35 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="border-t border-border py-8 px-4">
-        <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-3">
-            <BrandLogo size="footer" imgClassName="max-w-[130px]" />
-            <span>© 2026 Study.AI — Todos os direitos reservados</span>
+        <div className="container mx-auto flex flex-col gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <BrandLogo size="footer" imgClassName="max-w-[130px]" />
+              <span>© 2026 Study.AI — Todos os direitos reservados</span>
+            </div>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-foreground transition-colors">Termos</a>
+              <a href="#" className="hover:text-foreground transition-colors">Privacidade</a>
+              <a href="#" className="hover:text-foreground transition-colors">Contato</a>
+            </div>
           </div>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-foreground transition-colors">Termos</a>
-            <a href="#" className="hover:text-foreground transition-colors">Privacidade</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contato</a>
+          <div className="flex items-center justify-center gap-2 pt-4 border-t border-border/50">
+            <span className="text-xs text-muted-foreground">by</span>
+            <a
+              href="https://advocacy.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Advocacy.AI"
+              className="inline-flex items-center transition-opacity hover:opacity-80"
+            >
+              <img
+                src={advocacyLogo}
+                alt="Advocacy.AI"
+                loading="lazy"
+                decoding="async"
+                className="h-7 w-auto object-contain"
+              />
+            </a>
           </div>
         </div>
       </footer>
