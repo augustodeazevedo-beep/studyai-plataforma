@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +18,21 @@ interface Flashcard {
   created_at: string;
 }
 
-const STORAGE_KEY = "studyai_flashcards";
+function fromDB(row: Record<string, unknown>): Flashcard {
+  const lastMs = row.last_reviewed_at ? new Date(row.last_reviewed_at as string).getTime() : null;
+  const nextMs = row.next_review_at ? new Date(row.next_review_at as string).getTime() : Date.now();
+  const interval = lastMs ? Math.max(0, Math.round((nextMs - lastMs) / 86400000)) : 0;
+  return {
+    id: row.id as string,
+    front: row.front as string,
+    back: row.back as string,
+    easiness: (row.difficulty as number) ?? 2.5,
+    interval,
+    repetitions: (row.review_count as number) ?? 0,
+    nextReview: (row.next_review_at as string) ?? new Date().toISOString(),
+    created_at: row.created_at as string,
+  };
+}
 
 function sm2(card: Flashcard, quality: number): Flashcard {
   const q = Math.max(0, Math.min(5, quality));
@@ -44,7 +58,9 @@ function isDue(card: Flashcard): boolean {
 
 export default function Flashcards() {
   const navigate = useNavigate();
+  const [userId, setUserId] = useState<string | null>(null);
   const [cards, setCards] = useState<Flashcard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "study" | "create">("list");
   const [studyQueue, setStudyQueue] = useState<Flashcard[]>([]);
   const [current, setCurrent] = useState(0);
@@ -54,46 +70,50 @@ export default function Flashcards() {
   const [sessionStats, setSessionStats] = useState({ easy: 0, regular: 0, hard: 0 });
   const importRef = useRef<HTMLInputElement>(null);
 
-  // Guard: redirect to /auth if not authenticated
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) navigate("/auth", { replace: true });
-    });
-  }, [navigate]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) setCards(JSON.parse(stored));
+  const loadCards = useCallback(async (uid: string) => {
+    const { data, error } = await supabase
+      .from("flashcards")
+      .select("*")
+      .eq("user_id", uid)
+      .order("created_at", { ascending: false });
+    if (error) { toast.error("Erro ao carregar cartões"); return; }
+    setCards((data ?? []).map(fromDB));
   }, []);
 
-  const save = (updated: Flashcard[]) => {
-    setCards(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { navigate("/auth", { replace: true }); return; }
+      setUserId(session.user.id);
+      await loadCards(session.user.id);
+      setLoading(false);
+    });
+  }, [navigate, loadCards]);
 
-  const createCard = () => {
-    if (!newFront.trim() || !newBack.trim()) {
-      toast.error("Preencha frente e verso do cartão");
-      return;
-    }
-    const card: Flashcard = {
+  const createCard = async () => {
+    if (!newFront.trim() || !newBack.trim()) { toast.error("Preencha frente e verso do cartão"); return; }
+    if (!userId) return;
+    const { error } = await supabase.from("flashcards").insert({
       id: crypto.randomUUID(),
+      user_id: userId,
       front: newFront.trim(),
       back: newBack.trim(),
-      easiness: 2.5,
-      interval: 0,
-      repetitions: 0,
-      nextReview: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-    };
-    save([...cards, card]);
-    setNewFront("");
-    setNewBack("");
+      difficulty: 2.5,
+      review_count: 0,
+      next_review_at: new Date().toISOString(),
+      last_reviewed_at: null,
+    });
+    if (error) { toast.error("Erro ao criar cartão"); return; }
+    setNewFront(""); setNewBack("");
     toast.success("Cartão criado");
+    await loadCards(userId);
     setView("list");
   };
 
-  const deleteCard = (id: string) => save(cards.filter((c) => c.id !== id));
+  const deleteCard = async (id: string) => {
+    if (!userId) return;
+    await supabase.from("flashcards").delete().eq("id", id).eq("user_id", userId);
+    setCards((prev) => prev.filter((c) => c.id !== id));
+  };
 
   const startStudy = () => {
     const due = cards.filter(isDue);
@@ -105,17 +125,26 @@ export default function Flashcards() {
     setView("study");
   };
 
-  const rate = (quality: number) => {
+  const rate = async (quality: number) => {
+    if (!userId) return;
     const card = studyQueue[current];
     const updated = sm2(card, quality);
-    save(cards.map((c) => (c.id === card.id ? updated : c)));
-    setSessionStats((s) => ({
-      easy: s.easy + (quality === 5 ? 1 : 0),
-      regular: s.regular + (quality === 3 ? 1 : 0),
-      hard: s.hard + (quality === 1 ? 1 : 0),
-    }));
+    const { error } = await supabase.from("flashcards").update({
+      difficulty: updated.easiness,
+      review_count: updated.repetitions,
+      next_review_at: updated.nextReview,
+      last_reviewed_at: new Date().toISOString(),
+    }).eq("id", updated.id).eq("user_id", userId);
+    if (error) { toast.error("Erro ao salvar revisão"); return; }
+    setCards((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    const newStats = {
+      easy: sessionStats.easy + (quality === 5 ? 1 : 0),
+      regular: sessionStats.regular + (quality === 3 ? 1 : 0),
+      hard: sessionStats.hard + (quality === 1 ? 1 : 0),
+    };
+    setSessionStats(newStats);
     if (current + 1 >= studyQueue.length) {
-      toast.success(`Sessão concluída! ${sessionStats.easy + (quality === 5 ? 1 : 0)} fáceis · ${sessionStats.regular + (quality === 3 ? 1 : 0)} regulares · ${sessionStats.hard + (quality === 1 ? 1 : 0)} difíceis`);
+      toast.success(`Sessão concluída! ${newStats.easy} fáceis · ${newStats.regular} regulares · ${newStats.hard} difíceis`);
       setView("list");
     } else {
       setCurrent((p) => p + 1);
@@ -136,9 +165,9 @@ export default function Flashcards() {
 
   const importCards = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !userId) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const imported = JSON.parse(ev.target?.result as string);
         if (!Array.isArray(imported)) throw new Error("formato inválido");
@@ -147,7 +176,21 @@ export default function Flashcards() {
         ) as Flashcard[];
         const existingIds = new Set(cards.map((c) => c.id));
         const newCards = valid.filter((c) => !existingIds.has(c.id));
-        save([...cards, ...newCards]);
+        if (newCards.length > 0) {
+          const rows = newCards.map((c) => ({
+            id: c.id,
+            user_id: userId,
+            front: c.front,
+            back: c.back,
+            difficulty: c.easiness ?? 2.5,
+            review_count: c.repetitions ?? 0,
+            next_review_at: c.nextReview ?? new Date().toISOString(),
+            last_reviewed_at: null,
+          }));
+          const { error } = await supabase.from("flashcards").insert(rows);
+          if (error) { toast.error("Erro ao importar: " + error.message); return; }
+          await loadCards(userId);
+        }
         toast.success(`${newCards.length} cartões importados (${imported.length - newCards.length} duplicados ignorados)`);
       } catch {
         toast.error("Arquivo inválido. Use um JSON exportado pelo StudyAI.");
@@ -171,25 +214,18 @@ export default function Flashcards() {
           <button onClick={() => setView("list")} className="text-sm text-muted-foreground hover:underline">← Sair</button>
           <div className="text-sm text-muted-foreground">
             {current + 1} / {studyQueue.length}
-            <span className="ml-3 text-xs">
-              ✓ {sessionStats.easy} · ↻ {sessionStats.regular} · ✗ {sessionStats.hard}
-            </span>
+            <span className="ml-3 text-xs">✓ {sessionStats.easy} · ↻ {sessionStats.regular} · ✗ {sessionStats.hard}</span>
           </div>
         </div>
         <div className="w-full bg-border/40 rounded-full h-1">
-          <div
-            className="bg-primary h-1 rounded-full transition-all"
-            style={{ width: `${(current / studyQueue.length) * 100}%` }}
-          />
+          <div className="bg-primary h-1 rounded-full transition-all" style={{ width: `${(current / studyQueue.length) * 100}%` }} />
         </div>
         <div
           onClick={() => setFlipped(!flipped)}
           className="min-h-[240px] rounded-2xl border-2 cursor-pointer flex items-center justify-center p-8 text-center transition-all hover:border-primary/50 select-none"
         >
           <div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4">
-              {flipped ? "VERSO" : "FRENTE"}
-            </div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4">{flipped ? "VERSO" : "FRENTE"}</div>
             <p className="text-xl leading-relaxed">{flipped ? card.back : card.front}</p>
             {!flipped && <p className="text-xs text-muted-foreground mt-6">Clique para revelar</p>}
           </div>
@@ -218,22 +254,11 @@ export default function Flashcards() {
         <h2 className="text-xl font-bold">Novo Flashcard</h2>
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-wide text-muted-foreground">Frente (pergunta)</label>
-          <Textarea
-            placeholder="Ex: Qual o conceito de ITCMD?"
-            value={newFront}
-            onChange={(e) => setNewFront(e.target.value)}
-            rows={3}
-            autoFocus
-          />
+          <Textarea placeholder="Ex: Qual o conceito de ITCMD?" value={newFront} onChange={(e) => setNewFront(e.target.value)} rows={3} autoFocus />
         </div>
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-wide text-muted-foreground">Verso (resposta)</label>
-          <Textarea
-            placeholder="Ex: Imposto sobre transmissão causa mortis e doação..."
-            value={newBack}
-            onChange={(e) => setNewBack(e.target.value)}
-            rows={3}
-          />
+          <Textarea placeholder="Ex: Imposto sobre transmissão causa mortis e doação..." value={newBack} onChange={(e) => setNewBack(e.target.value)} rows={3} />
         </div>
         <div className="flex gap-2">
           <Button onClick={createCard} className="flex-1">Criar Cartão</Button>
@@ -287,7 +312,9 @@ export default function Flashcards() {
         </div>
       </div>
 
-      {cards.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-16 text-muted-foreground">Carregando...</div>
+      ) : cards.length === 0 ? (
         <div className="text-center py-16">
           <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-4">Nenhum flashcard criado ainda.</p>
