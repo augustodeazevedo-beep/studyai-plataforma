@@ -83,7 +83,7 @@ Formato: markdown estruturado. Seja direto, motivador e específico. Justifique 
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Dados completos do aluno:\n${JSON.stringify(context, null, 2)}` },

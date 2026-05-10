@@ -104,7 +104,7 @@ IMPORTANTE: Se o estado Psique indicar estresse elevado ou baixa energia, reduza
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Dados das disciplinas do aluno:\n${JSON.stringify(subjectSummaries, null, 2)}` },
