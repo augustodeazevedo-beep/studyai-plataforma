@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, RotateCcw, Trash2, BookOpen, Check, X, Download, Upload } from "lucide-react";
@@ -9,6 +10,7 @@ interface Flashcard {
   id: string;
   front: string;
   back: string;
+  subject?: string;
   easiness: number;
   interval: number;
   repetitions: number;
@@ -48,6 +50,8 @@ export default function Flashcards() {
   const [flipped, setFlipped] = useState(false);
   const [newFront, setNewFront] = useState("");
   const [newBack, setNewBack] = useState("");
+  const [newSubject, setNewSubject] = useState("");
+  const [filterSubject, setFilterSubject] = useState<string>("__all__");
   const [sessionStats, setSessionStats] = useState({ easy: 0, regular: 0, hard: 0 });
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +65,15 @@ export default function Flashcards() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
+  const subjects = Array.from(
+    new Set(cards.map((c) => c.subject).filter(Boolean) as string[])
+  ).sort();
+
+  const visibleCards =
+    filterSubject === "__all__"
+      ? cards
+      : cards.filter((c) => c.subject === filterSubject);
+
   const createCard = () => {
     if (!newFront.trim() || !newBack.trim()) {
       toast.error("Preencha frente e verso do cartão");
@@ -70,6 +83,7 @@ export default function Flashcards() {
       id: crypto.randomUUID(),
       front: newFront.trim(),
       back: newBack.trim(),
+      subject: newSubject.trim() || undefined,
       easiness: 2.5,
       interval: 0,
       repetitions: 0,
@@ -79,6 +93,7 @@ export default function Flashcards() {
     save([...cards, card]);
     setNewFront("");
     setNewBack("");
+    setNewSubject("");
     toast.success("Cartão criado");
     setView("list");
   };
@@ -86,7 +101,7 @@ export default function Flashcards() {
   const deleteCard = (id: string) => save(cards.filter((c) => c.id !== id));
 
   const startStudy = () => {
-    const due = cards.filter(isDue);
+    const due = visibleCards.filter(isDue);
     if (due.length === 0) { toast.info("Nenhum cartão para revisar agora!"); return; }
     setStudyQueue(due);
     setCurrent(0);
@@ -143,10 +158,10 @@ export default function Flashcards() {
     e.target.value = "";
   };
 
-  const due = cards.filter(isDue);
-  const mastered = cards.filter((c) => c.repetitions >= 5).length;
-  const avgEasiness = cards.length > 0
-    ? (cards.reduce((s, c) => s + c.easiness, 0) / cards.length).toFixed(2)
+  const due = visibleCards.filter(isDue);
+  const mastered = visibleCards.filter((c) => c.repetitions >= 5).length;
+  const avgEasiness = visibleCards.length > 0
+    ? (visibleCards.reduce((s, c) => s + c.easiness, 0) / visibleCards.length).toFixed(2)
     : "—";
 
   if (view === "study" && studyQueue.length > 0) {
@@ -173,6 +188,11 @@ export default function Flashcards() {
           className="min-h-[240px] rounded-2xl border-2 cursor-pointer flex items-center justify-center p-8 text-center transition-all hover:border-primary/50 select-none"
         >
           <div>
+            {card.subject && (
+              <div className="mb-3">
+                <Badge variant="outline" className="text-xs">{card.subject}</Badge>
+              </div>
+            )}
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4">
               {flipped ? "VERSO" : "FRENTE"}
             </div>
@@ -203,6 +223,18 @@ export default function Flashcards() {
         <button onClick={() => setView("list")} className="text-sm text-muted-foreground hover:underline">← Voltar</button>
         <h2 className="text-xl font-bold">Novo Flashcard</h2>
         <div className="space-y-2">
+          <label className="text-xs uppercase tracking-wide text-muted-foreground">Matéria / Tópico (opcional)</label>
+          <Input
+            list="subjects-list"
+            placeholder="Ex: Direito Civil, Processo Penal…"
+            value={newSubject}
+            onChange={(e) => setNewSubject(e.target.value)}
+          />
+          <datalist id="subjects-list">
+            {subjects.map((s) => <option key={s} value={s} />)}
+          </datalist>
+        </div>
+        <div className="space-y-2">
           <label className="text-xs uppercase tracking-wide text-muted-foreground">Frente (pergunta)</label>
           <Textarea
             placeholder="Ex: Qual o conceito de ITCMD?"
@@ -215,7 +247,7 @@ export default function Flashcards() {
         <div className="space-y-2">
           <label className="text-xs uppercase tracking-wide text-muted-foreground">Verso (resposta)</label>
           <Textarea
-            placeholder="Ex: Imposto sobre transmissão causa mortis e doação..."
+            placeholder="Ex: Imposto sobre transmissão causa mortis e doação…"
             value={newBack}
             onChange={(e) => setNewBack(e.target.value)}
             rows={3}
@@ -254,9 +286,38 @@ export default function Flashcards() {
         </div>
       </div>
 
+      {subjects.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground uppercase tracking-wide">Matéria:</span>
+          <button
+            onClick={() => setFilterSubject("__all__")}
+            className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+              filterSubject === "__all__"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border hover:border-primary/50"
+            }`}
+          >
+            Todas
+          </button>
+          {subjects.map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilterSubject(s)}
+              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                filterSubject === s
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-4 gap-4">
         <div className="rounded-lg border p-4">
-          <p className="text-2xl font-bold">{cards.length}</p>
+          <p className="text-2xl font-bold">{visibleCards.length}</p>
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
         </div>
         <div className="rounded-lg border p-4">
@@ -282,11 +343,18 @@ export default function Flashcards() {
             <Button variant="outline" onClick={() => importRef.current?.click()}><Upload className="w-4 h-4 mr-2" />Importar JSON</Button>
           </div>
         </div>
+      ) : visibleCards.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Nenhum cartão nesta matéria.</p>
+        </div>
       ) : (
         <div className="space-y-2">
-          {cards.map((card) => (
+          {visibleCards.map((card) => (
             <div key={card.id} className="border rounded-lg p-4 flex items-center justify-between">
               <div className="min-w-0">
+                {card.subject && (
+                  <Badge variant="outline" className="text-xs mb-1">{card.subject}</Badge>
+                )}
                 <p className="font-medium truncate">{card.front}</p>
                 <p className="text-sm text-muted-foreground truncate">{card.back}</p>
               </div>
