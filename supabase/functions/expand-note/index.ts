@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: "Você é um professor de concursos. Expanda a anotação do aluno com explicações detalhadas, exemplos práticos, macetes e dicas de prova. Mantenha o formato em markdown. Disciplina: " + (subjectName || "geral") },
           { role: "user", content: `Expanda esta anotação:\n\n${noteContent}` },
