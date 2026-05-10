@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, RotateCcw, Trash2, BookOpen, Check, X, Download, Upload } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Flashcard {
   id: string;
@@ -41,6 +43,7 @@ function isDue(card: Flashcard): boolean {
 }
 
 export default function Flashcards() {
+  const navigate = useNavigate();
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [view, setView] = useState<"list" | "study" | "create">("list");
   const [studyQueue, setStudyQueue] = useState<Flashcard[]>([]);
@@ -50,6 +53,13 @@ export default function Flashcards() {
   const [newBack, setNewBack] = useState("");
   const [sessionStats, setSessionStats] = useState({ easy: 0, regular: 0, hard: 0 });
   const importRef = useRef<HTMLInputElement>(null);
+
+  // Guard: redirect to /auth if not authenticated
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) navigate("/auth", { replace: true });
+    });
+  }, [navigate]);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -130,9 +140,13 @@ export default function Flashcards() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const imported: Flashcard[] = JSON.parse(ev.target?.result as string);
+        const imported = JSON.parse(ev.target?.result as string);
+        if (!Array.isArray(imported)) throw new Error("formato inválido");
+        const valid = imported.filter(
+          (c) => c && typeof c.id === "string" && typeof c.front === "string" && typeof c.back === "string"
+        ) as Flashcard[];
         const existingIds = new Set(cards.map((c) => c.id));
-        const newCards = imported.filter((c) => !existingIds.has(c.id));
+        const newCards = valid.filter((c) => !existingIds.has(c.id));
         save([...cards, ...newCards]);
         toast.success(`${newCards.length} cartões importados (${imported.length - newCards.length} duplicados ignorados)`);
       } catch {
@@ -165,7 +179,7 @@ export default function Flashcards() {
         <div className="w-full bg-border/40 rounded-full h-1">
           <div
             className="bg-primary h-1 rounded-full transition-all"
-            style={{ width: `${((current) / studyQueue.length) * 100}%` }}
+            style={{ width: `${(current / studyQueue.length) * 100}%` }}
           />
         </div>
         <div
