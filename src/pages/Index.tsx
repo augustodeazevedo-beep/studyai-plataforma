@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkles, BookOpen, Zap, Heart, GraduationCap, MessageCircle } from "lucide-react";
 import PricingSection from "@/components/landing/PricingSection";
@@ -11,6 +12,23 @@ import heroBg from "@/assets/hero-bg.jpg";
 import ctaBg from "@/assets/cta-bg.jpg";
 import featuresBg from "@/assets/features-bg.jpg";
 import advocacyLogo from "@/assets/advocacy-ai-logo.png";
+
+const FAQ_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    { question: "Preciso pagar para usar?", answer: "Não. O Study.AI tem um plano gratuito com acesso às funcionalidades essenciais — planejamento inteligente, revisões espaçadas, dashboard G-Force e módulos de IA. Planos pagos desbloqueiam recursos avançados como IA ilimitada e suporte prioritário." },
+    { question: "Funciona para qual concurso?", answer: "Para qualquer concurso público do Brasil. Você envia o PDF do edital e a IA extrai automaticamente disciplinas, tópicos, relevância e incidência, montando um plano personalizado." },
+    { question: "O que são os 5 vetores G-Force?", answer: "São as 5 dimensões que a IA analisa para tomar decisões: Relevância, Incidência, Compreensão, Intensidade e Psique. Juntos formam o sensor que guia toda a estratégia da plataforma." },
+    { question: "Como funciona o suporte a neurodivergência?", answer: "O Study.AI foi projetado com foco em estudantes com TDAH, TEA, dislexia e outras condições. A anamnese captura seu perfil cognitivo, o Pomodoro é editável de 1 a 120 min e a carga é reduzida em dias difíceis, sempre com linguagem empática." },
+    { question: "Preciso abandonar meu material atual?", answer: "Não. O Study.AI integra com seus materiais existentes — PDFs, apostilas, videoaulas — e cria a estratégia em cima do que você já usa." },
+    { question: "A IA realmente se adapta ao meu dia emocional?", answer: "Sim. Através dos check-ins diários (humor, estresse, energia, foco), a IA ajusta em tempo real o volume de estudo, o tipo de atividade e a linguagem das respostas." },
+  ].map((f) => ({
+    "@type": "Question",
+    name: f.question,
+    acceptedAnswer: { "@type": "Answer", text: f.answer },
+  })),
+};
 
 const features = [
   {
@@ -91,6 +109,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
+      <Helmet>
+        <title>Study.AI — Planejamento inteligente para concursos</title>
+        <meta name="description" content="Motor de decisão pedagógica com IA e neurociência para concursos. Planos adaptativos, revisões espaçadas e suporte a neurodivergência." />
+        <link rel="canonical" href="https://studyai-byadvocacyai.lovable.app/" />
+        <meta property="og:title" content="Study.AI — Planejamento inteligente para concursos" />
+        <meta property="og:description" content="IA + neurociência para maximizar seu aprendizado por unidade de carga cognitiva." />
+        <meta property="og:url" content="https://studyai-byadvocacyai.lovable.app/" />
+        <script type="application/ld+json">{JSON.stringify(FAQ_JSON_LD)}</script>
+      </Helmet>
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
@@ -110,11 +137,12 @@ const Index = () => {
         </div>
       </nav>
 
+      <main>
       {/* Hero */}
       <section className="relative pt-32 pb-24 px-4">
         {/* Background image */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <img src={heroBg} alt="" className="w-full h-full object-cover opacity-30" />
+          <img src={heroBg} alt="" width="1920" height="1080" fetchPriority="high" decoding="async" className="w-full h-full object-cover opacity-30" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
         </div>
 
@@ -357,6 +385,7 @@ const Index = () => {
 
       {/* FAQ */}
       <FAQSection />
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border py-8 px-4">
