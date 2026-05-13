@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -120,6 +121,13 @@ const Dashboard = () => {
   };
 
   return (
+    <>
+    <Helmet>
+      <title>Dashboard — Study.AI</title>
+      <meta name="description" content="Seu painel Study.AI: planner adaptativo, arsenal do edital, análises G-Force, coach e previsões para acelerar sua aprovação." />
+      <link rel="canonical" href="https://studyai-byadvocacyai.lovable.app/dashboard" />
+      <meta name="robots" content="noindex" />
+    </Helmet>
     <DashboardLayout
       activeTab={activeTab}
       onTabChange={setActiveTab}
@@ -128,6 +136,7 @@ const Dashboard = () => {
     >
       <div>{renderTab()}</div>
     </DashboardLayout>
+    </>
   );
 };
 
