@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,6 +94,13 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
+      <Helmet>
+        <title>Redefinir senha — Study.AI</title>
+        <meta name="description" content="Defina uma nova senha para sua conta Study.AI e retome seu planejamento de estudos com segurança." />
+        <link rel="canonical" href="https://studyai-byadvocacyai.lovable.app/reset-password" />
+        <meta name="robots" content="noindex" />
+      </Helmet>
+      <h1 className="sr-only">Redefinir sua senha</h1>
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-pulse-glow" />
       </div>
@@ -117,7 +125,7 @@ const ResetPassword = () => {
                     minLength={6}
                     required
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
