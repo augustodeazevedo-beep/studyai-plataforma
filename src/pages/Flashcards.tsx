@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -303,6 +304,12 @@ export default function Flashcards() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 py-8">
+      <Helmet>
+        <title>Flashcards — Study.AI</title>
+        <meta name="description" content="Revisão espaçada (SM-2) com flashcards inteligentes. Crie, importe e estude cartões adaptados ao seu desempenho." />
+        <link rel="canonical" href="https://studyai-byadvocacyai.lovable.app/flashcards" />
+        <meta name="robots" content="noindex" />
+      </Helmet>
       <input ref={importRef} type="file" accept=".json" className="hidden" onChange={importCards} />
       <div className="flex items-center justify-between">
         <div>
