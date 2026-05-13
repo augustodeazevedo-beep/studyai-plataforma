@@ -1,0 +1,14 @@
+# Study.AI
+
+> Plataforma de estudos com IA e neurociência para concursos públicos. Planejamento personalizado, revisões espaçadas, e métricas de evolução pensados para estudantes neurodivergentes.
+
+Study.AI é um motor de decisão pedagógica que maximiza o aprendizado por unidade de carga cognitiva, com base em 5 vetores (Relevância, Incidência, Compreensão, Intensidade e Psique) e revisões adaptativas (SRS). Faz parte do ecossistema Advocacy.AI.
+
+## Pages
+
+- [Início](/): Visão geral da plataforma, ciclo Study.AI, recursos, planos e FAQ.
+- [Entrar / Criar conta](/auth): Acesso à plataforma com email/senha ou Google.
+
+## Optional
+
+- [Recuperar senha](/reset-password): Fluxo de redefinição de senha.
