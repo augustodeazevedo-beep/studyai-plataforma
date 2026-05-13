@@ -310,10 +310,10 @@ export default function Flashcards() {
           <p className="text-muted-foreground text-sm mt-1">Revisão espaçada (SM-2)</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
-          <Button variant="ghost" size="icon" title="Importar JSON" onClick={() => importRef.current?.click()}>
+          <Button variant="ghost" size="icon" title="Importar JSON" aria-label="Importar flashcards (JSON)" onClick={() => importRef.current?.click()}>
             <Upload className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" title="Exportar JSON" onClick={exportCards} disabled={cards.length === 0}>
+          <Button variant="ghost" size="icon" title="Exportar JSON" aria-label="Exportar flashcards (JSON)" onClick={exportCards} disabled={cards.length === 0}>
             <Download className="w-4 h-4" />
           </Button>
           <Button onClick={startStudy} disabled={due.length === 0}>
@@ -405,7 +405,7 @@ export default function Flashcards() {
                 <Badge variant={isDue(card) ? "destructive" : "secondary"} className="text-xs">
                   {isDue(card) ? "Revisar" : `+${card.interval}d`}
                 </Badge>
-                <button onClick={() => deleteCard(card.id)} className="text-muted-foreground hover:text-destructive">
+                <button onClick={() => deleteCard(card.id)} aria-label="Excluir cartão" className="text-muted-foreground hover:text-destructive">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
