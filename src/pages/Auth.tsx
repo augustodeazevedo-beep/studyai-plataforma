@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
@@ -100,6 +101,14 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
+      <Helmet>
+        <title>Entrar ou criar conta — Study.AI</title>
+        <meta name="description" content="Acesse sua conta Study.AI ou crie uma conta gratuita para começar seu planejamento inteligente para concursos." />
+        <link rel="canonical" href="https://studyai-byadvocacyai.lovable.app/auth" />
+        <meta property="og:title" content="Entrar ou criar conta — Study.AI" />
+        <meta property="og:description" content="Acesse sua conta Study.AI ou crie uma conta gratuita." />
+      </Helmet>
+      <h1 className="sr-only">Entrar ou criar conta na Study.AI</h1>
       {/* Background effects */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-pulse-glow" />
@@ -173,6 +182,7 @@ const Auth = () => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                         className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -253,6 +263,7 @@ const Auth = () => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                         className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

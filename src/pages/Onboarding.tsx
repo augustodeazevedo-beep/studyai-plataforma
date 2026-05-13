@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,6 +215,12 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <Helmet>
+        <title>Configuração inicial — Study.AI</title>
+        <meta name="description" content="Configure seu perfil de estudos: objetivo, disciplinas, disponibilidade e autoavaliação para a IA montar seu plano." />
+        <link rel="canonical" href="https://studyai-byadvocacyai.lovable.app/onboarding" />
+        <meta name="robots" content="noindex" />
+      </Helmet>
       {/* Header */}
       <header className="border-b border-border glass sticky top-0 z-40">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
@@ -227,6 +234,7 @@ const Onboarding = () => {
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
+        <h1 className="sr-only">Configuração inicial da sua jornada de estudos</h1>
         {/* Progress */}
         <div className="mb-8">
           <Progress value={progress} className="h-2" />
@@ -403,7 +411,7 @@ const Onboarding = () => {
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm border border-primary/20"
                           >
                             <span>{s.name}</span>
-                            <button onClick={() => removeSubject(i)} className="hover:text-destructive">
+                            <button onClick={() => removeSubject(i)} aria-label="Remover disciplina" className="hover:text-destructive">
                               <X className="h-3 w-3" />
                             </button>
                           </div>

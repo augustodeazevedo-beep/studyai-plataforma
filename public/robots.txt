@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://studyai-byadvocacyai.lovable.app/sitemap.xml

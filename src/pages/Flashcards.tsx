@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -303,6 +304,12 @@ export default function Flashcards() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 py-8">
+      <Helmet>
+        <title>Flashcards — Study.AI</title>
+        <meta name="description" content="Revisão espaçada (SM-2) com flashcards inteligentes. Crie, importe e estude cartões adaptados ao seu desempenho." />
+        <link rel="canonical" href="https://studyai-byadvocacyai.lovable.app/flashcards" />
+        <meta name="robots" content="noindex" />
+      </Helmet>
       <input ref={importRef} type="file" accept=".json" className="hidden" onChange={importCards} />
       <div className="flex items-center justify-between">
         <div>
@@ -310,10 +317,10 @@ export default function Flashcards() {
           <p className="text-muted-foreground text-sm mt-1">Revisão espaçada (SM-2)</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
-          <Button variant="ghost" size="icon" title="Importar JSON" onClick={() => importRef.current?.click()}>
+          <Button variant="ghost" size="icon" title="Importar JSON" aria-label="Importar flashcards (JSON)" onClick={() => importRef.current?.click()}>
             <Upload className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" title="Exportar JSON" onClick={exportCards} disabled={cards.length === 0}>
+          <Button variant="ghost" size="icon" title="Exportar JSON" aria-label="Exportar flashcards (JSON)" onClick={exportCards} disabled={cards.length === 0}>
             <Download className="w-4 h-4" />
           </Button>
           <Button onClick={startStudy} disabled={due.length === 0}>
@@ -405,7 +412,7 @@ export default function Flashcards() {
                 <Badge variant={isDue(card) ? "destructive" : "secondary"} className="text-xs">
                   {isDue(card) ? "Revisar" : `+${card.interval}d`}
                 </Badge>
-                <button onClick={() => deleteCard(card.id)} className="text-muted-foreground hover:text-destructive">
+                <button onClick={() => deleteCard(card.id)} aria-label="Excluir cartão" className="text-muted-foreground hover:text-destructive">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
