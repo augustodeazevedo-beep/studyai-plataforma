@@ -1,29 +1,48 @@
 ## Objetivo
-Reduzir levemente o container de boas-vindas (`WelcomeBanner`) e trocar a imagem de fundo (atualmente "balança da justiça") por uma com identidade de **neurociência + IA**, mantendo a paleta Study.AI (ciano/teal sobre fundo escuro).
+Replicar visualmente o container "Faz parte de um ecossistema maior" (imagem de referência) na landing page do Study.AI e adicionar, na navbar superior, um botão de acesso rápido aos 6 produtos da suíte Advocacy.AI.
+
+## Produtos (ordem fixa)
+1. Advocase.AI — CRM, SDR e captação jurídica — `https://advocaseai-byadvocacyai.lovable.app` — ícone `Target`
+2. Advoga.AI — Gestão de processos e escritório — `https://advogaai-byadvocacy.lovable.app` — ícone `Briefcase`
+3. Peticiona.AI — Petições, minutas e contratos — `https://peticionaai-byadvocacyai.lovable.app` — ícone `FileText`
+4. Inventaria.AI — Planejamento patrimonial e sucessório — `https://inventariaai-byadvocacyai.lovable.app` — ícone `Scale`
+5. Fin.AI — Inteligência financeira e conciliação — `https://finai-byadvocacyia.lovable.app` — ícone `Wallet`
+6. Study.AI — Plataforma de estudos jurídicos — `https://studyai-byadvocacyai.lovable.app` — ícone `GraduationCap` — marcado como `active` (página atual)
 
 ## Alterações
 
-### 1. Nova imagem de fundo — `src/assets/dashboard-hero-bg.jpg` (substituir)
-Gerar via `imagegen--generate_image` (modelo `standard`, 1920x640, sem transparência) com prompt focado em:
-- Cérebro humano estilizado em wireframe/holográfico ciano-teal
-- Circuitos neurais, sinapses brilhantes, nós de rede neural
-- Partículas de dados, linhas de circuito sutis ao fundo
-- Fundo escuro (azul-marinho/preto) compatível com `bg-background`
-- Estética futurista, AI-native, tom científico (não cartoon)
-- Lado esquerdo mais escuro/limpo para o gradiente do texto respirar
+### 1. Novo componente `src/components/landing/EcosystemSection.tsx`
+Seção full-width acima do `PricingSection`, com:
+- Eyebrow em uppercase tracking-widest cyan: `ECOSSISTEMA ADVOCACY.AI`
+- Título: `Faz parte de um` + `ecossistema maior.` (font-display, gradiente em "ecossistema maior" via `text-gradient`)
+- Subtítulo em `text-muted-foreground`: descrição da suíte AI-Native, mencionando Advocacy.AI integrando jurídico, financeiro, patrimonial e geração documental
+- Grid `md:grid-cols-2 lg:grid-cols-3 gap-4` com 6 cards
+- Cada card: classe `glass rounded-xl p-6` + hover `border-primary/30`, ícone Lucide em caixa `bg-primary/10 rounded-lg`, nome com `.AI` em `text-primary` (padrão Study.AI), descrição em `text-sm text-muted-foreground`, ícone `ExternalLink` no canto superior direito
+- Card ativo (Study.AI): `border-primary/40 bg-primary/10`, sem link (renderiza `<div aria-current="page">`)
+- Demais cards: `<a target="_blank" rel="noopener noreferrer">`
+- Animação `motion` com `fadeUp` reaproveitando o padrão da página
 
-### 2. Reduzir o container — `src/components/dashboard/WelcomeBanner.tsx`
-Apenas ajustes de espaçamento/tamanho (sem mexer em estrutura, gradiente ou cores):
-- Padding: `px-5 py-5 sm:px-8 sm:py-6` → `px-4 py-4 sm:px-7 sm:py-5`
-- Greeting `h1`: `text-xl sm:text-3xl` → `text-lg sm:text-2xl`
-- Chip "AI-Native · Study.AI": `mb-3` → `mb-2`
-- Data: `mt-2 text-sm sm:text-base` → `mt-1.5 text-xs sm:text-sm`
+### 2. Botão "Apps" na navbar — `src/pages/Index.tsx`
+- Adicionar antes do botão "Entrar" um `DropdownMenu` (shadcn) inspirado em `src/components/dashboard/AppsLauncher.tsx`, com:
+  - Trigger: `Button variant="outline" size="sm"` com ícone `LayoutGrid` + label "Apps" (oculto em mobile, `hidden sm:inline`)
+  - Conteúdo: header "Ecossistema Advocacy.AI", lista dos 6 produtos com ícone, nome, descrição curta, `ExternalLink`/`Check` (Study.AI marcado como atual)
+- Manter o mesmo dataset usado pela seção (extrair para um único array em `EcosystemSection.tsx` e exportar, ou criar `src/data/advocacyApps.ts` compartilhado entre `EcosystemSection` e o dropdown da navbar para evitar duplicação)
 
-Mantém: imagem importada, `opacity-70`, gradiente, nome em uppercase com `text-primary`, borda `rounded-xl`.
+### 3. Inserção na landing — `src/pages/Index.tsx`
+- Importar `EcosystemSection` e renderizar entre o CTA motivacional e o `PricingSection`
+- Importar e montar o `DropdownMenu` no header (linha ~127)
+
+## Decisões de design (alinhadas à identidade Study.AI)
+- Reutilizar tokens semânticos: `bg-background`, `glass`, `border-primary/*`, `text-primary`, `text-gradient`, `rounded-xl`
+- Sem cores hardcoded; sem alterar `index.css` ou `tailwind.config.ts`
+- Mobile-first: 1 coluna no mobile, 2 no md, 3 no lg
 
 ## Fora de escopo
-- Sem mudanças em layout do header, AppsLauncher, sidebar, dados ou backend.
+- Sem mudanças em backend, rotas ou conteúdo do dashboard
+- Sem mudanças no `AppsLauncher` do dashboard (já existente)
+- Sem novas imagens/ativos
 
 ## Arquivos impactados
-- `src/assets/dashboard-hero-bg.jpg` (regenerada)
-- `src/components/dashboard/WelcomeBanner.tsx` (ajuste fino de tamanho)
+- `src/data/advocacyApps.ts` (novo — fonte única dos 6 produtos)
+- `src/components/landing/EcosystemSection.tsx` (novo)
+- `src/pages/Index.tsx` (import da seção + dropdown na navbar)
