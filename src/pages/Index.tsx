@@ -3,11 +3,14 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
-import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkles, BookOpen, Zap, Heart, GraduationCap, MessageCircle } from "lucide-react";
+import { Brain, Target, TrendingUp, Clock, BarChart3, Shield, ArrowRight, Sparkles, BookOpen, Zap, Heart, GraduationCap, MessageCircle, LayoutGrid, Check, ExternalLink } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PricingSection from "@/components/landing/PricingSection";
 import FAQSection from "@/components/landing/FAQSection";
 import LeadCaptureForm from "@/components/landing/LeadCaptureForm";
+import EcosystemSection from "@/components/landing/EcosystemSection";
 import BrandLogo from "@/components/brand/BrandLogo";
+import { ADVOCACY_APPS } from "@/data/advocacyApps";
 import heroBg from "@/assets/hero-bg.jpg";
 import ctaBg from "@/assets/cta-bg.jpg";
 import featuresBg from "@/assets/features-bg.jpg";
@@ -125,6 +128,67 @@ const Index = () => {
             <BrandLogo size="nav" imgClassName="max-w-[148px] sm:max-w-[170px]" />
           </Link>
           <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 rounded-xl">
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="hidden sm:inline">Apps</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 rounded-xl p-3">
+                <div className="px-2 pb-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Ecossistema
+                  </p>
+                  <p className="text-base font-display font-bold">
+                    Advocacy<span className="text-primary">.AI</span>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {ADVOCACY_APPS.map(({ name, url, description, Icon, active }) => {
+                    const content = (
+                      <>
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? "bg-primary/15 text-primary" : "bg-muted/50 text-foreground/80"}`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 text-sm font-semibold">
+                            <span className="truncate">
+                              {name}<span className="text-primary">.AI</span>
+                            </span>
+                            {active ? (
+                              <Check className="h-3.5 w-3.5 text-primary" />
+                            ) : (
+                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{description}</p>
+                        </div>
+                      </>
+                    );
+                    const baseClasses = "flex items-center gap-3 rounded-lg border px-2.5 py-2 transition-colors";
+                    if (active) {
+                      return (
+                        <div key={name} className={`${baseClasses} border-primary/40 bg-primary/10`} aria-current="page">
+                          {content}
+                        </div>
+                      );
+                    }
+                    return (
+                      <a
+                        key={name}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${baseClasses} border-transparent hover:border-border hover:bg-muted/40`}
+                      >
+                        {content}
+                      </a>
+                    );
+                  })}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="ghost" asChild>
               <Link to="/auth">Entrar</Link>
             </Button>
@@ -378,6 +442,8 @@ const Index = () => {
       </section>
 
       {/* Pricing */}
+      <EcosystemSection />
+
       <PricingSection />
 
       {/* Lead Capture */}
