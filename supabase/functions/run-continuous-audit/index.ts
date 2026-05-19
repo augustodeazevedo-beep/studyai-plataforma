@@ -51,23 +51,31 @@ async function auditUser(supabase: any, userId: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    // Require authentication - this function accesses user data
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const anonKey = getAnonKey();
+    if (!anonKey) return json({ error: "Configuração interna indisponível." }, 500);
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      anonKey,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!serviceKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY not configured");
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
 
-    const authHeader = req.headers.get("Authorization");
-    let targetUserId: string | null = null;
-    if (authHeader) {
-      const anonKey = getAnonKey();
-      if (!anonKey) return json({ error: "Configuração interna indisponível." }, 500);
-      const userClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, { global: { headers: { Authorization: authHeader } } });
-      const { data: { user } } = await userClient.auth.getUser();
-      targetUserId = user?.id || null;
-    }
+    const targetUserId: string = user.id;
 
-    const users = targetUserId
-      ? [{ user_id: targetUserId }]
-      : (await supabase.from("profiles").select("user_id").not("user_id", "is", null).limit(500)).data || [];
+    const users = [{ user_id: targetUserId }];
 
     const results = [];
     for (const profile of users) {

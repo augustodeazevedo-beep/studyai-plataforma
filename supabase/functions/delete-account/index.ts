@@ -28,37 +28,34 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Usuário não encontrado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Delete user data from all tables (order matters for FK constraints)
-    const tables = [
-      "question_attempts", "questions", "flashcards", "spaced_reviews",
-      "study_sessions", "study_calendar_blocks", "study_materials", "study_plan",
-      "topics", "user_subjects", "user_notes", "user_achievements",
-      "ai_coaching_history", "reminders", "psyche_checkins", "psyche_profiles", "profiles",
-    ];
+    // SOFT DELETE: schedule account deletion in 30 days instead of deleting immediately.
+    // This allows users to cancel by logging in again within the grace period.
+    //
+    // IMPORTANT: the following columns must exist on the "profiles" table.
+    // Create them via a Supabase migration if not yet present:
+    //   ALTER TABLE profiles ADD COLUMN IF NOT EXISTS deletion_scheduled_at timestamptz;
+    //   ALTER TABLE profiles ADD COLUMN IF NOT EXISTS status text DEFAULT 'active';
+    const scheduledDeletionDate = new Date();
+    scheduledDeletionDate.setDate(scheduledDeletionDate.getDate() + 30);
 
-    for (const table of tables) {
-      await adminClient.from(table).delete().eq("user_id", user.id);
+    const { error: updateError } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        deletion_scheduled_at: scheduledDeletionDate.toISOString(),
+        status: "pending_deletion",
+      })
+      .eq("id", user.id);
+
+    if (updateError) {
+      return new Response(JSON.stringify({ error: "Erro ao agendar exclusão de conta" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Delete user_roles
-    await adminClient.from("user_roles").delete().eq("user_id", user.id);
-
-    // Delete storage files
-    const { data: files } = await adminClient.storage.from("study-materials").list(user.id);
-    if (files && files.length > 0) {
-      const filePaths = files.map((f) => `${user.id}/${f.name}`);
-      await adminClient.storage.from("study-materials").remove(filePaths);
-    }
-
-    // Delete auth user
-    const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
-    if (deleteError) {
-      return new Response(JSON.stringify({ error: "Erro ao excluir conta" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({
+      message: "Account scheduled for deletion in 30 days. You can cancel by logging in again.",
+      scheduled_at: scheduledDeletionDate.toISOString(),
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     return new Response(JSON.stringify({ error: "Erro interno" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }

@@ -17,8 +17,8 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    // Use the authenticated user's token so RLS is enforced automatically
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -26,8 +26,6 @@ Deno.serve(async (req) => {
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Usuário não encontrado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
     const tables = [
       "profiles", "user_subjects", "topics", "study_sessions",
@@ -40,7 +38,7 @@ Deno.serve(async (req) => {
     const exportData: Record<string, unknown[]> = {};
 
     for (const table of tables) {
-      const { data } = await adminClient.from(table).select("*").eq("user_id", user.id);
+      const { data } = await userClient.from(table).select("*").eq("user_id", user.id);
       exportData[table] = data || [];
     }
 

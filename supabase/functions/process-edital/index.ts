@@ -36,6 +36,27 @@ const boundedTextSchema = (maxLength: number) => z.preprocess(
 const normalizeName = (value: string) =>
   value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
+function isValidHttpsUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const hostname = parsed.hostname;
+    // Bloquear IPs privados
+    if (
+      hostname === "localhost" ||
+      hostname.startsWith("127.") ||
+      hostname.startsWith("192.168.") ||
+      hostname.startsWith("10.") ||
+      hostname === "169.254.169.254"
+    ) return false;
+    // Exigir que seja um dom\u00ednio real (n\u00e3o s\u00f3 IP)
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const requestSchema = z.object({
   editalText: z.string().trim().min(20, "editalText deve conter texto válido").max(15000),
   targetExam: z.string().trim().max(180).nullish(),
@@ -428,6 +449,10 @@ ${edital}`;
 
       processedSubjects.push({ ...extracted, id: subjectData.id, name, relevance, incidence, sources });
       for (const source of sources.filter((source: any) => source.url).slice(0, 3)) {
+        if (!isValidHttpsUrl(source.url)) {
+          console.warn("Skipping invalid URL from AI extraction:", source.url);
+          continue;
+        }
         await supabase.from("public_source_audits").insert({ user_id: user.id, subject_id: subjectData.id, source_url: source.url, source_title: source.title || "Fonte pública", source_note: source.note || "Referência pública usada para Relevância/Incidência", origin: "process-edital", copyright_assessment: "Fonte pública usada como referência de incidência/relevância; sem reprodução integral de conteúdo protegido.", storage_notes: "Armazenados apenas metadados, disciplina, pontuação e referência da fonte." });
       }
 
@@ -459,6 +484,10 @@ ${edital}`;
           summary.counts.insertedTopics += 1;
           pushDetail(summary, "topics.inserted", { name: topic.name, subject: name, reason: "Novo tópico identificado no edital.", next: { relevance: topic.relevance, incidence: topic.incidence, comprehension: topic.comprehension } });
           for (const source of sources.filter((source: any) => source.url).slice(0, 3)) {
+            if (!isValidHttpsUrl(source.url)) {
+              console.warn("Skipping invalid URL from AI extraction:", source.url);
+              continue;
+            }
             await supabase.from("public_source_audits").insert({ user_id: user.id, subject_id: subjectData.id, topic_id: insertedTopic?.id || null, source_url: source.url, source_title: source.title || "Fonte pública", source_note: source.note || "Referência pública usada para Relevância/Incidência", origin: "process-edital", copyright_assessment: "Fonte pública usada como referência de incidência/relevância; sem reprodução integral de conteúdo protegido.", storage_notes: "Armazenados apenas metadados, tema, pontuação e referência da fonte." });
           }
         }
